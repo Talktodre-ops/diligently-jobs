@@ -1,0 +1,76 @@
+[package]
+name = "diligently-api"
+version = "0.1.0"
+edition = "2021"
+description = "Diligently — backend service for persistent audit log, blob storage, and sync."
+license = "UNLICENSED"
+publish = false
+
+[[bin]]
+name = "diligently-api"
+path = "src/main.rs"
+
+[dependencies]
+# HTTP + async runtime
+axum = { version = "0.8", features = ["macros"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["trace", "cors"] }
+
+# Database
+sqlx = { version = "0.8", features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "json",
+    "migrate",
+] }
+
+# R2 / S3-compatible blob storage
+aws-config       = { version = "1.5", features = ["behavior-version-latest"] }
+aws-sdk-s3       = { version = "1.55", features = ["behavior-version-latest"] }
+aws-credential-types = "1.2"
+
+# Serde + error handling
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror  = "1.0"
+anyhow     = "1.0"
+
+# IDs + time
+uuid    = { version = "1", features = ["v4", "serde"] }
+chrono  = { version = "0.4", features = ["serde"] }
+
+# Config
+dotenvy = "0.15"
+
+# Logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Constant-time comparison for bearer-token auth
+subtle = "2.6"
+
+# DOCX rendering for ATS-friendly CV exports.
+docx-rs = "0.4"
+
+# Scratch directory for tectonic LaTeX compile (writes cv.tex + reads cv.pdf).
+tempfile = "3"
+
+# Templating engine for the LaTeX CV template. Tera uses {{ }} / {% %}
+# delimiters which don't collide with LaTeX's single-{ syntax.
+tera = "1"
+
+# LLM client for the async ATS scoring job (OpenAI-compatible /chat/completions).
+# rustls (not native-tls) to avoid a system OpenSSL dependency, matching sqlx.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+tokio   = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[profile.release]
+opt-level     = 3
+lto           = "thin"
+codegen-units = 1
+strip         = true

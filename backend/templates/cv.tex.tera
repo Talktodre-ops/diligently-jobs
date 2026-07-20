@@ -1,0 +1,198 @@
+%-------------------------
+% Resume in LaTeX (Tera-templated) — body parameterized over ResumeDoc; every
+% field passes through `| tex` to escape LaTeX specials.
+%
+% `\input{glyphtounicode}` / `\pdfgentounicode` are pdfTeX-only, so they're
+% guarded with `\ifx\pdfgentounicode\undefined` to also compile under XeTeX
+% (Tectonic's engine).
+%------------------------
+
+\documentclass[letterpaper,10pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{fontawesome5}
+\usepackage{multicol}
+\setlength{\multicolsep}{-3.0pt}
+\setlength{\columnsep}{-1pt}
+\ifx\pdfgentounicode\undefined\else
+  \input{glyphtounicode}
+\fi
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.6in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1.19in}
+\addtolength{\topmargin}{-.75in}
+\addtolength{\textheight}{1.5in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-6pt}\scshape\raggedright\large\bfseries
+}{}{0em}{}[\color{black}\titlerule \vspace{-6pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\ifx\pdfgentounicode\undefined\else
+  \pdfgentounicode=1
+\fi
+
+%-------------------------
+% Custom commands — verbatim from the user's cv.tex. Wrapped in {% raw %}
+% because LaTeX macro params like `{#1` would otherwise be read by Tera as a
+% comment-open (`{#`). raw passes the block through byte-for-byte.
+{% raw %}
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{1.0\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & \textbf{\small #2} \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-3pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{1.001\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & \textbf{\small #2}\\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemi{$\vcenter{\hbox{\tiny$\bullet$}}$}
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[itemsep=0pt, topsep=1pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-2pt}}
+{% endraw %}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape {{ header.name | tex }}} \\ \vspace{1pt}
+    {\Large {{ header.title | tex }}} \\ \vspace{5pt}
+    \small
+{%- if header.email %}
+    \href{mailto:{{ header.email }}}{\raisebox{-0.2\height}\faEnvelope\  \underline{ {{- header.email | tex -}} }} ~
+{%- endif %}
+{%- if header.linkedin %}
+    \href{ {{- header.linkedin.url -}} }{\raisebox{-0.2\height}\faLinkedin\ \underline{ {{- header.linkedin.display | tex -}} }}  ~
+{%- endif %}
+{%- if header.github %}
+    \href{ {{- header.github.url -}} }{\raisebox{-0.2\height}\faGithub\ \underline{ {{- header.github.display | tex -}} }} ~
+{%- endif %}
+{%- if header.website %}
+    \href{ {{- header.website.url -}} }{\raisebox{-0.2\height}\faGlobe\ \underline{ {{- header.website.display | tex -}} }}
+{%- endif %}
+{%- if header.phone %}
+    {%- if header.email or header.linkedin or header.github or header.website %} ~ {% endif %}
+    \raisebox{-0.2\height}\faPhone\  {{ header.phone | tex }}
+{%- endif %}
+    \vspace{-8pt}
+\end{center}
+
+{% if summary %}
+%-----------PROFESSIONAL SUMMARY-----------
+\section{Professional Summary}
+\small{ {{- summary | tex -}} }
+{% endif %}
+
+{% if experience | length > 0 %}
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+{%- for exp in experience %}
+    \resumeSubheading
+      { {{- exp.role | tex -}} }{ {{- exp.start | tex }} -- {{ exp.end | tex -}} }
+      { {{- exp.company | tex -}} }{ {{- exp.location | default(value="") | tex -}} }
+{%- if exp.bullets | length > 0 %}
+      \resumeItemListStart
+{%- for bullet in exp.bullets %}
+        \resumeItem{ {{- bullet | tex -}} }
+{%- endfor %}
+      \resumeItemListEnd
+{%- endif %}
+{%- endfor %}
+  \resumeSubHeadingListEnd
+\vspace{-8pt}
+{% endif %}
+
+{% if education | length > 0 %}
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+{%- for ed in education %}
+    \resumeSubheading
+      { {{- ed.institution | tex -}} }{ {{- ed.location | default(value="") | tex -}} }
+      { {{- ed.degree | tex -}} }{ {{- ed.start | default(value="") | tex }}{% if ed.start and ed.end %} -- {% endif %}{{ ed.end | default(value="") | tex -}} }
+{%- endfor %}
+  \resumeSubHeadingListEnd
+{% endif %}
+
+{% if skills | length > 0 %}
+%-----------TECHNICAL SKILLS-----------
+\section{Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+{%- for group in skills %}
+     \textbf{ {{- group.label | tex -}} }{: {{ group.items | join(sep=", ") | tex }}} \\
+{%- endfor %}
+    }}
+ \end{itemize}
+ \vspace{-16pt}
+{% endif %}
+
+{% if projects | length > 0 %}
+%-----------PROJECTS & ACHIEVEMENTS-----------
+\section{Projects \& Achievements}
+    \resumeItemListStart
+{%- for p in projects %}
+      \resumeItem{
+        {%- if p.name %}\textbf{ {{- p.name | tex -}} }: {% endif -%}
+        {{ p.description | tex }}
+        {%- if p.link %}: \href{ {{- p.link.url -}} }{ {{- p.link.display | tex -}} }{% endif -%}
+      }
+{%- endfor %}
+    \resumeItemListEnd
+{% endif %}
+
+\end{document}

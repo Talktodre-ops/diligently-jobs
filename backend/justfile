@@ -1,0 +1,76 @@
+# Diligently backend — task runner.
+# Install just: https://github.com/casey/just
+# Run `just` (no args) to see the list.
+
+set windows-shell := ["pwsh.exe", "-NoLogo", "-NoProfile", "-Command"]
+
+# Default target — show list
+default:
+    @just --list
+
+# -- Local (no Docker) ---------------------------------------------------------
+
+# Run the api locally with hot reload (needs `cargo install cargo-watch` first)
+dev:
+    cargo watch -q -c -w src -w migrations -w Cargo.toml -x 'run --bin diligently-api'
+
+# One-shot build + run
+run:
+    cargo run --bin diligently-api
+
+# Cargo test (unit tests only — skips ignored integration tests)
+test:
+    cargo test
+
+# Smoke test against a running server (must be up at $DILIGENTLY_API_URL)
+smoke:
+    cargo test -- --ignored --nocapture
+
+# Format + lint
+fmt:
+    cargo fmt
+lint:
+    cargo clippy --all-targets -- -D warnings
+
+# -- Docker --------------------------------------------------------------------
+
+# Start the dev container (hot reload via cargo-watch)
+docker-dev:
+    docker compose up
+
+docker-dev-bg:
+    docker compose up -d
+
+docker-logs:
+    docker compose logs -f api
+
+docker-stop:
+    docker compose down
+
+# Build the production image
+docker-build:
+    docker build -t diligently-api:latest -f Dockerfile .
+
+# -- Database (sqlx-cli) -------------------------------------------------------
+
+# Create a new migration: `just migrate-new add_users`
+migrate-new name:
+    sqlx migrate add -r {{name}}
+
+# Apply all pending migrations
+migrate:
+    sqlx migrate run
+
+# Revert the latest migration
+migrate-revert:
+    sqlx migrate revert
+
+# -- Misc ----------------------------------------------------------------------
+
+# Wipe build artifacts (keep target/ to avoid re-downloading deps if possible)
+clean:
+    cargo clean
+
+# Quick connection check — does our .env reach Neon + R2 ?
+preflight:
+    cargo run --bin diligently-api --quiet -- --check-only || echo "(no --check-only flag yet; ignore)"

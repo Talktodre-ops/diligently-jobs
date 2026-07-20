@@ -1,0 +1,175 @@
+import { ChatConversation } from "@/types";
+import { Markdown } from "../Markdown";
+import { Button, Card } from "../ui";
+import {
+  BotIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DownloadIcon,
+  HeadphonesIcon,
+} from "lucide-react";
+import { useState } from "react";
+import { QuickActions } from "./QuickActions";
+
+type Props = {
+  lastTranscription: string;
+  lastAIResponse: string;
+  isAIProcessing: boolean;
+  conversation: ChatConversation;
+  startNewConversation: () => void;
+  exportConversation?: () => void;
+  quickActions: string[];
+  addQuickAction: (action: string) => void;
+  removeQuickAction: (action: string) => void;
+  isManagingQuickActions: boolean;
+  setIsManagingQuickActions: (isManaging: boolean) => void;
+  showQuickActions: boolean;
+  setShowQuickActions: (show: boolean) => void;
+  handleQuickActionClick: (action: string) => void;
+};
+
+export const OperationSection = ({
+  lastTranscription,
+  lastAIResponse,
+  isAIProcessing,
+  conversation,
+  startNewConversation,
+  exportConversation,
+  quickActions,
+  addQuickAction,
+  removeQuickAction,
+  isManagingQuickActions,
+  setIsManagingQuickActions,
+  showQuickActions,
+  setShowQuickActions,
+  handleQuickActionClick,
+}: Props) => {
+  const [openConversation, setOpenConversation] = useState(true);
+  return (
+    <div className="space-y-4">
+      {/* AI Response */}
+      {(lastAIResponse || isAIProcessing) && (
+        <>
+          <QuickActions
+            actions={quickActions}
+            onActionClick={handleQuickActionClick}
+            onAddAction={addQuickAction}
+            onRemoveAction={removeQuickAction}
+            isManaging={isManagingQuickActions}
+            setIsManaging={setIsManagingQuickActions}
+            show={showQuickActions}
+            setShow={setShowQuickActions}
+          />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <BotIcon className="w-3 h-3" />
+              <h3 className="font-semibold text-xs">{`AI Assistant - answering to "${lastTranscription}"`}</h3>
+            </div>
+            {/* Card also has overflow-x-hidden + min-w-0 as belt-and-
+                suspenders — without it, a Mermaid diagram wider than the
+                card could still push the row wider via flexbox/min-width
+                auto, even with the popover-level clipping above. */}
+            <Card className="p-3 bg-transparent max-w-full overflow-x-hidden min-w-0">
+              {isAIProcessing && !lastAIResponse ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full animate-pulse" />
+                  <p className="text-xs italic">Generating response...</p>
+                </div>
+              ) : (
+                // div, NOT p — Markdown produces block elements (pre, div,
+                // table, etc.) that are invalid inside <p>. Browsers
+                // silently re-parent which trips React commit ("Can only
+                // set one of children or dangerouslySetInnerHTML") and
+                // unmounts the whole tree mid-stream.
+                <div className="text-md leading-relaxed max-w-full overflow-x-hidden min-w-0">
+                  {lastAIResponse ? (
+                    <Markdown>{lastAIResponse}</Markdown>
+                  ) : null}
+                  {isAIProcessing && (
+                    <span className="inline-block w-2 h-4 animate-pulse ml-1" />
+                  )}
+                </div>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+
+      {conversation.messages.length > 2 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3
+              className="font-semibold text-md w-full cursor-pointer"
+              onClick={() => setOpenConversation(!openConversation)}
+            >
+              Conversations
+            </h3>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setOpenConversation(!openConversation)}
+              >
+                {openConversation ? (
+                  <ChevronDownIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronUpIcon className="h-4 w-4" />
+                )}
+              </Button>
+              {exportConversation && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={exportConversation}
+                  title="Export conversation as Markdown"
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  startNewConversation();
+                  setOpenConversation(false);
+                }}
+              >
+                Start New
+              </Button>
+            </div>
+          </div>
+
+          {openConversation ? (
+            <>
+              {conversation.messages.length > 2 &&
+                conversation?.messages
+                  ?.slice(2)
+                  .sort((a, b) => b.timestamp - a.timestamp)
+                  .map((message) => (
+                    <div
+                      key={message.id}
+                      className="space-y-3 flex flex-row gap-2"
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                          {message.role === "user" ? (
+                            <HeadphonesIcon className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <BotIcon className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                      <Card className="p-3 bg-transparent">
+                        {/* div not p — Markdown emits block elements */}
+                        <div className="text-sm leading-relaxed">
+                          <Markdown>{message.content}</Markdown>
+                        </div>
+                      </Card>
+                    </div>
+                  ))}
+            </>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+};

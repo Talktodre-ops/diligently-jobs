@@ -1,0 +1,11 @@
+Copyright (c) 2026 Diligently. All rights reserved.
+
+This software is provided as a private, all-rights-reserved work in progress
+during a clean-room rewrite of code originally derived from Pluely (MIT,
+Copyright (c) 2025 Srikanth Nani). Until that rewrite is complete, the upstream
+MIT terms continue to apply to any derived portions; see
+`third-party-notices/pluely-mit.txt` and `CLEANROOM.md` for the per-file status
+of derivation vs. clean-room work.
+
+Once the clean-room rewrite is complete and `CLEANROOM.md` shows zero remaining
+derived files, this LICENSE will be replaced with the final license of choice.

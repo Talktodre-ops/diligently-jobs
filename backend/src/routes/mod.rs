@@ -1,0 +1,12 @@
+pub mod applications;
+pub mod ats_scores;
+pub mod blobs;
+pub mod cover_letters;
+pub mod cv_versions;
+pub mod events;
+pub mod health;
+pub mod interviews;
+pub mod jobs;
+pub mod me;
+pub mod proposals;
+pub mod research;

@@ -1,0 +1,36 @@
+# Dev Dockerfile — keeps the Rust toolchain in the image so `cargo watch` can
+# rebuild inside the container on file change. Volume-mount your source to /app.
+# Much slower to start than the prod image but iteration is sub-second after
+# the first build.
+
+FROM rust:1.83-bookworm
+
+ARG TECTONIC_VERSION=0.15.0
+
+WORKDIR /app
+
+# cargo-watch for hot reload; sqlx-cli for migrations from the host shell
+RUN cargo install cargo-watch --locked --version ^8 \
+ && cargo install sqlx-cli --locked --version ^0.8 --no-default-features --features rustls,postgres
+
+# Install tectonic for the cv_render job. Single static musl binary; fetches
+# any missing LaTeX packages from the TeX Live archive on first compile and
+# caches them per-user under ~/.cache/Tectonic.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl fontconfig libfontconfig1 libgraphite2-3 libharfbuzz0b libicu72 \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+      | tar -xz -C /usr/local/bin tectonic \
+ && chmod +x /usr/local/bin/tectonic \
+ && /usr/local/bin/tectonic --version
+
+# Pre-warm the Cargo registry so the first volume-mounted build is faster
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo fetch && rm -rf src
+
+EXPOSE 8787
+
+ENV RUST_LOG=diligently_api=debug,tower_http=info,sqlx=warn
+
+# Default command — overridden by compose to add `cargo watch -x run`
+CMD ["cargo", "run", "--bin", "diligently-api"]

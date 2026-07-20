@@ -1,0 +1,177 @@
+%-------------------------
+% Resume in LaTeX
+% Sample / placeholder template for Diligently CV rendering.
+% Based on: Sourabh Bajaj
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{fontawesome5}
+\usepackage{multicol}
+\setlength{\multicolsep}{-3.0pt}
+\setlength{\columnsep}{-1pt}
+% glyphtounicode is a pdfTeX-only file. Skip under XeTeX/LuaTeX (which the
+% backend uses via Tectonic) — both engines emit unicode-correct PDFs without
+% this hack, so ATS parsability is unaffected.
+\ifx\pdfgentounicode\undefined\else
+  \input{glyphtounicode}
+\fi
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.6in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1.19in}
+\addtolength{\topmargin}{-.7in}
+\addtolength{\textheight}{1.4in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large\bfseries
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generated pdf is machine readable/ATS parsable.
+% pdfTeX-only — guarded so XeTeX/LuaTeX (Tectonic) silently skip it.
+\ifx\pdfgentounicode\undefined\else
+  \pdfgentounicode=1
+\fi
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{1.0\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & \textbf{\small #2} \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{1.001\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & \textbf{\small #2}\\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemi{$\vcenter{\hbox{\tiny$\bullet$}}$}
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape Jane Doe} \\ \vspace{1pt}
+    {\Large Software Engineer} \\ \vspace{8pt}
+    \small
+    \href{mailto:jane.doe@example.com}{\raisebox{-0.2\height}\faEnvelope\  \underline{jane.doe@example.com}} ~
+    \href{https://www.linkedin.com/in/janedoe/}{\raisebox{-0.2\height}\faLinkedin\ \underline{linkedin.com/in/janedoe}}  ~
+    \href{https://github.com/janedoe}{\raisebox{-0.2\height}\faGithub\ \underline{github.com/janedoe}} ~
+    \href{https://example.com/}{\raisebox{-0.2\height}\faGlobe\ \underline{example.com}}
+    \vspace{-8pt}
+\end{center}
+
+%-----------PROFESSIONAL SUMMARY-----------
+\section{Professional Summary}
+\small{Software engineer with experience building and shipping reliable backend and full-stack systems. Comfortable across the full development lifecycle — design, implementation, testing, and deployment — with a focus on clean, maintainable code and measurable outcomes. This is placeholder text; replace it with your own summary.}
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Software Engineer}{Jan. 2023 -- Present}
+      {Example Corp}{Remote}
+      \resumeItemListStart
+        \resumeItem{Built and maintained backend services handling production traffic, improving reliability and reducing error rates.}
+        \resumeItem{Designed and shipped new features end to end, from API design through to the user-facing interface.}
+        \resumeItem{Improved system performance through profiling, caching, and query optimization.}
+        \resumeItem{Collaborated with cross-functional teams to scope, estimate, and deliver work on schedule.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Junior Software Engineer}{Jun. 2021 -- Dec. 2022}
+      {Sample Inc}{Remote}
+      \resumeItemListStart
+        \resumeItem{Implemented and tested features across the stack under mentorship from senior engineers.}
+        \resumeItem{Wrote automated tests and helped set up CI pipelines to catch regressions early.}
+        \resumeItem{Contributed to code reviews and internal documentation.}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+\vspace{-16pt}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {State University}{City, Country}
+      {Bachelor of Science in Computer Science}{2017 -- 2021}
+  \resumeSubHeadingListEnd
+
+%-----------TECHNICAL SKILLS-----------
+\section{Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: Python, JavaScript, TypeScript, SQL, Rust} \\
+     \textbf{Frameworks \& Tools}{: React, Node.js, FastAPI, PostgreSQL, Docker, Git} \\
+     \textbf{Cloud \& DevOps}{: AWS, CI/CD, Kubernetes, Terraform} \\
+     \textbf{Practices}{: Testing, Code Review, Agile, System Design} \\
+    }}
+ \end{itemize}
+ \vspace{-16pt}
+
+%-----------PROJECTS & ACHIEVEMENTS-----------
+\section{Projects \& Achievements}
+    \resumeItemListStart
+      \resumeItem{\textbf{Sample Project}: A short description of a project you built, the tech you used, and the impact it had.}
+      \resumeItem{\textbf{Open Source}: A contribution or personal project worth highlighting: \href{https://github.com/janedoe}{GitHub}}
+      \resumeItem{Add your own achievements here — awards, talks, certifications, or notable results.}
+    \resumeItemListEnd
+
+\end{document}

@@ -1,0 +1,22 @@
+# Build artifacts
+target/
+*.pdb
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Docker build context noise
+*.log
+
+# Local-only third-party binaries (e.g. Tectonic on Windows dev machines).
+# Docker images install Tectonic at build time; nothing in `tools/` belongs
+# in source control.
+tools/

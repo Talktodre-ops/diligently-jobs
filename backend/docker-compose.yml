@@ -1,0 +1,55 @@
+# Dev compose. Source is volume-mounted so saves trigger cargo-watch rebuild
+# inside the running container without restarting compose.
+#
+# Usage:
+#   docker compose up        # foreground
+#   docker compose up -d     # background
+#   docker compose logs -f   # tail
+#   docker compose down      # stop
+#
+# Database = Neon (cloud), so no local postgres service needed. If you ever
+# want a local PG for offline dev, uncomment the `postgres` service below and
+# swap DATABASE_URL.
+
+services:
+  api:
+    container_name: diligently-api
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: >
+      sh -c "cargo watch -q -c -w src -w migrations -w Cargo.toml -x 'run --bin diligently-api'"
+    env_file:
+      - .env
+    ports:
+      - "8787:8787"
+    volumes:
+      # Source — synced to container for cargo-watch
+      - ./src:/app/src
+      - ./migrations:/app/migrations
+      - ./Cargo.toml:/app/Cargo.toml
+      - ./Cargo.lock:/app/Cargo.lock
+      # Persist target/ between runs so we don't rebuild deps every restart
+      - cargo-target:/app/target
+      - cargo-registry:/usr/local/cargo/registry
+    restart: unless-stopped
+
+  # Uncomment to run a local Postgres alongside the api (offline dev).
+  # Remember to also update DATABASE_URL in .env to:
+  #   postgresql://diligently:diligently@postgres:5432/diligently
+  #
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_DB: diligently
+  #     POSTGRES_USER: diligently
+  #     POSTGRES_PASSWORD: diligently
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  cargo-target:
+  cargo-registry:
+  # postgres-data:

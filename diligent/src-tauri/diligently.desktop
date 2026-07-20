@@ -1,0 +1,26 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Diligently
+Comment=Diligently — a privacy-first desktop AI copilot for job applications, interviews, and meetings.
+Exec=diligently
+Icon=diligently
+Terminal=false
+Categories=Utility;AudioVideo;Audio;Office;
+Keywords=ai;assistant;voice;speech;microphone;meeting;interview;cv;resume;job;privacy;
+StartupNotify=true
+StartupWMClass=diligently
+MimeType=audio/wav;audio/mp3;audio/ogg;
+
+# Permissions for microphone access
+X-GNOME-UsesNotifications=true
+X-KDE-SubstituteUID=false
+X-GNOME-SingleWindow=false
+
+# Flatpak permissions (if packaged as Flatpak)
+X-Flatpak-Permission=device=dri
+X-Flatpak-Permission=device=all
+X-Flatpak-Permission=socket=pulseaudio
+X-Flatpak-Permission=socket=fallback-x11
+X-Flatpak-Permission=socket=wayland
+X-Flatpak-Permission=env=PULSE_SERVER=unix:/run/user/1000/pulse/native

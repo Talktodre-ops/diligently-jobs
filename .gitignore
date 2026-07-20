@@ -1,0 +1,110 @@
+# =============================================================================
+# Diligetly — root .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Working notes and planning docs — kept local, never shipped
+# -----------------------------------------------------------------------------
+TASKS.md
+**/TASKS.md
+diligent/src-tauri/my-archi.md
+NOTES.md
+**/NOTES.md
+SCRATCH.md
+
+# -----------------------------------------------------------------------------
+# Kami — sibling project, forked separately, not part of Diligetly
+# -----------------------------------------------------------------------------
+Kami/
+
+# -----------------------------------------------------------------------------
+# Secrets — never commit
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.env.local
+**/.env
+!**/.env.example
+
+# Preserved upstream .git from forks — internal artifact, don't commit
+**/.git.pluely-upstream/
+**/.git.upstream/
+
+# -----------------------------------------------------------------------------
+# Frontend (Node / Vite / Tauri webview)
+# -----------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+.vite/
+**/.vite/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# Rust / Cargo / Tauri
+# -----------------------------------------------------------------------------
+target/
+**/target/
+**/src-tauri/gen/schemas/
+*.pdb
+
+# Vendored platform binaries — install tectonic yourself, or use Docker (bundles it)
+backend/tools/
+*.exe
+
+# -----------------------------------------------------------------------------
+# Stealth test harness artifacts (screenshots, logs, captures)
+# -----------------------------------------------------------------------------
+diligent/tests/stealth/results/
+**/tests/stealth/results/
+
+# -----------------------------------------------------------------------------
+# IDE / editor / OS noise
+# -----------------------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Claude Code per-project config — settings.local.json caches bearer tokens
+# inside permission grants, so it MUST be gitignored.
+# -----------------------------------------------------------------------------
+.claude.json
+.claude/state/
+.claude/projects/
+.claude/settings.local.json
+**/.claude/settings.local.json
+
+# -----------------------------------------------------------------------------
+# Local cached agent / model artifacts
+# -----------------------------------------------------------------------------
+*.onnx.cache
+*.cache/
+
+# Scratch screenshots / generated CV outputs (not app assets)
+images/image copy*.png
+images/generated-*.pdf
+
+# -----------------------------------------------------------------------------
+# Local build-tracking artifacts for the open-sourcing effort (never shipped)
+# -----------------------------------------------------------------------------
+/PROGRESS.md
