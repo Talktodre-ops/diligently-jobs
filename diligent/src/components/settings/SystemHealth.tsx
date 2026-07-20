@@ -27,9 +27,7 @@ interface Check {
 export const SystemHealth = () => {
   const [checks, setChecks] = useState<Check[]>([
     { id: "anthropic", label: "Anthropic API key", status: "unknown" },
-    { id: "deepgram", label: "Deepgram API key", status: "unknown" },
     { id: "backend", label: "Backend reachable", status: "unknown" },
-    { id: "audio", label: "System audio access", status: "unknown" },
   ]);
   const [running, setRunning] = useState(false);
 
@@ -75,37 +73,7 @@ export const SystemHealth = () => {
         }
       })(),
 
-      // 2. Deepgram key — same presence-only pattern. Reuses the existing
-      //    provider lookup (DEEPGRAM_API_KEY is read by the Rust capture
-      //    path, not via get_ai_provider_api_key, so we just probe whether
-      //    a Deepgram-dependent command would succeed via a side-effect-
-      //    free env read).
-      (async () => {
-        try {
-          const key = await invoke<string | null>("get_deepgram_api_key_cmd");
-          if (key && key.trim()) {
-            setCheck("deepgram", {
-              status: "ok",
-              detail: `key found (${key.slice(0, 12)}…)`,
-            });
-          } else {
-            setCheck("deepgram", {
-              status: "fail",
-              detail: "DEEPGRAM_API_KEY not set in src-tauri/.env",
-            });
-          }
-        } catch (e) {
-          // Command might not be registered yet — show as unknown so the
-          // dashboard doesn't lie about a "fail" when the issue is just
-          // the probe being missing.
-          setCheck("deepgram", {
-            status: "unknown",
-            detail: "probe unavailable in this build",
-          });
-        }
-      })(),
-
-      // 3. Backend reachable — uses the existing /health endpoint.
+      // 2. Backend reachable — uses the existing /health endpoint.
       (async () => {
         try {
           const h = await getHealth();
@@ -129,26 +97,6 @@ export const SystemHealth = () => {
           });
         }
       })(),
-
-      // 4. System audio access — calls the Rust check command.
-      (async () => {
-        try {
-          const ok = await invoke<boolean>("check_system_audio_access");
-          if (ok) {
-            setCheck("audio", { status: "ok", detail: "input device ready" });
-          } else {
-            setCheck("audio", {
-              status: "fail",
-              detail: "no default input device or permission denied",
-            });
-          }
-        } catch (e) {
-          setCheck("audio", {
-            status: "fail",
-            detail: e instanceof Error ? e.message : String(e),
-          });
-        }
-      })(),
     ]);
 
     setRunning(false);
@@ -166,7 +114,7 @@ export const SystemHealth = () => {
         <div className="flex flex-col">
           <h3 className="font-semibold text-sm">System health</h3>
           <p className="text-xs text-muted-foreground">
-            Quick diagnostic for the four subsystems interview mode depends on.
+            Quick diagnostic for the app's LLM key and backend connection.
           </p>
         </div>
         <Button

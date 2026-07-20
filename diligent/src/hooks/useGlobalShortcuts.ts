@@ -4,14 +4,12 @@ import { useCallback, useEffect, useRef } from "react";
 
 interface Shortcuts {
   toggle: string;
-  audio: string;
   screenshot: string;
 }
 
 // Global singleton to prevent multiple event listeners in StrictMode
 let globalEventListeners: {
   focus?: UnlistenFn;
-  audio?: UnlistenFn;
   screenshot?: UnlistenFn;
 } = {};
 
@@ -20,7 +18,6 @@ let lastScreenshotEventTime = 0;
 
 export const useGlobalShortcuts = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const audioCallbackRef = useRef<(() => void) | null>(null);
   const screenshotCallbackRef = useRef<(() => void) | null>(null);
 
   const checkShortcutsRegistered = useCallback(async (): Promise<boolean> => {
@@ -48,11 +45,6 @@ export const useGlobalShortcuts = () => {
     inputRef.current = input;
   }, []);
 
-  // Register audio callback
-  const registerAudioCallback = useCallback((callback: () => void) => {
-    audioCallbackRef.current = callback;
-  }, []);
-
   // Register screenshot callback
   const registerScreenshotCallback = useCallback((callback: () => void) => {
     screenshotCallbackRef.current = callback;
@@ -68,13 +60,6 @@ export const useGlobalShortcuts = () => {
             globalEventListeners.focus();
           } catch (error) {
             console.warn("Error cleaning up focus listener:", error);
-          }
-        }
-        if (globalEventListeners.audio) {
-          try {
-            globalEventListeners.audio();
-          } catch (error) {
-            console.warn("Error cleaning up audio listener:", error);
           }
         }
         if (globalEventListeners.screenshot) {
@@ -95,14 +80,6 @@ export const useGlobalShortcuts = () => {
           }, 100);
         });
         globalEventListeners.focus = unlistenFocus;
-
-        // Listen for audio recording event
-        const unlistenAudio = await listen("start-audio-recording", () => {
-          if (audioCallbackRef.current) {
-            audioCallbackRef.current();
-          }
-        });
-        globalEventListeners.audio = unlistenAudio;
 
         // Listen for screenshot trigger event with debouncing
         const unlistenScreenshot = await listen("trigger-screenshot", () => {
@@ -133,7 +110,6 @@ export const useGlobalShortcuts = () => {
     checkShortcutsRegistered,
     getShortcuts,
     registerInputRef,
-    registerAudioCallback,
     registerScreenshotCallback,
   };
 };

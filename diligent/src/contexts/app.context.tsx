@@ -2,7 +2,6 @@ import {
   AI_PROVIDERS,
   DEFAULT_SYSTEM_PROMPT,
   DEFAULT_SCREENSHOT_AUTO_PROMPT,
-  SPEECH_TO_TEXT_PROVIDERS,
   STORAGE_KEYS,
 } from "@/config";
 import { safeLocalStorage } from "@/lib";
@@ -296,11 +295,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ...customAiProviders,
   ];
 
-  // Computed all STT providers
-  const allSttProviders: TYPE_PROVIDER[] = [
-    ...SPEECH_TO_TEXT_PROVIDERS,
-    ...customSttProviders,
-  ];
+  // Computed all STT providers. NOTE: STT/voice was removed for the
+  // open-source jobs build; this residual plumbing is dead (no UI feeds it)
+  // and should be fully stripped in a follow-up cleanup.
+  const allSttProviders: TYPE_PROVIDER[] = [...customSttProviders];
 
   const onSetSelectedAIProvider = ({
     provider,
