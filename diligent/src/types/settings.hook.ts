@@ -14,17 +14,8 @@ export interface UseSettingsReturn {
   handleScreenshotPromptChange: (value: string) => void;
   handleScreenshotEnabledChange: (enabled: boolean) => void;
   allAiProviders: TYPE_PROVIDER[];
-  allSttProviders: TYPE_PROVIDER[];
   selectedAIProvider: { provider: string; variables: Record<string, string> };
-  selectedSttProvider: {
-    provider: string;
-    variables: Record<string, string>;
-  };
   onSetSelectedAIProvider: (provider: {
-    provider: string;
-    variables: Record<string, string>;
-  }) => void;
-  onSetSelectedSttProvider: (provider: {
     provider: string;
     variables: Record<string, string>;
   }) => void;
@@ -32,5 +23,4 @@ export interface UseSettingsReturn {
   showDeleteConfirmDialog: boolean;
   setShowDeleteConfirmDialog: React.Dispatch<React.SetStateAction<boolean>>;
   variables: { key: string; value: string }[];
-  sttVariables: { key: string; value: string }[];
 }

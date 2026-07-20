@@ -18,19 +18,6 @@ export type IContextType = {
     provider: string;
     variables: Record<string, string>;
   }) => void;
-  allSttProviders: TYPE_PROVIDER[];
-  customSttProviders: TYPE_PROVIDER[];
-  selectedSttProvider: {
-    provider: string;
-    variables: Record<string, string>;
-  };
-  onSetSelectedSttProvider: ({
-    provider,
-    variables,
-  }: {
-    provider: string;
-    variables: Record<string, string>;
-  }) => void;
   screenshotConfiguration: ScreenshotConfig;
   setScreenshotConfiguration: React.Dispatch<
     React.SetStateAction<ScreenshotConfig>
