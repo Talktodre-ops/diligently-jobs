@@ -1,12 +1,12 @@
 [package]
 name = "diligently_app"
 version = "0.1.4"
-description = "Diligently — a privacy-first desktop AI copilot for job applications, interviews, and meetings."
+description = "Desktop AI copilot for job applications — JD tailoring, CV & cover-letter generation, and company research."
 authors = ["ANDERSON Victor (@Talktodre-ops)"]
-license = "UNLICENSED"
+license = "MIT"
 readme = "../README.md"
-keywords = ["ai-assistant", "tauri", "desktop-app", "privacy-first", "interview-copilot"]
-categories = ["gui", "multimedia", "accessibility", "science"]
+keywords = ["ai-assistant", "tauri", "desktop-app", "job-search", "cv-tailoring"]
+categories = ["gui"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -1,0 +1,22 @@
+Diligently
+==========
+
+Copyright (c) 2026 ANDERSON Victor (@Talktodre-ops)
+Licensed under the MIT License (see LICENSE).
+
+Origin and attribution
+-----------------------
+Diligently began as a fork of Pluely (MIT, Copyright (c) 2025 Srikanth Nani).
+Portions of the desktop shell are derived from that project. The upstream MIT
+license is retained in full at:
+
+    third-party-notices/pluely-mit.txt
+
+Per the MIT terms, that copyright and permission notice must be preserved in
+all copies or substantial portions of the software.
+
+Third-party components
+----------------------
+This project also uses shadcn/ui primitives (MIT) and other open-source
+dependencies listed in package.json / Cargo.toml under their respective
+licenses.
