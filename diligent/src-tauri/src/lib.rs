@@ -3,9 +3,7 @@ mod window;
 mod shortcuts;
 mod activate;
 mod api;
-mod clipboard;
 mod research;
-mod stealth;
 
 #[cfg(target_os = "macos")]
 use tauri_plugin_macos_permissions;
@@ -39,30 +37,6 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
-}
-
-/// Toggle mouse pass-through (WS_EX_TRANSPARENT) on the main window.
-/// On non-Windows targets this is a no-op until macOS parity ships.
-#[tauri::command]
-fn set_click_through(window: tauri::WebviewWindow, enabled: bool) -> Result<(), String> {
-    stealth::set_click_through(&window, enabled);
-    Ok(())
-}
-
-/// Returns true if mouse pass-through is currently enabled on the main window.
-#[tauri::command]
-fn get_click_through() -> bool {
-    stealth::is_click_through()
-}
-
-/// Stealth copy: read the currently-selected text in the focused window via
-/// UI Automation and put it on the system clipboard. Bypasses host-page
-/// Ctrl+C/copy-event blockers because the read happens at the OS
-/// accessibility layer — no key event reaches the browser. Returns the
-/// copied text on success, or a category-prefixed error string on failure.
-#[tauri::command]
-fn stealth_copy_selection() -> Result<String, String> {
-    clipboard::copy_focused_selection()
 }
 
 /// JS log forwarder. In Tauri 2, JS console.log goes only to the webview's
@@ -233,10 +207,7 @@ pub fn run() {
             greet,
             get_app_version,
             set_window_height,
-            set_click_through,
-            get_click_through,
             capture_to_base64,
-            stealth_copy_selection,
             dev_log,
             save_file_to_downloads,
             shortcuts::get_shortcuts,

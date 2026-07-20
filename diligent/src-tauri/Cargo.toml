@@ -17,11 +17,8 @@ edition = "2021"
 name = "diligently_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
-# Stealth: the produced executable is `LocalAssistant.exe`, not `diligently_app.exe`.
-# This is what shows up in Task Manager / tasklist / Get-Process and is the most visible
-# stealth tell after window-level capture exclusion. See TASKS.md Track 3D.
 [[bin]]
-name = "LocalAssistant"
+name = "diligently"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -56,16 +53,5 @@ windows = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Dwm",
-    # UI Automation — lets us read text from the focused control of any
-    # accessibility-exposed app (Chrome, Edge, Firefox all expose their DOM
-    # via UIA for screen readers). Powers the F13 "stealth copy" flow that
-    # bypasses host-page JS Ctrl+C blockers entirely — no key event reaches
-    # the browser, the read happens at the OS accessibility layer.
-    "Win32_UI_Accessibility",
     "Win32_System_Com",
-    "Win32_System_Variant",
-    "Win32_System_Ole",
-    # Clipboard — SetClipboardData(CF_UNICODETEXT) for the stealth-copy path.
-    "Win32_System_DataExchange",
-    "Win32_System_Memory",
 ] }

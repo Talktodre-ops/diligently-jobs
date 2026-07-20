@@ -1,11 +1,9 @@
 use tauri::{Manager, App, WebviewWindow};
 
-use crate::stealth;
-
 // The offset from the top of the screen to the window
 const TOP_OFFSET: i32 = 54;
 
-/// Sets up the main window with custom positioning + stealth styles.
+/// Sets up the main window with custom positioning.
 pub fn setup_main_window(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     // Try different possible window labels
     let window = app.get_webview_window("main")
@@ -17,7 +15,6 @@ pub fn setup_main_window(app: &mut App) -> Result<(), Box<dyn std::error::Error>
         .ok_or("No window found")?;
 
     position_window_top_center(&window, TOP_OFFSET)?;
-    stealth::apply_stealth_styles(&window);
 
     Ok(())
 }

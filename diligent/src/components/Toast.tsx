@@ -198,13 +198,6 @@ export function useGlobalToastListeners() {
           );
         }
       );
-
-      // No listener for "stealth-copy-result" by design: F13 must produce
-      // ZERO on-screen feedback (WDA_EXCLUDEFROMCAPTURE hides the toast
-      // from screen capture, but a human observer would still see it).
-      // The clipboard change itself is the confirmation — paste to verify.
-      // Rust still emits the event for diagnostic completeness; the eprintln
-      // on the Rust side ([stealth-copy] copied N chars) is the debug path.
     })();
 
     return () => {

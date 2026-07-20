@@ -16,58 +16,10 @@ const DEFAULT_SCREENSHOT_SHORTCUT: &str = "cmd+shift+s";
 #[cfg(not(target_os = "macos"))]
 const DEFAULT_SCREENSHOT_SHORTCUT: &str = "ctrl+shift+s";
 
-// Click-through toggle hotkey. Iterated twice — Ctrl+Shift+P collided with
-// VSCode's Command Palette (Windows' RegisterHotKey is first-come-first-
-// served, so VSCode's registration shadowed ours); Ctrl+Alt+C collided
-// with an OEM laptop command. Alt+F-key combos are essentially never
-// claimed by mainstream apps OR by Windows/OEM utilities.
-//
-// If Alt+F9 also conflicts on a specific machine, the startup log will
-// print "[shortcuts] failed to register click-through shortcut: ..." and
-// the frontend gets a `shortcut-conflict` event. Pick another from this
-// pool — all are well-unused: alt+f9, alt+f10, alt+f12, ctrl+alt+shift+c.
-#[cfg(target_os = "macos")]
-const DEFAULT_CLICK_THROUGH_SHORTCUT: &str = "alt+f9";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_CLICK_THROUGH_SHORTCUT: &str = "alt+f9";
-
-// Stealth copy hotkey. F13 is virtually never owned by any application or
-// OEM utility — it doesn't exist on most physical keyboards, which means
-// nothing claims it. Users remap a free key (ScrollLock, Right-Ctrl) to F13
-// via PowerToys Keyboard Manager. Picking F13 keeps us out of conflict with
-// any host page that wires up Ctrl+C / Ctrl+A intercepts (those handlers
-// never fire — no Ctrl modifier in our chord).
-#[cfg(target_os = "macos")]
-const DEFAULT_STEALTH_COPY_SHORTCUT: &str = "f13";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_STEALTH_COPY_SHORTCUT: &str = "f13";
-
-// Stealth select-all-and-copy chord. PowerToys remap (Keyboard Manager →
-// Remap a shortcut): F13 + A → Alt + F23. We can't register F13+A directly
-// because Win32 RegisterHotKey only accepts Alt/Ctrl/Shift/Win as modifier
-// slots — F13 isn't a valid modifier there. Alt+F23 is the target because
-// no mainstream app claims F-keys above F12 with the Alt modifier.
-#[cfg(target_os = "macos")]
-const DEFAULT_STEALTH_SELECT_ALL_SHORTCUT: &str = "alt+f23";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_STEALTH_SELECT_ALL_SHORTCUT: &str = "alt+f23";
-
-// Stealth copy alias chord. PowerToys remap: F13 + C → Alt + F24. Behaves
-// identically to F13 alone — both call copy_focused_selection — but lets
-// users with Ctrl+C muscle memory hit F13+C and have it Just Work.
-#[cfg(target_os = "macos")]
-const DEFAULT_STEALTH_COPY_ALIAS_SHORTCUT: &str = "alt+f24";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_STEALTH_COPY_ALIAS_SHORTCUT: &str = "alt+f24";
-
 /// Initialize global shortcuts for the application
 pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let toggle_shortcut = DEFAULT_TOGGLE_SHORTCUT.parse::<Shortcut>()?;
     let screenshot_shortcut = DEFAULT_SCREENSHOT_SHORTCUT.parse::<Shortcut>()?;
-    let click_through_shortcut = DEFAULT_CLICK_THROUGH_SHORTCUT.parse::<Shortcut>()?;
-    let stealth_copy_shortcut = DEFAULT_STEALTH_COPY_SHORTCUT.parse::<Shortcut>()?;
-    let stealth_select_all_shortcut = DEFAULT_STEALTH_SELECT_ALL_SHORTCUT.parse::<Shortcut>()?;
-    let stealth_copy_alias_shortcut = DEFAULT_STEALTH_COPY_ALIAS_SHORTCUT.parse::<Shortcut>()?;
 
     // Defensive cleanup BEFORE any on_shortcut calls. The tauri global-
     // shortcut plugin's internal registry can carry stale registrations
@@ -77,11 +29,7 @@ pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<
     // out of the whole setup, leaving every shortcut after it unbound.
     // Best-effort: unregister can fail (e.g. we never owned the shortcut)
     // and that's fine, we proceed regardless.
-    for sc in [
-        toggle_shortcut, screenshot_shortcut,
-        click_through_shortcut, stealth_copy_shortcut,
-        stealth_select_all_shortcut, stealth_copy_alias_shortcut,
-    ] {
+    for sc in [toggle_shortcut, screenshot_shortcut] {
         let _ = app.global_shortcut().unregister(sc);
     }
 
@@ -113,55 +61,6 @@ pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<
         failed.push("screenshot");
     } else {
         registered.push("screenshot");
-    }
-
-    let app_handle = app.clone();
-    if let Err(e) = app.global_shortcut().on_shortcut(click_through_shortcut, move |_app, _shortcut, event| {
-        if event.state() == ShortcutState::Pressed {
-            handle_click_through_shortcut(&app_handle);
-        }
-    }) {
-        eprintln!("[shortcuts] failed to register click-through: {e}");
-        failed.push("click-through");
-    } else {
-        registered.push("click-through");
-    }
-
-    let app_handle = app.clone();
-    if let Err(e) = app.global_shortcut().on_shortcut(stealth_copy_shortcut, move |_app, _shortcut, event| {
-        if event.state() == ShortcutState::Pressed {
-            handle_stealth_copy_shortcut(&app_handle);
-        }
-    }) {
-        eprintln!("[shortcuts] failed to register stealth-copy: {e}");
-        failed.push("stealth-copy");
-    } else {
-        registered.push("stealth-copy");
-    }
-
-    let app_handle = app.clone();
-    if let Err(e) = app.global_shortcut().on_shortcut(stealth_select_all_shortcut, move |_app, _shortcut, event| {
-        if event.state() == ShortcutState::Pressed {
-            handle_stealth_select_all_shortcut(&app_handle);
-        }
-    }) {
-        eprintln!("[shortcuts] failed to register stealth-select-all: {e}");
-        failed.push("stealth-select-all");
-    } else {
-        registered.push("stealth-select-all");
-    }
-
-    let app_handle = app.clone();
-    if let Err(e) = app.global_shortcut().on_shortcut(stealth_copy_alias_shortcut, move |_app, _shortcut, event| {
-        if event.state() == ShortcutState::Pressed {
-            // Same handler as bare F13 — F13+C is just an ergonomic alias.
-            handle_stealth_copy_shortcut(&app_handle);
-        }
-    }) {
-        eprintln!("[shortcuts] failed to register stealth-copy-alias: {e}");
-        failed.push("stealth-copy-alias");
-    } else {
-        registered.push("stealth-copy-alias");
     }
 
     // Single startup summary so we can confirm what's bound when a user
@@ -243,106 +142,12 @@ fn handle_screenshot_shortcut<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Handle click-through (mouse pass-through) shortcut. Toggles BOTH:
-/// - Tauri's `set_ignore_cursor_events` (the cross-platform API; on Windows
-///   it manages WS_EX_LAYERED + WS_EX_TRANSPARENT together which is what
-///   actually makes clicks pass through)
-/// - Our custom `stealth::set_click_through` which keeps a mutex state so
-///   `is_click_through()` queries stay accurate, and toggles WS_EX_TRANSPARENT
-///   directly as belt-and-suspenders.
-///
-/// Both calls are necessary — without `set_ignore_cursor_events`, the
-/// global shortcut couldn't *disable* a state set by the JS-side button
-/// (the JS path uses set_ignore_cursor_events to enable, and a Rust-only
-/// WS_EX_TRANSPARENT clear wouldn't unset the LAYERED + cursor-events flags).
-fn handle_click_through_shortcut<R: Runtime>(app: &AppHandle<R>) {
-    let Some(window) = app.get_webview_window("main") else {
-        eprintln!("Main window not found for click-through toggle");
-        return;
-    };
-    let next = !crate::stealth::is_click_through();
-    if let Err(e) = window.set_ignore_cursor_events(next) {
-        eprintln!("set_ignore_cursor_events failed: {e}");
-    }
-    crate::stealth::set_click_through(&window, next);
-    if let Err(e) = window.emit("click-through-changed", next) {
-        eprintln!("Failed to emit click-through-changed event: {}", e);
-    }
-}
-
-/// Handle the stealth-copy hotkey (F13 tap, or F13+C alias).
-///
-/// Uses UIA to read the currently-selected text in the focused window and
-/// writes it to the system clipboard. Bypasses the host-page Ctrl+C/copy-
-/// event blockers entirely — no keyboard or clipboard event reaches the
-/// browser's JS.
-///
-/// Emits a `stealth-copy-result` event for completeness; no UI listener is
-/// wired (visible feedback would defeat stealth). Diagnostic feedback lives
-/// in the eprintln below — run the app via `npm run tauri dev` to see it.
-fn handle_stealth_copy_shortcut<R: Runtime>(app: &AppHandle<R>) {
-    let payload = match crate::clipboard::copy_focused_selection() {
-        Ok(text) => {
-            let char_count = text.chars().count();
-            let preview: String = text.chars().take(40).collect();
-            let preview = if text.chars().count() > 40 {
-                format!("{}…", preview)
-            } else {
-                preview
-            };
-            eprintln!("[stealth-copy] selection copied: {} chars", char_count);
-            json!({ "ok": true, "charCount": char_count, "preview": preview })
-        }
-        Err(e) => {
-            eprintln!("[stealth-copy] selection failed: {}", e);
-            json!({ "ok": false, "error": e })
-        }
-    };
-
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.emit("stealth-copy-result", payload);
-    }
-}
-
-/// Handle the stealth select-all-and-copy chord (F13+A → Alt+F23 via
-/// PowerToys). Uses UIA's DocumentRange to extract ALL text from the focused
-/// element without ever changing selection state — so unlike a real Ctrl+A,
-/// the browser shows no highlight at any point. Result goes straight to
-/// the clipboard.
-fn handle_stealth_select_all_shortcut<R: Runtime>(app: &AppHandle<R>) {
-    let payload = match crate::clipboard::copy_focused_document_text() {
-        Ok(text) => {
-            let char_count = text.chars().count();
-            let preview: String = text.chars().take(40).collect();
-            let preview = if text.chars().count() > 40 {
-                format!("{}…", preview)
-            } else {
-                preview
-            };
-            eprintln!("[stealth-copy] document copied: {} chars", char_count);
-            json!({ "ok": true, "charCount": char_count, "preview": preview })
-        }
-        Err(e) => {
-            eprintln!("[stealth-copy] document failed: {}", e);
-            json!({ "ok": false, "error": e })
-        }
-    };
-
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.emit("stealth-copy-result", payload);
-    }
-}
-
 /// Tauri command to get current shortcuts
 #[tauri::command]
 pub fn get_shortcuts() -> serde_json::Value {
     json!({
         "toggle": DEFAULT_TOGGLE_SHORTCUT,
-        "screenshot": DEFAULT_SCREENSHOT_SHORTCUT,
-        "clickThrough": DEFAULT_CLICK_THROUGH_SHORTCUT,
-        "stealthCopy": DEFAULT_STEALTH_COPY_SHORTCUT,
-        "stealthSelectAll": DEFAULT_STEALTH_SELECT_ALL_SHORTCUT,
-        "stealthCopyAlias": DEFAULT_STEALTH_COPY_ALIAS_SHORTCUT
+        "screenshot": DEFAULT_SCREENSHOT_SHORTCUT
     })
 }
 
@@ -352,10 +157,6 @@ pub fn check_shortcuts_registered<R: Runtime>(app: AppHandle<R>) -> Result<bool,
     let shortcuts = [
         DEFAULT_TOGGLE_SHORTCUT,
         DEFAULT_SCREENSHOT_SHORTCUT,
-        DEFAULT_CLICK_THROUGH_SHORTCUT,
-        DEFAULT_STEALTH_COPY_SHORTCUT,
-        DEFAULT_STEALTH_SELECT_ALL_SHORTCUT,
-        DEFAULT_STEALTH_COPY_ALIAS_SHORTCUT,
     ];
 
     for shortcut_str in shortcuts {
