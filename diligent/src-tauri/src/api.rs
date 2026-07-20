@@ -31,7 +31,7 @@ fn get_llm_api_key_for_provider(provider_id: &str) -> Option<String> {
     let env_name = match provider_id.to_lowercase().as_str() {
         "openai" => "OPENAI_API_KEY",
         "deepseek" => "DEEPSEEK_API_KEY",
-        // Interview mode + screenshot-code mode default to Anthropic. Provider
+        // Screenshot code-analysis (vision) defaults to Anthropic. Provider
         // id "claude" matches AI_PROVIDERS[].id in src/config/ai-providers.constants.ts.
         "claude" | "anthropic" => "ANTHROPIC_API_KEY",
         _ => return None,

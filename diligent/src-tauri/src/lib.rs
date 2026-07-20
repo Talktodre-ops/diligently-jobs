@@ -64,7 +64,7 @@ fn set_window_height(window: tauri::WebviewWindow, height: u32) -> Result<(), St
 /// Capture the primary monitor as a base64-encoded JPEG.
 ///
 /// Returns a compressed JPEG sized to fit under Anthropic's 5 MB encoded
-/// limit so the interview-assistant code-capture flow doesn't randomly fail
+/// limit so the screenshot code-capture flow doesn't randomly fail
 /// at high resolutions. Errors are prefixed with a category tag
 /// (`MonitorEnum:`, `NoPrimaryMonitor`, `CaptureFailed:`, `EmptyImage`,
 /// `EncodeFailed:`, `CannotCompress`) so the JS side can decide retry vs.
@@ -192,7 +192,7 @@ fn save_file_to_downloads(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Load `src-tauri/.env` at runtime so `std::env::var` (e.g. DEEPGRAM_API_KEY) applies without a rebuild.
+    // Load `src-tauri/.env` at runtime so `std::env::var` (e.g. TAVILY_API_KEY) applies without a rebuild.
     let _ = dotenv::from_path(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".env"));
 
     let builder = tauri::Builder::default()

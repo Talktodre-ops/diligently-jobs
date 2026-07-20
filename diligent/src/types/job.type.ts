@@ -139,11 +139,11 @@ export interface JobWorkspace {
    */
   backend_application_id?: string;
   /**
-   * Free-form notes the user wants Claude to know during interview mode
-   * for THIS specific role. Appended to the composed interview system prompt
-   * after the standard role/CV context. Use it for things like:
-   *   "This is a Staff Eng role focused on payment rails. The CTO is
-   *    technical, expect deep system-design questions on consistency."
+   * Free-form personal notes the user keeps for THIS specific role — e.g.
+   * interview prep, panel details, or points to emphasize. A per-workspace
+   * scratchpad. Use it for things like:
+   *   "Staff Eng role focused on payment rails. Expect deep system-design
+   *    questions on consistency."
    *   "Emphasize my open-source contributions when relevant."
    */
   interview_system_prompt?: string;

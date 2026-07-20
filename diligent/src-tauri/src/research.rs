@@ -3,7 +3,7 @@
 //! Uses Tavily (https://tavily.com): returns LLM-ready extracted `content` per
 //! result, so no separate page-fetch step is needed. The API key stays out of
 //! the frontend bundle by living here in the desktop Rust layer (same pattern
-//! as the Deepgram/LLM keys). The frontend invokes `web_search`, then
+//! as the LLM provider keys). The frontend invokes `web_search`, then
 //! synthesizes the brief client-side via the normal AI provider stack.
 //! LinkedIn still can't be fetched (login wall / ToS) — the UI offers a paste
 //! box for that. Provider-neutral command name so swapping search backends is

@@ -913,9 +913,8 @@ export const useJobWorkspace = () => {
     [updateAndPersist]
   );
 
-  /** Save the role-specific interview-prompt notes (used as an extra hint to
-   *  Claude during interview mode for this workspace's role). Persists
-   *  immediately so the next interview turn reads the new value. */
+  /** Save the role-specific notes (a per-workspace scratchpad for interview
+   *  prep and points to emphasize). Persists immediately. */
   const updateInterviewPrompt = useCallback(
     (text: string) => {
       updateAndPersist({ interview_system_prompt: text });
