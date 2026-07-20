@@ -6,7 +6,6 @@ mod api;
 mod clipboard;
 mod deepgram_stream;
 mod microphone;
-mod realmq;
 mod research;
 mod stealth;
 
@@ -237,7 +236,6 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .manage(AudioState::default())
         .manage(shortcuts::WindowVisibility(Mutex::new(false)))
-        .manage(realmq::RealmQState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_http::init())
@@ -272,8 +270,6 @@ pub fn run() {
             api::get_deepgram_api_key_cmd,
             api::upload_audio_file_to_url,
             research::web_search,
-            realmq::open_realmq_window,
-            realmq::realmq_sidecar_port,
             speaker::start_system_audio_capture,
             speaker::stop_system_audio_capture,
             speaker::check_system_audio_access,

@@ -11,8 +11,7 @@ import { useSystemAudio } from "./hooks/useSystemAudio";
 import { useWindowResize } from "./hooks/useWindow";
 import { listen } from "@tauri-apps/api/event";
 import type { ChatConversation } from "./types";
-import { Briefcase, Send, Sparkles } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { Briefcase, Send } from "lucide-react";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "./components/ui";
 import { JobModePanel } from "./components/job/JobModePanel";
 import { UpworkModePanel } from "./components/upwork/UpworkModePanel";
@@ -170,19 +169,6 @@ const AppInner = () => {
               <UpworkModePanel />
             </PopoverContent>
           </Popover>
-          <Button
-            size="icon"
-            aria-label="RealmQ Studio"
-            className="cursor-pointer"
-            title="RealmQ Studio"
-            onClick={() => {
-              invoke("open_realmq_window").catch((e) =>
-                console.error("[realmq] open_realmq_window failed:", e)
-              );
-            }}
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
           <Settings />
         </div>
 
