@@ -12,19 +12,9 @@ const DEFAULT_TOGGLE_SHORTCUT: &str = "cmd+backslash";
 const DEFAULT_TOGGLE_SHORTCUT: &str = "ctrl+backslash";
 
 #[cfg(target_os = "macos")]
-const DEFAULT_AUDIO_SHORTCUT: &str = "cmd+shift+a";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_AUDIO_SHORTCUT: &str = "ctrl+shift+a";
-
-#[cfg(target_os = "macos")]
 const DEFAULT_SCREENSHOT_SHORTCUT: &str = "cmd+shift+s";
 #[cfg(not(target_os = "macos"))]
 const DEFAULT_SCREENSHOT_SHORTCUT: &str = "ctrl+shift+s";
-
-#[cfg(target_os = "macos")]
-const DEFAULT_SYSTEM_AUDIO_SHORTCUT: &str = "cmd+shift+m";
-#[cfg(not(target_os = "macos"))]
-const DEFAULT_SYSTEM_AUDIO_SHORTCUT: &str = "ctrl+shift+m";
 
 // Click-through toggle hotkey. Iterated twice — Ctrl+Shift+P collided with
 // VSCode's Command Palette (Windows' RegisterHotKey is first-come-first-
@@ -73,9 +63,7 @@ const DEFAULT_STEALTH_COPY_ALIAS_SHORTCUT: &str = "alt+f24";
 /// Initialize global shortcuts for the application
 pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let toggle_shortcut = DEFAULT_TOGGLE_SHORTCUT.parse::<Shortcut>()?;
-    let audio_shortcut = DEFAULT_AUDIO_SHORTCUT.parse::<Shortcut>()?;
     let screenshot_shortcut = DEFAULT_SCREENSHOT_SHORTCUT.parse::<Shortcut>()?;
-    let system_audio_shortcut = DEFAULT_SYSTEM_AUDIO_SHORTCUT.parse::<Shortcut>()?;
     let click_through_shortcut = DEFAULT_CLICK_THROUGH_SHORTCUT.parse::<Shortcut>()?;
     let stealth_copy_shortcut = DEFAULT_STEALTH_COPY_SHORTCUT.parse::<Shortcut>()?;
     let stealth_select_all_shortcut = DEFAULT_STEALTH_SELECT_ALL_SHORTCUT.parse::<Shortcut>()?;
@@ -90,8 +78,8 @@ pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<
     // Best-effort: unregister can fail (e.g. we never owned the shortcut)
     // and that's fine, we proceed regardless.
     for sc in [
-        toggle_shortcut, audio_shortcut, screenshot_shortcut,
-        system_audio_shortcut, click_through_shortcut, stealth_copy_shortcut,
+        toggle_shortcut, screenshot_shortcut,
+        click_through_shortcut, stealth_copy_shortcut,
         stealth_select_all_shortcut, stealth_copy_alias_shortcut,
     ] {
         let _ = app.global_shortcut().unregister(sc);
@@ -116,18 +104,6 @@ pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<
     }
 
     let app_handle = app.clone();
-    if let Err(e) = app.global_shortcut().on_shortcut(audio_shortcut, move |_app, _shortcut, event| {
-        if event.state() == ShortcutState::Pressed {
-            handle_audio_shortcut(&app_handle);
-        }
-    }) {
-        eprintln!("[shortcuts] failed to register audio: {e}");
-        failed.push("audio");
-    } else {
-        registered.push("audio");
-    }
-
-    let app_handle = app.clone();
     if let Err(e) = app.global_shortcut().on_shortcut(screenshot_shortcut, move |_app, _shortcut, event| {
         if event.state() == ShortcutState::Pressed {
             handle_screenshot_shortcut(&app_handle);
@@ -137,18 +113,6 @@ pub fn setup_global_shortcuts<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<
         failed.push("screenshot");
     } else {
         registered.push("screenshot");
-    }
-
-    let app_handle = app.clone();
-    if let Err(e) = app.global_shortcut().on_shortcut(system_audio_shortcut, move |_app, _shortcut, event| {
-        if event.state() == ShortcutState::Pressed {
-            handle_system_audio_shortcut(&app_handle);
-        }
-    }) {
-        eprintln!("[shortcuts] failed to register system-audio: {e}");
-        failed.push("system audio");
-    } else {
-        registered.push("system audio");
     }
 
     let app_handle = app.clone();
@@ -269,27 +233,6 @@ fn handle_toggle_window<R: Runtime>(app: &AppHandle<R>) {
 }
 
 
-/// Handle audio shortcut
-fn handle_audio_shortcut<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(window) = app.get_webview_window("main") {
-        // Ensure window is visible
-        if let Ok(false) = window.is_visible() {
-            if let Err(e) = window.show() {
-                eprintln!("Failed to show window: {}", e);
-                return;
-            }
-            if let Err(e) = window.set_focus() {
-                eprintln!("Failed to focus window: {}", e);
-            }
-        }
-        
-        // Emit event to start audio recording
-        if let Err(e) = window.emit("start-audio-recording", json!({})) {
-            eprintln!("Failed to emit audio recording event: {}", e);
-        }
-    }
-}
-
 /// Handle screenshot shortcut - mode will be determined by user settings in frontend
 fn handle_screenshot_shortcut<R: Runtime>(app: &AppHandle<R>) {
     if let Some(window) = app.get_webview_window("main") {
@@ -390,35 +333,12 @@ fn handle_stealth_select_all_shortcut<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Handle system audio shortcut
-fn handle_system_audio_shortcut<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(window) = app.get_webview_window("main") {
-        // Ensure window is visible
-        if let Ok(false) = window.is_visible() {
-            if let Err(e) = window.show() {
-                eprintln!("Failed to show window: {}", e);
-                return;
-            }
-            if let Err(e) = window.set_focus() {
-                eprintln!("Failed to focus window: {}", e);
-            }
-        }
-        
-        // Emit event to toggle system audio capture - frontend will determine current state
-        if let Err(e) = window.emit("toggle-system-audio", json!({})) {
-            eprintln!("Failed to emit system audio event: {}", e);
-        }
-    }
-}
-
 /// Tauri command to get current shortcuts
 #[tauri::command]
 pub fn get_shortcuts() -> serde_json::Value {
     json!({
         "toggle": DEFAULT_TOGGLE_SHORTCUT,
-        "audio": DEFAULT_AUDIO_SHORTCUT,
         "screenshot": DEFAULT_SCREENSHOT_SHORTCUT,
-        "systemAudio": DEFAULT_SYSTEM_AUDIO_SHORTCUT,
         "clickThrough": DEFAULT_CLICK_THROUGH_SHORTCUT,
         "stealthCopy": DEFAULT_STEALTH_COPY_SHORTCUT,
         "stealthSelectAll": DEFAULT_STEALTH_SELECT_ALL_SHORTCUT,
@@ -431,9 +351,7 @@ pub fn get_shortcuts() -> serde_json::Value {
 pub fn check_shortcuts_registered<R: Runtime>(app: AppHandle<R>) -> Result<bool, String> {
     let shortcuts = [
         DEFAULT_TOGGLE_SHORTCUT,
-        DEFAULT_AUDIO_SHORTCUT,
         DEFAULT_SCREENSHOT_SHORTCUT,
-        DEFAULT_SYSTEM_AUDIO_SHORTCUT,
         DEFAULT_CLICK_THROUGH_SHORTCUT,
         DEFAULT_STEALTH_COPY_SHORTCUT,
         DEFAULT_STEALTH_SELECT_ALL_SHORTCUT,

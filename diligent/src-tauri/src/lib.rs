@@ -4,8 +4,6 @@ mod shortcuts;
 mod activate;
 mod api;
 mod clipboard;
-mod deepgram_stream;
-mod microphone;
 mod research;
 mod stealth;
 
@@ -31,16 +29,7 @@ const SCREENSHOT_MAX_H: u32 = 1080;
 /// read for the model.
 const JPEG_QUALITY_LADDER: &[u8] = &[80, 70, 60, 50, 40, 30];
 
-use std::sync::{Arc, Mutex};
-
-mod speaker;
-
-#[derive(Default)]
-pub struct AudioState {
-    /// Active capture session (Deepgram WS task + WAV writer). One at a time.
-    pub session: Arc<Mutex<Option<speaker::CaptureSession>>>,
-}
-
+use std::sync::Mutex;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -234,7 +223,6 @@ pub fn run() {
     let _ = dotenv::from_path(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".env"));
 
     let builder = tauri::Builder::default()
-        .manage(AudioState::default())
         .manage(shortcuts::WindowVisibility(Mutex::new(false)))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -261,19 +249,12 @@ pub fn run() {
             activate::secure_storage_save,
             activate::secure_storage_get,
             activate::secure_storage_remove,
-            api::transcribe_audio,
             api::chat_stream,
             api::fetch_models,
             api::check_license_status,
             api::get_ai_provider_api_key,
             api::get_ai_provider_default_model,
-            api::get_deepgram_api_key_cmd,
-            api::upload_audio_file_to_url,
-            research::web_search,
-            speaker::start_system_audio_capture,
-            speaker::stop_system_audio_capture,
-            speaker::check_system_audio_access,
-            speaker::request_system_audio_access
+            research::web_search
         ])
         .setup(|app| {
             // Setup main window positioning

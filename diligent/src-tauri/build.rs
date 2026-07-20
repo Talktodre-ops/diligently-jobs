@@ -14,14 +14,6 @@ fn main() {
         println!("cargo:rustc-env=APP_ENDPOINT={}", app_endpoint);
     }
 
-    if let Ok(deepgram_api_key) = std::env::var("DEEPGRAM_API_KEY") {
-        println!("cargo:rustc-env=DEEPGRAM_API_KEY={}", deepgram_api_key);
-    }
-
-    if let Ok(deepgram_model) = std::env::var("DEEPGRAM_MODEL") {
-        println!("cargo:rustc-env=DEEPGRAM_MODEL={}", deepgram_model);
-    }
-
     // Tavily Search API key — powers the company-research feature (Phase 3, M1).
     // Baked at build time like the other secrets; also readable at runtime from
     // src-tauri/.env via dotenv in lib.rs, so it can be set without a rebuild.
