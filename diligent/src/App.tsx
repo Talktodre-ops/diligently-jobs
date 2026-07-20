@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Settings, Updater } from "./components";
+import { Card, Settings } from "./components";
 import { AppDragControls } from "./components/AppDragControls";
 import { ToastProvider, useGlobalToastListeners } from "./components/Toast";
 import { Completion } from "./components/completion";
@@ -144,8 +144,6 @@ const AppInner = () => {
           </Popover>
           <Settings />
         </div>
-
-        <Updater />
       </Card>
     </div>
   );

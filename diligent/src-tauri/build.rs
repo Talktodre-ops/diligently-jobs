@@ -1,18 +1,6 @@
 fn main() {
     let env_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".env");
     let _ = dotenv::from_path(&env_path);
-    
-     if let Ok(payment_endpoint) = std::env::var("PAYMENT_ENDPOINT") {
-        println!("cargo:rustc-env=PAYMENT_ENDPOINT={}", payment_endpoint);
-    }
-    
-    if let Ok(api_access_key) = std::env::var("API_ACCESS_KEY") {
-        println!("cargo:rustc-env=API_ACCESS_KEY={}", api_access_key);
-    }
-    
-    if let Ok(app_endpoint) = std::env::var("APP_ENDPOINT") {
-        println!("cargo:rustc-env=APP_ENDPOINT={}", app_endpoint);
-    }
 
     // Tavily Search API key — powers the company-research feature (Phase 3, M1).
     // Baked at build time like the other secrets; also readable at runtime from

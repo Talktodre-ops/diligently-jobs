@@ -90,15 +90,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     titles: { isEnabled: true },
   });
 
-  const getManagedApiInitialState = () => {
-    const managed = safeLocalStorage.getItem(STORAGE_KEYS.MANAGED_API_ENABLED);
-    return managed === "true";
-  };
-
-  const [managedApiEnabled, setManagedApiEnabledState] = useState<boolean>(
-    getManagedApiInitialState()
-  );
-
   // Function to load AI, STT, system prompt and screenshot config data from storage
   const loadData = () => {
     // Load system prompt
@@ -147,14 +138,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // Load customizable state
     const customizableState = getCustomizableState();
     setCustomizable(customizableState);
-
-    // Load managed API enabled state
-    const savedManagedApiEnabled = safeLocalStorage.getItem(
-      STORAGE_KEYS.MANAGED_API_ENABLED
-    );
-    if (savedManagedApiEnabled !== null) {
-      setManagedApiEnabledState(savedManagedApiEnabled === "true");
-    }
   };
 
   // Load data on mount
@@ -297,12 +280,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     loadData();
   };
 
-  const setManagedApiEnabled = (enabled: boolean) => {
-    setManagedApiEnabledState(enabled);
-    safeLocalStorage.setItem(STORAGE_KEYS.MANAGED_API_ENABLED, String(enabled));
-    loadData();
-  };
-
   // Create the context value (extend IContextType accordingly)
   const value: IContextType = {
     systemPrompt,
@@ -318,8 +295,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toggleAlwaysOnTop,
     toggleTitlesVisibility,
     loadData,
-    managedApiEnabled,
-    setManagedApiEnabled,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -27,6 +27,4 @@ export type IContextType = {
   toggleAlwaysOnTop: (isEnabled: boolean) => Promise<void>;
   toggleTitlesVisibility: (isEnabled: boolean) => void;
   loadData: () => void;
-  managedApiEnabled: boolean;
-  setManagedApiEnabled: (enabled: boolean) => void;
 };

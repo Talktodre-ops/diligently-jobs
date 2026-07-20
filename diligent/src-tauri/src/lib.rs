@@ -1,7 +1,6 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod window;
 mod shortcuts;
-mod activate;
 mod api;
 mod research;
 
@@ -199,7 +198,6 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .manage(shortcuts::WindowVisibility(Mutex::new(false)))
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())  // Add shell plugin
@@ -214,12 +212,6 @@ pub fn run() {
             shortcuts::check_shortcuts_registered,
             shortcuts::set_app_icon_visibility,
             shortcuts::set_always_on_top,
-            activate::activate_license_api,
-            activate::mask_license_key_cmd,
-            activate::get_checkout_url,
-            activate::secure_storage_save,
-            activate::secure_storage_get,
-            activate::secure_storage_remove,
             api::chat_stream,
             api::fetch_models,
             api::check_license_status,

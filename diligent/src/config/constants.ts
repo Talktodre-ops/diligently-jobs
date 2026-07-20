@@ -10,7 +10,6 @@ export const STORAGE_KEYS = {
   SYSTEM_AUDIO_CONTEXT: "system_audio_context",
   SYSTEM_AUDIO_QUICK_ACTIONS: "system_audio_quick_actions",
   CUSTOMIZABLE: "customizable",
-  MANAGED_API_ENABLED: "managed_api_enabled",
   JOB_WORKSPACES: "job_workspaces",
   UPWORK_WORKSPACES: "upwork_workspaces",
 } as const;

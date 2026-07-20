@@ -15,7 +15,6 @@ import { AlwaysOnTopToggle } from "./AlwaysOnTopToggle";
 import { TitleToggle } from "./TitleToggle";
 import { AIProviders } from "./ai-configs";
 import { DeleteChats } from "./DeleteChats";
-import { ManagedApiSetup } from "./ManagedApiSetup";
 import { BackendStatus } from "./BackendStatus";
 import { SystemHealth } from "./SystemHealth";
 
@@ -54,9 +53,6 @@ export const Settings = () => {
 
             {/* Backend Sync status (audit log + R2) */}
             <BackendStatus />
-
-            {/* Managed API Setup */}
-            <ManagedApiSetup />
 
             {/* System Prompt */}
             <SystemPrompt {...settings} />
