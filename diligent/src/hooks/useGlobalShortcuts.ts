@@ -6,7 +6,6 @@ interface Shortcuts {
   toggle: string;
   audio: string;
   screenshot: string;
-  systemAudio: string;
 }
 
 // Global singleton to prevent multiple event listeners in StrictMode
@@ -14,7 +13,6 @@ let globalEventListeners: {
   focus?: UnlistenFn;
   audio?: UnlistenFn;
   screenshot?: UnlistenFn;
-  systemAudio?: UnlistenFn;
 } = {};
 
 // Global debounce for screenshot events to prevent duplicates
@@ -24,7 +22,6 @@ export const useGlobalShortcuts = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const audioCallbackRef = useRef<(() => void) | null>(null);
   const screenshotCallbackRef = useRef<(() => void) | null>(null);
-  const systemAudioCallbackRef = useRef<(() => void) | null>(null);
 
   const checkShortcutsRegistered = useCallback(async (): Promise<boolean> => {
     try {
@@ -61,11 +58,6 @@ export const useGlobalShortcuts = () => {
     screenshotCallbackRef.current = callback;
   }, []);
 
-  // Register system audio callback
-  const registerSystemAudioCallback = useCallback((callback: () => void) => {
-    systemAudioCallbackRef.current = callback;
-  }, []);
-
   // Setup event listeners using global singleton
   useEffect(() => {
     const setupEventListeners = async () => {
@@ -90,13 +82,6 @@ export const useGlobalShortcuts = () => {
             globalEventListeners.screenshot();
           } catch (error) {
             console.warn("Error cleaning up screenshot listener:", error);
-          }
-        }
-        if (globalEventListeners.systemAudio) {
-          try {
-            globalEventListeners.systemAudio();
-          } catch (error) {
-            console.warn("Error cleaning up system audio listener:", error);
           }
         }
 
@@ -136,14 +121,6 @@ export const useGlobalShortcuts = () => {
           }
         });
         globalEventListeners.screenshot = unlistenScreenshot;
-
-        // Listen for system audio toggle event
-        const unlistenSystemAudio = await listen("toggle-system-audio", () => {
-          if (systemAudioCallbackRef.current) {
-            systemAudioCallbackRef.current();
-          }
-        });
-        globalEventListeners.systemAudio = unlistenSystemAudio;
       } catch (error) {
         console.error("Failed to setup event listeners:", error);
       }
@@ -158,6 +135,5 @@ export const useGlobalShortcuts = () => {
     registerInputRef,
     registerAudioCallback,
     registerScreenshotCallback,
-    registerSystemAudioCallback,
   };
 };

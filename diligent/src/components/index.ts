@@ -7,4 +7,3 @@ export * from "./Markdown";
 export * from "./Header";
 export * from "./Selection";
 export * from "./TextInput";
-export * from "./speech";
