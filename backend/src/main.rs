@@ -73,13 +73,44 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
     tracing::info!(%bind_addr, "listening");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    tracing::info!("shut down cleanly");
     Ok(())
+}
+
+/// Resolves when the process is asked to stop (Ctrl+C, or SIGTERM on unix) so
+/// axum can drain in-flight requests and return normally. Without this, Ctrl+C
+/// hard-kills the process and `cargo run` reports a non-zero
+/// `STATUS_CONTROL_C_EXIT` ("process didn't exit successfully").
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+    tracing::info!("shutdown signal received — draining");
 }
 
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("diligently_api=debug,tower_http=info,sqlx=warn"));
+        .unwrap_or_else(|_| EnvFilter::new("diligently_api=info,tower_http=info,sqlx=error"));
     tracing_subscriber::registry()
         .with(filter)
         .with(fmt::layer().with_target(false))

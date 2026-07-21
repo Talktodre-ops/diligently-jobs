@@ -227,7 +227,16 @@ pub fn run() {
             if let Err(e) = shortcuts::setup_global_shortcuts(app.handle()) {
                 eprintln!("Failed to setup global shortcuts: {}", e);
             }
-            
+
+            // Exit cleanly on Ctrl+C from the terminal (`npm run tauri dev`)
+            // rather than being hard-killed (which reports STATUS_CONTROL_C_EXIT).
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if tokio::signal::ctrl_c().await.is_ok() {
+                    handle.exit(0);
+                }
+            });
+
             Ok(())
         });
 
