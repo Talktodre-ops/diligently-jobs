@@ -1,5 +1,7 @@
 <div align="center">
 
+![Diligently](images/diligently_banner.png)
+
 # Diligently
 
 **A desktop AI copilot for job applications.**
@@ -25,24 +27,34 @@ Paste a job description and Diligently walks you through a complete application:
 - ✉️ **Cover letters** — drafts a focused, role-specific letter.
 - 📄 **PDF / DOCX rendering** — clean, ATS-friendly documents via a LaTeX (Tectonic) pipeline.
 - 📊 **ATS scoring** — scores a tailored CV against the job description.
-- 💼 **Upwork proposals** — a separate flow for freelance proposals.
+- 💼 **Upwork proposals** — a separate flow for freelance proposals, with architecture diagrams.
 - 💬 **Quick chat** — ask a question without leaving the overlay.
 
 Everything is **bring-your-own-key**: the desktop app talks directly to Anthropic. There is no hosted service and no telemetry.
+
+## Screenshots
+
+**Job Copilot** — an always-on-top overlay you can reach from anywhere. Each job lives in its own workspace and moves through a pipeline: JD → Research → Your CV → Gaps → Tailor → Cover Letter → Follow-up.
+
+![Job Copilot](images/job-screen.png)
+
+**CV tailoring** — every bullet is shown Original vs Rewrite. Accept them all, or one at a time; the accepted set renders straight to a downloadable LaTeX PDF/DOCX.
+
+![CV tailoring](images/tailor-screen.png)
+
+**Upwork proposals** — generates architecture (Mermaid) diagrams you can attach as supporting material for a proposal.
+
+![Upwork architecture diagram](images/mermaid-diagram.png)
+
+**Settings** — a live System Health panel (your Claude key + backend connectivity) and where you paste API keys.
+
+![Settings and System Health](images/fully-working.png)
 
 ## How it works
 
 Two pieces you run locally, in two terminals — **no Docker required**:
 
-```mermaid
-flowchart LR
-    U([You]) --> D["🖥️ Desktop app<br/>(Tauri + React)"]
-    D -->|applications + documents| B["⚙️ Backend API<br/>(Rust + Axum)"]
-    D -->|chat + tailoring| A["🤖 Anthropic Claude"]
-    D -->|company research| T["🔎 Tavily"]
-    B --> P[("🐘 Postgres<br/>Neon")]
-    B --> R[("🗄️ Object storage<br/>Cloudflare R2")]
-```
+![Diligently architecture](images/diligently_flowchart.png)
 
 | Component  | Path        | Stack                       | Talks to                                  |
 |------------|-------------|-----------------------------|-------------------------------------------|
@@ -151,13 +163,19 @@ npm install
 npm run tauri dev
 ```
 
-The first `cargo run` compiles the backend and applies the DB migrations; the first `npm install` pulls the UI dependencies. After that, both start quickly.
+The first `cargo run` compiles the backend and applies the DB migrations; the first `npm install` pulls the UI dependencies. The initial compile takes a few minutes — this is normal:
+
+![First compile](images/installation-guide-img.png)
+
+Once both are up, the backend is listening and the desktop app builds and launches:
+
+![Backend and desktop building](images/build.png)
 
 ### Verify it's working
 
 - Backend terminal should log `migrations applied`, `r2 client ready`, and `listening`.
 - Check health directly: `curl http://localhost:8787/health` → `{"status":"ok","postgres":{"ok":true},"r2":{"ok":true}}`.
-- In the app, open **Settings → System health**: the **Anthropic API key** and **Backend reachable** rows should be green.
+- In the app, open **Settings → System health**: the **Anthropic API key** and **Backend reachable** rows should be green (see the [Settings screenshot](#screenshots) above).
 
 ---
 
@@ -232,6 +250,7 @@ diligently-jobs/
 │   ├── src/            React UI (Job Copilot, Upwork, chat, settings)
 │   ├── src-tauri/      Rust shell (window, shortcuts, screenshot, Tavily)
 │   └── .env.example
+├── images/             README screenshots + diagrams
 ├── scripts/            setup.ps1 / setup.sh
 └── README.md
 ```
