@@ -33,8 +33,6 @@ export const useCompletion = () => {
     currentConversationId: null,
     conversationHistory: [],
   });
-  const [micOpen, setMicOpen] = useState(false);
-  const [enableVAD, setEnableVAD] = useState(false);
   const [messageHistoryOpen, setMessageHistoryOpen] = useState(false);
   const [isFilesPopoverOpen, setIsFilesPopoverOpen] = useState(false);
   const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
@@ -58,11 +56,10 @@ export const useCompletion = () => {
     }
 
     // Auto-fallback for first-run users so chat works without opening
-    // settings. DeepSeek v4-pro is the default since 2026-06: best
-    // problem-solving on text pasted via the F13 stealth-copy flow, and the
-    // Tauri side has env-autofill (DEEPSEEK_API_KEY + DEEPSEEK_MODEL) so
-    // first-run works as long as the key is set at build time.
-    return allAiProviders.find((p) => p.id === "deepseek") || allAiProviders[0];
+    // settings. Claude (Anthropic) is the only built-in provider; the Tauri
+    // side has env-autofill (ANTHROPIC_API_KEY + ANTHROPIC_MODEL) so first-run
+    // works as long as the key is set in src-tauri/.env.
+    return allAiProviders.find((p) => p.id === "claude") || allAiProviders[0];
   }, [allAiProviders, selectedAIProvider.provider]);
 
   const setInput = useCallback((value: string) => {
@@ -689,11 +686,10 @@ export const useCompletion = () => {
 
   useEffect(() => {
     resizeWindow(
-      isPopoverOpen || micOpen || messageHistoryOpen || isFilesPopoverOpen
+      isPopoverOpen || messageHistoryOpen || isFilesPopoverOpen
     );
   }, [
     isPopoverOpen,
-    micOpen,
     messageHistoryOpen,
     resizeWindow,
     isFilesPopoverOpen,
@@ -734,21 +730,13 @@ export const useCompletion = () => {
     }
   };
 
-  const toggleRecording = () => {
-    setEnableVAD(!enableVAD);
-    setMicOpen(!micOpen);
-  };
-
   // register callbacks for global shortcuts
   useEffect(() => {
-    globalShortcuts.registerAudioCallback(toggleRecording);
     globalShortcuts.registerInputRef(inputRef.current);
     globalShortcuts.registerScreenshotCallback(captureScreenshot);
   }, [
-    globalShortcuts.registerAudioCallback,
     globalShortcuts.registerInputRef,
     globalShortcuts.registerScreenshotCallback,
-    toggleRecording,
     captureScreenshot,
     inputRef,
   ]);
@@ -768,10 +756,6 @@ export const useCompletion = () => {
     cancel,
     reset,
     setState,
-    enableVAD,
-    setEnableVAD,
-    micOpen,
-    setMicOpen,
     currentConversationId: state.currentConversationId,
     conversationHistory: state.conversationHistory,
     loadConversation,

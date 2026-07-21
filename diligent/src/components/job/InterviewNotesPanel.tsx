@@ -7,7 +7,7 @@ interface Props {
   onSave: (text: string) => void;
 }
 
-const PLACEHOLDER = `Optional. Extra context Claude should know during interview mode for THIS role.
+const PLACEHOLDER = `Optional. Personal notes for THIS role — interview prep, things to emphasize, panel details.
 
 Examples:
 - "Staff Engineer role at a fintech. Expect deep system-design on payment rails + consistency."
@@ -15,9 +15,8 @@ Examples:
 - "Hiring panel is 4 people — keep answers tight."`;
 
 /**
- * Workspace-scoped interview notes. Appended to the composed interview
- * system prompt as ROLE-SPECIFIC NOTES so Claude has per-role steering
- * beyond what the parsed JD captures.
+ * Workspace-scoped notes for a role — a personal scratchpad (interview prep,
+ * things to emphasize, panel details) saved alongside this application.
  *
  * Debounced save: 500ms after the user stops typing. Avoids hammering
  * localStorage on every keystroke.
@@ -48,8 +47,8 @@ export const InterviewNotesPanel = ({ value, onSave }: Props) => {
         </span>
       </div>
       <p className="text-xs text-muted-foreground italic">
-        Steers Claude's answers during interview mode for this workspace only.
-        Auto-saves.
+        Personal notes for this role (e.g. interview prep). Saved to this
+        workspace. Auto-saves.
       </p>
       <Textarea
         value={text}

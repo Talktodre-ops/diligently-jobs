@@ -1,14 +1,8 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod window;
 mod shortcuts;
-mod activate;
 mod api;
-mod clipboard;
-mod deepgram_stream;
-mod microphone;
-mod realmq;
 mod research;
-mod stealth;
 
 #[cfg(target_os = "macos")]
 use tauri_plugin_macos_permissions;
@@ -32,16 +26,7 @@ const SCREENSHOT_MAX_H: u32 = 1080;
 /// read for the model.
 const JPEG_QUALITY_LADDER: &[u8] = &[80, 70, 60, 50, 40, 30];
 
-use std::sync::{Arc, Mutex};
-
-mod speaker;
-
-#[derive(Default)]
-pub struct AudioState {
-    /// Active capture session (Deepgram WS task + WAV writer). One at a time.
-    pub session: Arc<Mutex<Option<speaker::CaptureSession>>>,
-}
-
+use std::sync::Mutex;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -51,30 +36,6 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
-}
-
-/// Toggle mouse pass-through (WS_EX_TRANSPARENT) on the main window.
-/// On non-Windows targets this is a no-op until macOS parity ships.
-#[tauri::command]
-fn set_click_through(window: tauri::WebviewWindow, enabled: bool) -> Result<(), String> {
-    stealth::set_click_through(&window, enabled);
-    Ok(())
-}
-
-/// Returns true if mouse pass-through is currently enabled on the main window.
-#[tauri::command]
-fn get_click_through() -> bool {
-    stealth::is_click_through()
-}
-
-/// Stealth copy: read the currently-selected text in the focused window via
-/// UI Automation and put it on the system clipboard. Bypasses host-page
-/// Ctrl+C/copy-event blockers because the read happens at the OS
-/// accessibility layer — no key event reaches the browser. Returns the
-/// copied text on success, or a category-prefixed error string on failure.
-#[tauri::command]
-fn stealth_copy_selection() -> Result<String, String> {
-    clipboard::copy_focused_selection()
 }
 
 /// JS log forwarder. In Tauri 2, JS console.log goes only to the webview's
@@ -103,7 +64,7 @@ fn set_window_height(window: tauri::WebviewWindow, height: u32) -> Result<(), St
 /// Capture the primary monitor as a base64-encoded JPEG.
 ///
 /// Returns a compressed JPEG sized to fit under Anthropic's 5 MB encoded
-/// limit so the interview-assistant code-capture flow doesn't randomly fail
+/// limit so the screenshot code-capture flow doesn't randomly fail
 /// at high resolutions. Errors are prefixed with a category tag
 /// (`MonitorEnum:`, `NoPrimaryMonitor`, `CaptureFailed:`, `EmptyImage`,
 /// `EncodeFailed:`, `CannotCompress`) so the JS side can decide retry vs.
@@ -231,15 +192,12 @@ fn save_file_to_downloads(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Load `src-tauri/.env` at runtime so `std::env::var` (e.g. DEEPGRAM_API_KEY) applies without a rebuild.
+    // Load `src-tauri/.env` at runtime so `std::env::var` (e.g. TAVILY_API_KEY) applies without a rebuild.
     let _ = dotenv::from_path(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".env"));
 
     let builder = tauri::Builder::default()
-        .manage(AudioState::default())
         .manage(shortcuts::WindowVisibility(Mutex::new(false)))
-        .manage(realmq::RealmQState::default())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())  // Add shell plugin
@@ -247,37 +205,19 @@ pub fn run() {
             greet,
             get_app_version,
             set_window_height,
-            set_click_through,
-            get_click_through,
             capture_to_base64,
-            stealth_copy_selection,
             dev_log,
             save_file_to_downloads,
             shortcuts::get_shortcuts,
             shortcuts::check_shortcuts_registered,
             shortcuts::set_app_icon_visibility,
             shortcuts::set_always_on_top,
-            activate::activate_license_api,
-            activate::mask_license_key_cmd,
-            activate::get_checkout_url,
-            activate::secure_storage_save,
-            activate::secure_storage_get,
-            activate::secure_storage_remove,
-            api::transcribe_audio,
             api::chat_stream,
             api::fetch_models,
             api::check_license_status,
             api::get_ai_provider_api_key,
             api::get_ai_provider_default_model,
-            api::get_deepgram_api_key_cmd,
-            api::upload_audio_file_to_url,
-            research::web_search,
-            realmq::open_realmq_window,
-            realmq::realmq_sidecar_port,
-            speaker::start_system_audio_capture,
-            speaker::stop_system_audio_capture,
-            speaker::check_system_audio_access,
-            speaker::request_system_audio_access
+            research::web_search
         ])
         .setup(|app| {
             // Setup main window positioning
@@ -287,7 +227,16 @@ pub fn run() {
             if let Err(e) = shortcuts::setup_global_shortcuts(app.handle()) {
                 eprintln!("Failed to setup global shortcuts: {}", e);
             }
-            
+
+            // Exit cleanly on Ctrl+C from the terminal (`npm run tauri dev`)
+            // rather than being hard-killed (which reports STATUS_CONTROL_C_EXIT).
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if tokio::signal::ctrl_c().await.is_ok() {
+                    handle.exit(0);
+                }
+            });
+
             Ok(())
         });
 

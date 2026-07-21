@@ -1,24 +1,19 @@
 import { useEffect, useState } from "react";
-import { Card, Settings, SystemAudio, Updater } from "./components";
+import { Card, Settings } from "./components";
 import { AppDragControls } from "./components/AppDragControls";
 import { ToastProvider, useGlobalToastListeners } from "./components/Toast";
 import { Completion } from "./components/completion";
 import { ChatHistory } from "./components/history";
-import { AudioVisualizer } from "./components/speech/audio-visualizer";
-import { StatusIndicator } from "./components/speech/StatusIndicator";
 import { useTitles } from "./hooks";
-import { useSystemAudio } from "./hooks/useSystemAudio";
 import { useWindowResize } from "./hooks/useWindow";
 import { listen } from "@tauri-apps/api/event";
 import type { ChatConversation } from "./types";
-import { Briefcase, Send, Sparkles } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { Briefcase, Send } from "lucide-react";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "./components/ui";
 import { JobModePanel } from "./components/job/JobModePanel";
 import { UpworkModePanel } from "./components/upwork/UpworkModePanel";
 
 const AppInner = () => {
-  const systemAudio = useSystemAudio();
   const [isHidden, setIsHidden] = useState(false);
   const [jobModeOpen, setJobModeOpen] = useState(false);
   const [upworkModeOpen, setUpworkModeOpen] = useState(false);
@@ -87,31 +82,8 @@ const AppInner = () => {
         className="w-full flex flex-row items-center gap-2 p-2"
       >
         <AppDragControls />
-        <SystemAudio {...systemAudio} />
-        {systemAudio?.capturing ? (
-          <div className="flex flex-row items-center gap-2 justify-between w-full">
-            <div className="flex flex-1 items-center gap-2">
-              <AudioVisualizer isRecording={systemAudio?.capturing} />
-            </div>
-            <div className="flex !w-fit items-center gap-2">
-              <StatusIndicator
-                setupRequired={systemAudio.setupRequired}
-                error={systemAudio.error}
-                isProcessing={systemAudio.isProcessing}
-                isAIProcessing={systemAudio.isAIProcessing}
-                capturing={systemAudio.capturing}
-              />
-            </div>
-          </div>
-        ) : null}
 
-        <div
-          className={`${
-            systemAudio?.capturing
-              ? "hidden w-full fade-out transition-all duration-300"
-              : "w-full flex flex-row gap-2 items-center"
-          }`}
-        >
+        <div className="w-full flex flex-row gap-2 items-center">
           <Completion isHidden={isHidden} />
           <ChatHistory
             onSelectConversation={handleSelectConversation}
@@ -170,23 +142,8 @@ const AppInner = () => {
               <UpworkModePanel />
             </PopoverContent>
           </Popover>
-          <Button
-            size="icon"
-            aria-label="RealmQ Studio"
-            className="cursor-pointer"
-            title="RealmQ Studio"
-            onClick={() => {
-              invoke("open_realmq_window").catch((e) =>
-                console.error("[realmq] open_realmq_window failed:", e)
-              );
-            }}
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
           <Settings />
         </div>
-
-        <Updater capturing={systemAudio?.capturing} />
       </Card>
     </div>
   );

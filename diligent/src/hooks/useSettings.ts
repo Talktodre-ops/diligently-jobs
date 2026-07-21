@@ -11,23 +11,14 @@ export const useSettings = () => {
     screenshotConfiguration,
     setScreenshotConfiguration,
     allAiProviders,
-    allSttProviders,
     selectedAIProvider,
-    selectedSttProvider,
     onSetSelectedAIProvider,
-    onSetSelectedSttProvider,
   } = useApp();
   const { resizeWindow } = useWindowResize();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [variables, setVariables] = useState<{ key: string; value: string }[]>(
     []
   );
-  const [sttVariables, setSttVariables] = useState<
-    {
-      key: string;
-      value: string;
-    }[]
-  >([]);
 
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
 
@@ -74,18 +65,6 @@ export const useSettings = () => {
     }
   }, [selectedAIProvider.provider]);
 
-  useEffect(() => {
-    if (selectedSttProvider.provider) {
-      const provider = allSttProviders.find(
-        (p) => p.id === selectedSttProvider.provider
-      );
-      if (provider) {
-        const variables = extractVariables(provider?.curl);
-        setSttVariables(variables);
-      }
-    }
-  }, [selectedSttProvider.provider]);
-
   const handleDeleteAllChatsConfirm = () => {
     safeLocalStorage.removeItem(STORAGE_KEYS.CHAT_HISTORY);
     setShowDeleteConfirmDialog(false);
@@ -102,15 +81,11 @@ export const useSettings = () => {
     handleScreenshotPromptChange,
     handleScreenshotEnabledChange,
     allAiProviders,
-    allSttProviders,
     selectedAIProvider,
-    selectedSttProvider,
     onSetSelectedAIProvider,
-    onSetSelectedSttProvider,
     handleDeleteAllChatsConfirm,
     showDeleteConfirmDialog,
     setShowDeleteConfirmDialog,
     variables,
-    sttVariables,
   };
 };

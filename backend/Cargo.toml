@@ -3,7 +3,7 @@ name = "diligently-api"
 version = "0.1.0"
 edition = "2021"
 description = "Diligently — backend service for persistent audit log, blob storage, and sync."
-license = "UNLICENSED"
+license = "MIT"
 publish = false
 
 [[bin]]

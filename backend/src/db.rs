@@ -2,10 +2,33 @@ use anyhow::{Context, Result};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
 
+/// Strip a `channel_binding=...` query param from a Postgres URL. Neon's
+/// connection strings include it, but sqlx's Postgres driver doesn't implement
+/// it and logs a noisy "ignoring unrecognized connect parameter" warning at
+/// startup. sqlx ignores the parameter either way, so dropping it just quiets
+/// the log without changing behaviour.
+fn strip_channel_binding(url: &str) -> String {
+    match url.split_once('?') {
+        None => url.to_string(),
+        Some((base, query)) => {
+            let kept: Vec<&str> = query
+                .split('&')
+                .filter(|p| !p.starts_with("channel_binding="))
+                .collect();
+            if kept.is_empty() {
+                base.to_string()
+            } else {
+                format!("{base}?{}", kept.join("&"))
+            }
+        }
+    }
+}
+
 /// Initialize the Postgres connection pool. Neon recommends connecting through
 /// its pooler endpoint (host contains `-pooler`); we keep our local pool small
 /// because the pooler is doing the real concurrency multiplexing.
 pub async fn init_pool(database_url: &str) -> Result<PgPool> {
+    let database_url = strip_channel_binding(database_url);
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .min_connections(1)
@@ -22,7 +45,7 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool> {
         // pooler dropped during a suspend is replaced transparently rather than
         // failing the request with a broken-pipe error.
         .test_before_acquire(true)
-        .connect(database_url)
+        .connect(&database_url)
         .await
         .context("failed to connect to Postgres — check DATABASE_URL and that Neon is reachable")?;
 

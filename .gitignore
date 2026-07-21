@@ -1,21 +1,15 @@
 # =============================================================================
-# Diligetly — root .gitignore
+# Diligently — root .gitignore
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Working notes and planning docs — kept local, never shipped
+# Working notes / scratch — kept local, never shipped
 # -----------------------------------------------------------------------------
-TASKS.md
-**/TASKS.md
-diligent/src-tauri/my-archi.md
 NOTES.md
 **/NOTES.md
 SCRATCH.md
-
-# -----------------------------------------------------------------------------
-# Kami — sibling project, forked separately, not part of Diligetly
-# -----------------------------------------------------------------------------
-Kami/
+TASKS.md
+**/TASKS.md
 
 # -----------------------------------------------------------------------------
 # Secrets — never commit
@@ -26,10 +20,6 @@ Kami/
 *.env.local
 **/.env
 !**/.env.example
-
-# Preserved upstream .git from forks — internal artifact, don't commit
-**/.git.pluely-upstream/
-**/.git.upstream/
 
 # -----------------------------------------------------------------------------
 # Frontend (Node / Vite / Tauri webview)
@@ -59,15 +49,9 @@ target/
 **/src-tauri/gen/schemas/
 *.pdb
 
-# Vendored platform binaries — install tectonic yourself, or use Docker (bundles it)
+# Vendored platform binary — `scripts/setup` downloads tectonic here
 backend/tools/
 *.exe
-
-# -----------------------------------------------------------------------------
-# Stealth test harness artifacts (screenshots, logs, captures)
-# -----------------------------------------------------------------------------
-diligent/tests/stealth/results/
-**/tests/stealth/results/
 
 # -----------------------------------------------------------------------------
 # IDE / editor / OS noise
@@ -85,8 +69,7 @@ ehthumbs.db
 desktop.ini
 
 # -----------------------------------------------------------------------------
-# Claude Code per-project config — settings.local.json caches bearer tokens
-# inside permission grants, so it MUST be gitignored.
+# Claude Code per-project config — settings.local.json can cache tokens
 # -----------------------------------------------------------------------------
 .claude.json
 .claude/state/
@@ -95,16 +78,12 @@ desktop.ini
 **/.claude/settings.local.json
 
 # -----------------------------------------------------------------------------
-# Local cached agent / model artifacts
+# Local caches
 # -----------------------------------------------------------------------------
 *.onnx.cache
 *.cache/
 
-# Scratch screenshots / generated CV outputs (not app assets)
-images/image copy*.png
-images/generated-*.pdf
-
 # -----------------------------------------------------------------------------
-# Local build-tracking artifacts for the open-sourcing effort (never shipped)
+# Local build-tracking for the open-sourcing effort (never shipped)
 # -----------------------------------------------------------------------------
 /PROGRESS.md

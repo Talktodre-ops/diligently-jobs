@@ -1,12 +1,12 @@
 [package]
 name = "diligently_app"
 version = "0.1.4"
-description = "Diligently — a privacy-first desktop AI copilot for job applications, interviews, and meetings."
+description = "Desktop AI copilot for job applications — JD tailoring, CV & cover-letter generation, and company research."
 authors = ["ANDERSON Victor (@Talktodre-ops)"]
-license = "UNLICENSED"
+license = "MIT"
 readme = "../README.md"
-keywords = ["ai-assistant", "tauri", "desktop-app", "privacy-first", "interview-copilot"]
-categories = ["gui", "multimedia", "accessibility", "science"]
+keywords = ["ai-assistant", "tauri", "desktop-app", "job-search", "cv-tailoring"]
+categories = ["gui"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,11 +17,8 @@ edition = "2021"
 name = "diligently_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
-# Stealth: the produced executable is `LocalAssistant.exe`, not `diligently_app.exe`.
-# This is what shows up in Task Manager / tasklist / Get-Process and is the most visible
-# stealth tell after window-level capture exclusion. See TASKS.md Track 3D.
 [[bin]]
-name = "LocalAssistant"
+name = "diligently"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -31,7 +28,6 @@ dotenv = "0.15"
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
-tauri-plugin-updater = "2.9.0"
 tauri-plugin-http = "2.5.2"
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
@@ -39,8 +35,6 @@ serde_json = "1"
 image = "0.25.6"
 xcap = "0.0.12"
 base64 = "0.22"
-cpal = "0.15.3"
-hound = "3.5.1"
 tokio = { version = "1.0", features = ["full"] }
 uuid = { version = "1.0", features = ["v4"] }
 reqwest = { version = "0.12", features = ["json", "stream"] }
@@ -48,37 +42,15 @@ dotenv = "0.15"
 futures-util = "0.3"
 anyhow = "1.0"
 tracing = "0.1"
-ringbuf = "0.4.8"
 tauri-plugin-shell = "2.3.1"
-
-# Deepgram streaming STT — connects via wss to api.deepgram.com.
-# webpki-roots avoids any dependence on the OS cert store.
-tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots", "url"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tauri-plugin-macos-permissions = "2"
-cidre = "0.11.3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-wasapi = "0.19.0"
 windows = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Dwm",
-    # UI Automation — lets us read text from the focused control of any
-    # accessibility-exposed app (Chrome, Edge, Firefox all expose their DOM
-    # via UIA for screen readers). Powers the F13 "stealth copy" flow that
-    # bypasses host-page JS Ctrl+C blockers entirely — no key event reaches
-    # the browser, the read happens at the OS accessibility layer.
-    "Win32_UI_Accessibility",
     "Win32_System_Com",
-    "Win32_System_Variant",
-    "Win32_System_Ole",
-    # Clipboard — SetClipboardData(CF_UNICODETEXT) for the stealth-copy path.
-    "Win32_System_DataExchange",
-    "Win32_System_Memory",
 ] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-libpulse-binding = "2.30.1"
-libpulse-simple-binding = "2.29.0"
