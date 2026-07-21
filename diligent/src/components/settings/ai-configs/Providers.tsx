@@ -43,8 +43,8 @@ export const Providers = ({
     <div className="space-y-3">
       <div className="space-y-2">
         <Header
-          title="Select AI Provider"
-          description="OpenAI and DeepSeek use streaming for fast token-by-token replies. Turn off Managed API in settings if you use your own keys here. Model field: try gpt-4o-mini (OpenAI) or deepseek-v4-pro (DeepSeek — thinking mode, default)."
+          title="Provider"
+          description="Diligently uses Claude (Anthropic). Enter your API key and model below — the model defaults to claude-sonnet-4-6."
         />
         <Selection
           selected={selectedAIProvider?.provider}
@@ -73,7 +73,7 @@ export const Providers = ({
           title={`Method: ${
             localSelectedProvider?.method || "Invalid"
           }, Endpoint: ${localSelectedProvider?.url || "Invalid"}`}
-          description={`If you want to use different url or method, you can always create a custom provider.`}
+          description={`The endpoint requests are sent to.`}
         />
       ) : null}
 

@@ -1,20 +1,17 @@
 import { Header } from "@/components";
 import { UseSettingsReturn } from "@/types";
 import { Providers } from "./Providers";
-import { CustomProviders } from "./CustomProvider";
 
 export const AIProviders = (settings: UseSettingsReturn) => {
   return (
     <div className="space-y-3">
       <Header
-        title="AI Providers"
-        description="Select your preferred AI service provider to get started."
+        title="AI Provider"
+        description="Diligently uses Claude (Anthropic). Enter your API key below, or set ANTHROPIC_API_KEY in src-tauri/.env."
         isMainTitle
       />
 
-      {/* Custom Provider */}
-      <CustomProviders {...settings} />
-      {/* Providers Selection */}
+      {/* Provider key + model */}
       <Providers {...settings} />
     </div>
   );

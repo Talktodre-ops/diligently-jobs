@@ -56,11 +56,10 @@ export const useCompletion = () => {
     }
 
     // Auto-fallback for first-run users so chat works without opening
-    // settings. DeepSeek v4-pro is the default since 2026-06: strong
-    // problem-solving on pasted text, and the Tauri side has env-autofill
-    // (DEEPSEEK_API_KEY + DEEPSEEK_MODEL) so first-run works as long as the
-    // key is set at build time.
-    return allAiProviders.find((p) => p.id === "deepseek") || allAiProviders[0];
+    // settings. Claude (Anthropic) is the only built-in provider; the Tauri
+    // side has env-autofill (ANTHROPIC_API_KEY + ANTHROPIC_MODEL) so first-run
+    // works as long as the key is set in src-tauri/.env.
+    return allAiProviders.find((p) => p.id === "claude") || allAiProviders[0];
   }, [allAiProviders, selectedAIProvider.provider]);
 
   const setInput = useCallback((value: string) => {
