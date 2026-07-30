@@ -26,7 +26,8 @@ interface Check {
  */
 export const SystemHealth = () => {
   const [checks, setChecks] = useState<Check[]>([
-    { id: "anthropic", label: "Anthropic API key", status: "unknown" },
+    { id: "anthropic", label: "Anthropic API key (chat)", status: "unknown" },
+    { id: "deepseek", label: "DeepSeek API key (job & Upwork)", status: "unknown" },
     { id: "backend", label: "Backend reachable", status: "unknown" },
   ]);
   const [running, setRunning] = useState(false);
@@ -73,7 +74,33 @@ export const SystemHealth = () => {
         }
       })(),
 
-      // 2. Backend reachable — uses the existing /health endpoint.
+      // 2. DeepSeek key — powers the job + Upwork generators. Same
+      //    presence-only check (a real ping would cost tokens).
+      (async () => {
+        try {
+          const key = await invoke<string | null>("get_ai_provider_api_key", {
+            providerId: "deepseek",
+          });
+          if (key && key.trim()) {
+            setCheck("deepseek", {
+              status: "ok",
+              detail: `key found (${key.slice(0, 12)}…)`,
+            });
+          } else {
+            setCheck("deepseek", {
+              status: "fail",
+              detail: "DEEPSEEK_API_KEY not set in src-tauri/.env",
+            });
+          }
+        } catch (e) {
+          setCheck("deepseek", {
+            status: "fail",
+            detail: e instanceof Error ? e.message : String(e),
+          });
+        }
+      })(),
+
+      // 3. Backend reachable — uses the existing /health endpoint.
       (async () => {
         try {
           const h = await getHealth();
@@ -114,7 +141,7 @@ export const SystemHealth = () => {
         <div className="flex flex-col">
           <h3 className="font-semibold text-sm">System health</h3>
           <p className="text-xs text-muted-foreground">
-            Quick diagnostic for the app's LLM key and backend connection.
+            Quick diagnostic for the app's API keys and backend connection.
           </p>
         </div>
         <Button
