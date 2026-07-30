@@ -9,21 +9,14 @@ import type {
 } from "@/types";
 import { fetchAIResponse } from "./ai-response.function";
 import { extractJson, parseJsonLenient, stripThinkBlocks } from "./json-utils.function";
-import { AI_PROVIDERS } from "@/config/ai-providers.constants";
+import { DEEPSEEK_PROVIDER, DEEPSEEK_SELECTED } from "@/config/ai-providers.constants";
 import { HUMAN_VOICE_RULES } from "@/config/human-voice.constants";
 
-// Job/JD operations are forced to Claude regardless of the user's chat
-// default. Same rationale as cv.function.ts: DeepSeek v4-pro WITH thinking
-// (our Ask-Me-Anything default) adds 10-30s of latency and eats output
-// tokens, causing truncation on schema-following tasks. Claude is faster
-// on structured output and more reliable at producing valid JSON.
-const CLAUDE_PROVIDER = AI_PROVIDERS.find((p) => p.id === "claude")!;
-const CLAUDE_SELECTED = {
-  provider: "claude",
-  variables: {} as Record<string, string>,
-};
-// 8192 vs Claude template's 4096 default. Tailored CVs hit the cap at
-// 4096 on real-world resumes and truncate mid-array.
+// Job-application generation runs on DeepSeek (thinking disabled — see
+// DEEPSEEK_PROVIDER). Callers still pass provider/selectedProvider for
+// backward compat but they're ignored, so this is opaque to the hook layer.
+// 8192 vs the provider template's 4096 default. Tailored CVs hit the cap
+// at 4096 on real-world resumes and truncate mid-array.
 const JOB_BODY_OVERRIDES: Record<string, unknown> = { max_tokens: 8192 };
 
 const PARSE_JD_SYSTEM_PROMPT = `You extract structured job requirements from a job description.
@@ -59,8 +52,8 @@ export async function parseJD(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: PARSE_JD_SYSTEM_PROMPT,
     userMessage: jdText,
     bodyOverrides: JOB_BODY_OVERRIDES,
@@ -102,8 +95,8 @@ export async function analyzeGaps(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: ANALYZE_GAPS_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: JOB_BODY_OVERRIDES,
@@ -212,8 +205,8 @@ export async function tailorSkills(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: TAILOR_SKILLS_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: JOB_BODY_OVERRIDES,
@@ -318,8 +311,8 @@ export async function tailorSummary(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: TAILOR_SUMMARY_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: JOB_BODY_OVERRIDES,
@@ -389,8 +382,8 @@ export async function tailorTitles(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: TAILOR_TITLES_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: JOB_BODY_OVERRIDES,
@@ -501,8 +494,8 @@ export async function generateTailoredBullets(
 
     let accumulated = "";
     for await (const chunk of fetchAIResponse({
-      provider: CLAUDE_PROVIDER,
-      selectedProvider: CLAUDE_SELECTED,
+      provider: DEEPSEEK_PROVIDER,
+      selectedProvider: DEEPSEEK_SELECTED,
       systemPrompt: TAILOR_BULLETS_SYSTEM_PROMPT,
       userMessage,
       bodyOverrides: JOB_BODY_OVERRIDES,

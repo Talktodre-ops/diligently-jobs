@@ -8,7 +8,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { fetchAIResponse } from "./ai-response.function";
-import { AI_PROVIDERS } from "@/config/ai-providers.constants";
+import { DEEPSEEK_PROVIDER, DEEPSEEK_SELECTED } from "@/config/ai-providers.constants";
 import type {
   WebSearchResult,
   CompanyBrief,
@@ -17,13 +17,9 @@ import type {
 } from "@/types";
 import { EMPTY_COMPANY_BRIEF } from "@/types";
 
-// Company research is part of the job-applications flow — force-routed
-// to Claude. Same rationale as cv/job/cover-letter/followup.
-const CLAUDE_PROVIDER = AI_PROVIDERS.find((p) => p.id === "claude")!;
-const CLAUDE_SELECTED = {
-  provider: "claude",
-  variables: {} as Record<string, string>,
-};
+// Company research runs on DeepSeek (thinking disabled — see
+// DEEPSEEK_PROVIDER). Callers still pass provider/selectedProvider for
+// backward compat but they're ignored, so this is opaque to the hook layer.
 const RESEARCH_BODY_OVERRIDES: Record<string, unknown> = { max_tokens: 8192 };
 
 // =============================================================================
@@ -184,8 +180,8 @@ export async function researchCompany(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: RESEARCH_SYNTHESIS_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: RESEARCH_BODY_OVERRIDES,

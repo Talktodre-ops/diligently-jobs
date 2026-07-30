@@ -6,20 +6,13 @@
 // separately by the workspace so they stay consistent and editable.
 
 import { fetchAIResponse } from "./ai-response.function";
-import { AI_PROVIDERS } from "@/config/ai-providers.constants";
+import { DEEPSEEK_PROVIDER, DEEPSEEK_SELECTED } from "@/config/ai-providers.constants";
 import { HUMAN_VOICE_RULES } from "@/config/human-voice.constants";
 import type { CompanyBrief, JobRequirements, TYPE_PROVIDER } from "@/types";
 
-// Cover letter is part of the job-applications flow — force-routed to
-// Claude. Same rationale as cv.function.ts and job.function.ts: DeepSeek
-// with thinking mode (our Ask-Me-Anything default) wastes 10-30s of
-// latency and eats output budget on structured-text tasks. Caller still
-// passes provider for backward compat — ignored.
-const CLAUDE_PROVIDER = AI_PROVIDERS.find((p) => p.id === "claude")!;
-const CLAUDE_SELECTED = {
-  provider: "claude",
-  variables: {} as Record<string, string>,
-};
+// Cover letter generation runs on DeepSeek (thinking disabled — see
+// DEEPSEEK_PROVIDER). Callers still pass provider/selectedProvider for
+// backward compat but they're ignored, so this is opaque to the hook layer.
 const COVER_LETTER_BODY_OVERRIDES: Record<string, unknown> = { max_tokens: 8192 };
 
 const COVER_LETTER_SYSTEM_PROMPT = `You write concise, specific cover letters that read like a sharp human wrote them. Never generic or templated.
@@ -75,8 +68,8 @@ export async function generateCoverLetter(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: COVER_LETTER_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: COVER_LETTER_BODY_OVERRIDES,

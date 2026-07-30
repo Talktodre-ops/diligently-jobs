@@ -5,17 +5,13 @@
 // channels + timing + drafts — never invents named people.
 
 import { fetchAIResponse } from "./ai-response.function";
-import { AI_PROVIDERS } from "@/config/ai-providers.constants";
+import { DEEPSEEK_PROVIDER, DEEPSEEK_SELECTED } from "@/config/ai-providers.constants";
 import { HUMAN_VOICE_RULES } from "@/config/human-voice.constants";
 import type { CompanyBrief, FollowUp, JobRequirements, TYPE_PROVIDER } from "@/types";
 
-// Follow-up plan generation is part of the job-applications flow —
-// force-routed to Claude. Same rationale as cv/job/cover-letter.
-const CLAUDE_PROVIDER = AI_PROVIDERS.find((p) => p.id === "claude")!;
-const CLAUDE_SELECTED = {
-  provider: "claude",
-  variables: {} as Record<string, string>,
-};
+// Follow-up plan generation runs on DeepSeek (thinking disabled — see
+// DEEPSEEK_PROVIDER). Callers still pass provider/selectedProvider for
+// backward compat but they're ignored, so this is opaque to the hook layer.
 const FOLLOWUP_BODY_OVERRIDES: Record<string, unknown> = { max_tokens: 8192 };
 
 const FOLLOWUP_SYSTEM_PROMPT = `You plan a job-application follow-up cadence and draft each message.
@@ -76,8 +72,8 @@ export async function generateFollowUps(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: FOLLOWUP_SYSTEM_PROMPT,
     userMessage,
     bodyOverrides: FOLLOWUP_BODY_OVERRIDES,

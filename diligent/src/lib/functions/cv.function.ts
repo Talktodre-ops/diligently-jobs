@@ -13,26 +13,14 @@
 
 import { fetchAIResponse } from "./ai-response.function";
 import { extractJson, parseJsonLenient } from "./json-utils.function";
-import { AI_PROVIDERS } from "@/config/ai-providers.constants";
+import { DEEPSEEK_PROVIDER, DEEPSEEK_SELECTED } from "@/config/ai-providers.constants";
 import type { CVSection, ResumeDoc, TYPE_PROVIDER } from "@/types";
 
-// CV operations are forced to Claude regardless of the user's chat default.
-// Reasoning:
-// - Ask-Me-Anything uses DeepSeek v4-pro WITH thinking + reasoning_effort=high
-//   for problem-solving. Those same params are fatal here: 10-30s of latency
-//   per call (gap analysis slowed from ~5s to ~30s) and thinking eats output
-//   token budget, causing truncated JSON mid-array.
-// - Claude follows JSON schemas more reliably and produces clean output
-//   for parse/tailor/gap analysis without any reasoning overhead.
-// - Caller still passes provider/selectedProvider for backward compat but
-//   they're ignored — change is opaque to the hook layer.
-const CLAUDE_PROVIDER = AI_PROVIDERS.find((p) => p.id === "claude")!;
-const CLAUDE_SELECTED = {
-  provider: "claude",
-  variables: {} as Record<string, string>,
-};
+// CV generation runs on DeepSeek (thinking disabled — see
+// DEEPSEEK_PROVIDER). Callers still pass provider/selectedProvider for
+// backward compat but they're ignored, so this is opaque to the hook layer.
 
-// max_tokens override for CV ops. Claude's curl template defaults to 4096
+// max_tokens override for CV ops. The provider template defaults to 4096
 // which truncates full CV regenerations mid-output. 8192 fits a real CV
 // comfortably (verified on ~6-page resumes during testing).
 const CV_BODY_OVERRIDES: Record<string, unknown> = { max_tokens: 8192 };
@@ -202,8 +190,8 @@ export async function parseCvToResumeDoc(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: PARSE_RESUME_DOC_SYSTEM_PROMPT,
     userMessage: text,
     bodyOverrides: CV_BODY_OVERRIDES,
@@ -362,8 +350,8 @@ export async function parseCv(
   void provider;
   void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider: CLAUDE_PROVIDER,
-    selectedProvider: CLAUDE_SELECTED,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: PARSE_CV_SYSTEM_PROMPT,
     userMessage: text,
     bodyOverrides: CV_BODY_OVERRIDES,
