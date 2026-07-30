@@ -74,14 +74,17 @@ The backend stores your application history and rendered documents; the desktop 
 | [Tauri OS deps](https://v2.tauri.app/start/prerequisites/) | native webview toolchain | per-OS (WebView2 on Windows) |
 | A **Postgres** database | stores applications & history | **[Neon](#1-neon--postgres-database)** (free) — steps below |
 | An **S3-compatible bucket** | stores rendered CVs/letters | **[Cloudflare R2](#2-cloudflare-r2--object-storage)** (free tier) — steps below |
-| An **Anthropic API key** | the app's LLM | **[console.anthropic.com](#3-anthropic--claude-api-key)** — steps below |
-| *(optional)* a **Tavily key** | company research | **[app.tavily.com](#4-tavily--company-research-optional)** (free) |
+| An **Anthropic API key** | quick chat + screenshots | **[console.anthropic.com](#3-anthropic--claude-api-key)** — steps below |
+| A **DeepSeek API key** | job & Upwork generation | **[platform.deepseek.com](#4-deepseek--job--upwork-generation)** — steps below |
+| *(optional)* a **Tavily key** | company research | **[app.tavily.com](#5-tavily--company-research-optional)** (free) |
 
 ---
 
 ## Getting your keys
 
-You need three services (Neon, Cloudflare R2, Anthropic) and one optional one (Tavily). Each has a free tier. Follow these once, then paste the values into the `.env` files (`scripts/setup` creates them for you).
+You need four services (Neon, Cloudflare R2, Anthropic, DeepSeek) and one optional one (Tavily). Follow these once, then paste the values into the `.env` files (`scripts/setup` creates them for you).
+
+> **Why two LLM providers?** They do different jobs. **Claude** runs the quick chat and reads screenshots (vision). **DeepSeek** runs the job & Upwork generation (CV tailoring, JD parsing, cover letters, proposals) — it's far cheaper per token at comparable quality on those structured tasks, and an application costs cents.
 
 ### 1. Neon — Postgres database
 
@@ -115,12 +118,25 @@ Rendered CVs and cover letters are stored in an S3-compatible bucket. R2 has a g
 
 ### 3. Anthropic — Claude API key
 
+Powers the **quick chat** and **screenshot/vision**.
+
 1. Go to **[console.anthropic.com](https://console.anthropic.com)** and sign up (this is separate from a claude.ai subscription).
 2. Add billing and prepay some credits (minimum **$5**).
 3. **Settings → API Keys → Create Key**, and copy the `sk-ant-api03-...` value.
 4. Put it in `diligent/src-tauri/.env` as **`ANTHROPIC_API_KEY`**.
 
-### 4. Tavily — company research (optional)
+### 4. DeepSeek — job & Upwork generation
+
+Powers the **Job Copilot** (CV parsing/tailoring, JD parsing, gap analysis, company research synthesis, cover letters, follow-ups) and **Upwork proposals**.
+
+1. Go to **[platform.deepseek.com](https://platform.deepseek.com)** and sign up.
+2. Top up a small balance — generating a full application costs cents.
+3. **API keys → Create new API key**, and copy the `sk-...` value.
+4. Put it in `diligent/src-tauri/.env` as **`DEEPSEEK_API_KEY`** (leave `DEEPSEEK_MODEL=deepseek-v4-pro`).
+
+> The app sends `"thinking": {"type":"disabled"}` on these calls on purpose. DeepSeek's thinking mode adds 10–30s per call and spends the output budget on reasoning, which truncates the structured JSON these generators rely on. With it disabled the same calls return complete JSON in ~2–3s.
+
+### 5. Tavily — company research (optional)
 
 1. Sign up free at **[app.tavily.com](https://app.tavily.com)** (no card).
 2. Copy the API key (it starts with `tvly-`).
@@ -148,7 +164,7 @@ bash scripts/setup.sh
 **Paste your keys** (from the steps above):
 
 - `backend/.env` → `DATABASE_URL` (Neon) and the `R2_*` values (Cloudflare R2)
-- `diligent/src-tauri/.env` → `ANTHROPIC_API_KEY` (and optionally `TAVILY_API_KEY`)
+- `diligent/src-tauri/.env` → `ANTHROPIC_API_KEY` + `DEEPSEEK_API_KEY` (and optionally `TAVILY_API_KEY`)
 
 **Start it — two terminals:**
 
@@ -175,7 +191,7 @@ Once both are up, the backend is listening and the desktop app builds and launch
 
 - Backend terminal should log `migrations applied`, `r2 client ready`, and `listening`.
 - Check health directly: `curl http://localhost:8787/health` → `{"status":"ok","postgres":{"ok":true},"r2":{"ok":true}}`.
-- In the app, open **Settings → System health**: the **Anthropic API key** and **Backend reachable** rows should be green (see the [Settings screenshot](#screenshots) above).
+- In the app, open **Settings → System health**: the **Anthropic API key**, **DeepSeek API key** and **Backend reachable** rows should all be green (see the [Settings screenshot](#screenshots) above).
 
 ---
 
@@ -200,8 +216,10 @@ Everything is set through two `.env` files (both gitignored — never committed)
 
 | Variable | Required | What |
 |----------|----------|------|
-| `ANTHROPIC_API_KEY` | ✅ | your Claude key (`sk-ant-...`) |
+| `ANTHROPIC_API_KEY` | ✅ | your Claude key (`sk-ant-...`) — quick chat + screenshots |
 | `ANTHROPIC_MODEL` | — | defaults to `claude-sonnet-4-6` |
+| `DEEPSEEK_API_KEY` | ✅ | your DeepSeek key (`sk-...`) — job & Upwork generation |
+| `DEEPSEEK_MODEL` | — | defaults to `deepseek-v4-pro` (thinking disabled by the app) |
 | `TAVILY_API_KEY` | — | optional — enables the company-research step |
 
 **`diligent/.env`** holds `VITE_BACKEND_URL` (defaults to `http://localhost:8787`) and `VITE_BEARER_TOKEN` (the shared token, set by `scripts/setup`).
