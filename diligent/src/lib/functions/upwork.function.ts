@@ -9,9 +9,14 @@
 //   2. generateProposal — an AIDA proposal whose decisive first line is a
 //      first-class artifact: 3 hyper-specific opener variants + a body that
 //      never fabricates experience.
+//
+// Upwork generation is force-routed to DeepSeek, same as the job flow (see
+// DEEPSEEK_PROVIDER in ai-providers.constants.ts). Callers still pass
+// provider/selectedProvider for backward compat but they're ignored.
 
 import { fetchAIResponse } from "./ai-response.function";
 import { webSearch } from "./research.function";
+import { DEEPSEEK_PROVIDER, DEEPSEEK_SELECTED } from "@/config/ai-providers.constants";
 import type {
   JobRequirements,
   ProposalLength,
@@ -197,9 +202,11 @@ export async function findRelatedProjects(
     .join("\n");
 
   let accumulated = "";
+  void provider;
+  void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider,
-    selectedProvider,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: PROJECTS_SYNTHESIS_SYSTEM_PROMPT,
     userMessage,
   })) {
@@ -282,9 +289,11 @@ export async function generateSolutionBrief(
     .join("\n");
 
   let accumulated = "";
+  void provider;
+  void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider,
-    selectedProvider,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: SOLUTION_BRIEF_SYSTEM_PROMPT,
     userMessage,
   })) {
@@ -432,9 +441,11 @@ export async function generateProposal(
   );
 
   let accumulated = "";
+  void provider;
+  void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider,
-    selectedProvider,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt,
     userMessage,
   })) {
@@ -531,9 +542,11 @@ export async function answerScreeningQuestions(
     .join("\n");
 
   let accumulated = "";
+  void provider;
+  void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider,
-    selectedProvider,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: SCREENING_SYSTEM_PROMPT,
     userMessage,
   })) {
@@ -623,9 +636,11 @@ export async function generateArchitectureDiagram(
     .join("\n");
 
   let accumulated = "";
+  void provider;
+  void selectedProvider;
   for await (const chunk of fetchAIResponse({
-    provider,
-    selectedProvider,
+    provider: DEEPSEEK_PROVIDER,
+    selectedProvider: DEEPSEEK_SELECTED,
     systemPrompt: ARCHITECTURE_DIAGRAM_SYSTEM_PROMPT,
     userMessage,
   })) {
