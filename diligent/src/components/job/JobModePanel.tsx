@@ -234,8 +234,12 @@ export const JobModePanel = () => {
 
   return (
     <div className="flex w-screen overflow-hidden" style={{ maxHeight: "70vh" }}>
-      {/* Sidebar — previous workspaces */}
-      <div className="w-44 shrink-0 border-r border-input/50 flex flex-col">
+      {/* Sidebar — previous workspaces.
+          `min-h-0` here and on the ScrollArea below for the same reason as the
+          main content: without it the column grows to fit every workspace, the
+          70vh cap never bites, and newly added workspaces fall off the bottom
+          with no way to scroll to them. */}
+      <div className="w-44 shrink-0 border-r border-input/50 flex flex-col min-h-0">
         <div className="flex items-center justify-between px-3 py-2 border-b border-input/30">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Workspaces
@@ -251,7 +255,7 @@ export const JobModePanel = () => {
           </Button>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-0.5 p-1.5">
             {allWorkspaces.length === 0 && (
               <p className="text-xs text-muted-foreground italic px-2 py-1">
