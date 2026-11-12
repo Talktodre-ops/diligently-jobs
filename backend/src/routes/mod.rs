@@ -7,6 +7,7 @@ pub mod events;
 pub mod health;
 pub mod interviews;
 pub mod jobs;
+pub mod profile;
 pub mod research;
 
 use uuid::Uuid;

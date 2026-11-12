@@ -69,7 +69,7 @@ pub fn build_router(state: AppState) -> Router {
     // signed-out request with 401, and scopes every query to that user.
     use routes::{
         applications, ats_scores, blobs, cover_letters, cv_versions, events, interviews,
-        jobs as job_routes, research,
+        jobs as job_routes, profile, research,
     };
     let resources = Router::new()
         .route("/v1/events", post(events::append).get(events::list))
@@ -119,7 +119,8 @@ pub fn build_router(state: AppState) -> Router {
             "/v1/interviews/{id}",
             get(interviews::get_one).patch(interviews::patch),
         )
-        .route("/v1/blobs/presign-download", post(blobs::presign_download));
+        .route("/v1/blobs/presign-download", post(blobs::presign_download))
+        .route("/v1/profile", get(profile::get).patch(profile::patch));
 
     Router::new()
         .merge(public)
