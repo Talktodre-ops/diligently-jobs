@@ -653,3 +653,120 @@ async fn letter_step(
         .map_err(ai)?;
     Ok(true)
 }
+
+/// Score shown while the user reviews: moves from the master CV's score to
+/// the projected score in proportion to the proposals accepted so far.
+/// Instant and free; a real rescore is available on demand.
+pub fn estimate(before: i64, projected: i64, decided: i64, total: i64) -> i64 {
+    if total <= 0 {
+        return before;
+    }
+    let gained = (projected - before) as f64 * decided.clamp(0, total) as f64 / total as f64;
+    (before as f64 + gained).round().clamp(0.0, 100.0) as i64
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ScoreView {
+    pub before: Option<i64>,
+    pub projected: Option<i64>,
+    pub current: Option<i64>,
+    /// The newest real score of a tailored version, if one was requested.
+    pub rescored: Option<i64>,
+    pub decided: i64,
+    pub pending: i64,
+}
+
+pub async fn score_view(db: &PgPool, uid: Uuid, app_id: Uuid) -> Result<ScoreView, AppError> {
+    let latest = |kind: &'static str| async move {
+        sqlx::query_scalar::<_, i32>(
+            "select score from ats_scores where application_id = $1 and user_id = $2 and kind = $3 order by created_at desc limit 1",
+        )
+        .bind(app_id)
+        .bind(uid)
+        .bind(kind)
+        .fetch_optional(db)
+        .await
+        .map(|o| o.map(i64::from))
+    };
+    let before = latest("before").await?;
+    let projected = latest("projected").await?;
+    let rescored = latest("rescore").await?;
+    let (accepted, pending, total): (i64, i64, i64) = sqlx::query_as(
+        r#"
+        select
+            (select count(*) from tailored_bullets where application_id = $1 and user_id = $2 and status in ('accepted', 'edited'))
+              + (select count(*) from applications where id = $1 and user_id = $2 and tailored_summary is not null and summary_status = 'accepted'),
+            (select count(*) from tailored_bullets where application_id = $1 and user_id = $2 and status = 'pending')
+              + (select count(*) from applications where id = $1 and user_id = $2 and tailored_summary is not null and summary_status = 'pending'),
+            (select count(*) from tailored_bullets where application_id = $1 and user_id = $2)
+              + (select count(*) from applications where id = $1 and user_id = $2 and tailored_summary is not null)
+        "#,
+    )
+    .bind(app_id)
+    .bind(uid)
+    .fetch_one(db)
+    .await?;
+    let current = match (before, projected) {
+        (Some(b), Some(p)) => Some(estimate(b, p, accepted, total)),
+        (Some(b), None) => Some(b),
+        _ => None,
+    };
+    Ok(ScoreView {
+        before,
+        projected,
+        current,
+        rescored,
+        decided: accepted,
+        pending,
+    })
+}
+
+/// Save the decided CV as the application's tailored version, reusing the
+/// newest one when nothing changed. Returns its id.
+pub async fn materialize(db: &PgPool, uid: Uuid, app_id: Uuid) -> Result<Uuid, AppError> {
+    let (_, doc) = decided_doc(db, uid, app_id).await?;
+    let sections = serde_json::to_value(&doc).map_err(anyhow::Error::from)?;
+    let newest: Option<(Uuid, Value)> = sqlx::query_as(
+        "select id, sections from cv_versions where application_id = $1 and user_id = $2 order by created_at desc limit 1",
+    )
+    .bind(app_id)
+    .bind(uid)
+    .fetch_optional(db)
+    .await?;
+    if let Some((id, s)) = newest {
+        if s == sections {
+            return Ok(id);
+        }
+    }
+    let base: Option<Uuid> = sqlx::query_scalar(
+        "select base_cv_version_id from applications where id = $1 and user_id = $2",
+    )
+    .bind(app_id)
+    .bind(uid)
+    .fetch_one(db)
+    .await?;
+    let id: Uuid = sqlx::query_scalar(
+        "insert into cv_versions (user_id, application_id, sections, label, based_on_id) values ($1, $2, $3, 'tailored', $4) returning id",
+    )
+    .bind(uid)
+    .bind(app_id)
+    .bind(&sections)
+    .bind(base)
+    .fetch_one(db)
+    .await?;
+    Ok(id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn estimate_moves_with_decisions() {
+        assert_eq!(estimate(80, 86, 0, 3), 80);
+        assert_eq!(estimate(80, 86, 2, 3), 84);
+        assert_eq!(estimate(80, 86, 3, 3), 86);
+        assert_eq!(estimate(80, 86, 9, 3), 86, "clamped");
+        assert_eq!(estimate(80, 86, 0, 0), 80);
+    }
+}

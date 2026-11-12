@@ -24,7 +24,7 @@ pub mod web;
 use axum::{
     http::{header, HeaderValue, Method},
     middleware,
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Router,
 };
 use sqlx::PgPool;
@@ -76,7 +76,7 @@ pub fn build_router(state: AppState) -> Router {
     // signed-out request with 401, and scopes every query to that user.
     use routes::{
         applications, ats_scores, blobs, cover_letters, cv, cv_versions, events, interviews,
-        jobs as job_routes, profile, research, uploads, workspace,
+        jobs as job_routes, profile, research, review, uploads, workspace,
     };
     let resources = Router::new()
         .route("/v1/events", post(events::append).get(events::list))
@@ -137,7 +137,16 @@ pub fn build_router(state: AppState) -> Router {
             )),
         )
         .route("/v1/cv/uploads/{id}", get(uploads::get_upload))
-        .route("/v1/applications/start", post(workspace::start));
+        .route("/v1/applications/start", post(workspace::start))
+        .route("/v1/applications/{id}/brief", get(review::brief))
+        .route("/v1/applications/{id}/rewrites", get(review::list_rewrites))
+        .route(
+            "/v1/applications/{id}/summary",
+            patch(review::decide_summary),
+        )
+        .route("/v1/applications/{id}/cv", get(review::tailored_cv))
+        .route("/v1/applications/{id}/rescore", post(review::rescore))
+        .route("/v1/rewrites/{id}", patch(review::decide_rewrite));
 
     Router::new()
         .merge(public)
