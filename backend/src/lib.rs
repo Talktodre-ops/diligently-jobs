@@ -68,7 +68,7 @@ pub fn build_router(state: AppState) -> Router {
     // Resource routes. Every handler takes `CurrentUser`, which rejects a
     // signed-out request with 401, and scopes every query to that user.
     use routes::{
-        applications, ats_scores, blobs, cover_letters, cv_versions, events, interviews,
+        applications, ats_scores, blobs, cover_letters, cv, cv_versions, events, interviews,
         jobs as job_routes, profile, research,
     };
     let resources = Router::new()
@@ -120,7 +120,8 @@ pub fn build_router(state: AppState) -> Router {
             get(interviews::get_one).patch(interviews::patch),
         )
         .route("/v1/blobs/presign-download", post(blobs::presign_download))
-        .route("/v1/profile", get(profile::get).patch(profile::patch));
+        .route("/v1/profile", get(profile::get).patch(profile::patch))
+        .route("/v1/cv/master", get(cv::get_master).put(cv::put_master));
 
     Router::new()
         .merge(public)

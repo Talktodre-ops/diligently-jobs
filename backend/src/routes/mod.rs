@@ -2,6 +2,7 @@ pub mod applications;
 pub mod ats_scores;
 pub mod blobs;
 pub mod cover_letters;
+pub mod cv;
 pub mod cv_versions;
 pub mod events;
 pub mod health;

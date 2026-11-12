@@ -133,7 +133,7 @@ async fn cover_letter_render(
 /// for the flat fallback which has no header of its own. None if none exists.
 async fn latest_base_header(db: &sqlx::PgPool, user_id: Uuid) -> Option<render::resume::Header> {
     let rows = sqlx::query_scalar::<_, Value>(
-        "select sections from cv_versions where application_id is null and user_id = $1 order by created_at desc limit 50",
+        "select c.sections from profiles p join cv_versions c on c.id = p.master_cv_version_id and c.user_id = p.user_id where p.user_id = $1",
     )
     .bind(user_id)
     .fetch_all(db)
@@ -393,7 +393,7 @@ async fn ats_score(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
     {
         Some(c) => Some(c),
         None => sqlx::query_as::<_, (Uuid, Value)>(
-            "select id, sections from cv_versions where application_id is null and user_id = $1 order by created_at desc limit 1",
+            "select c.id, c.sections from profiles p join cv_versions c on c.id = p.master_cv_version_id and c.user_id = p.user_id where p.user_id = $1",
         )
         .bind(user_id)
         .fetch_optional(&state.db)
