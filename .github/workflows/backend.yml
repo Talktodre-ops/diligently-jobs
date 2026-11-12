@@ -31,3 +31,16 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Tests (local Postgres and S3 emulator in Docker)
         run: scripts/test.sh
+
+  audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit dependencies (reviewed exceptions in .cargo/audit.toml)
+        run: cargo audit

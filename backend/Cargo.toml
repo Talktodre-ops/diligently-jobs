@@ -28,8 +28,12 @@ sqlx = { version = "0.8", features = [
 ] }
 
 # R2 / S3-compatible blob storage
-aws-config       = { version = "1.5", features = ["behavior-version-latest"] }
-aws-sdk-s3       = { version = "1.55", features = ["behavior-version-latest"] }
+# Defaults off: the SDKs' default "rustls" feature is the legacy hyper 0.14
+# client on rustls 0.21 (open advisories). default-https-client uses the
+# current stack. Credentials are passed explicitly, so no SSO or process
+# credential providers.
+aws-config       = { version = "1.5", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"] }
+aws-sdk-s3       = { version = "1.55", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio", "http-1x"] }
 aws-credential-types = "1.2"
 
 # Serde + error handling
