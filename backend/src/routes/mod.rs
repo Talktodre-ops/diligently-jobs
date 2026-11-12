@@ -7,6 +7,30 @@ pub mod events;
 pub mod health;
 pub mod interviews;
 pub mod jobs;
-pub mod me;
-pub mod proposals;
 pub mod research;
+
+use uuid::Uuid;
+
+use crate::error::AppError;
+
+/// 404 unless `application_id` exists and belongs to `user_id`. Called before
+/// attaching anything to an application; the composite foreign keys in the
+/// schema are the backstop if a handler forgets.
+pub async fn ensure_application(
+    db: &sqlx::PgPool,
+    user_id: Uuid,
+    application_id: Uuid,
+) -> Result<(), AppError> {
+    let found: bool = sqlx::query_scalar(
+        "select exists(select 1 from applications where id = $1 and user_id = $2)",
+    )
+    .bind(application_id)
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+    if found {
+        Ok(())
+    } else {
+        Err(AppError::NotFound)
+    }
+}

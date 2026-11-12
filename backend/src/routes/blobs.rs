@@ -1,3 +1,4 @@
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::extract::Json;
 use crate::AppState;
@@ -8,22 +9,10 @@ use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-/// Bucket key convention. Keep clients from picking weird paths so we can
-/// reason about R2 listings later.
-///   cvs/<id>.{pdf,docx}
-///   interviews/<id>.wav
-///   letters/<id>.pdf
-///   screenshots/<id>.png
-/// Any other prefix is rejected. (Server-side defense — the caller could
-/// theoretically write anywhere with the bucket-wide R2 token, but we never
-/// SIGN a URL for them outside this convention.)
-const ALLOWED_KEY_PREFIXES: &[&str] = &[
-    "cvs/",
-    "interviews/",
-    "letters/",
-    "screenshots/",
-    "exports/",
-];
+/// Bucket key convention: every object belongs to one user and lives under
+/// `u/{user_id}/{subdir}/...`, for example `u/<id>/cvs/<cv id>.pdf`. URLs are
+/// only ever signed for the caller's own prefix and these subdirectories.
+const ALLOWED_SUBDIRS: &[&str] = &["cvs/", "letters/", "uploads/", "exports/", "interviews/"];
 
 /// Default presigning TTL when the caller doesn't specify one.
 const DEFAULT_TTL_SECONDS: u64 = 300; // 5 minutes
@@ -49,50 +38,15 @@ pub struct PresignResponse {
     pub expires_at: DateTime<Utc>,
 }
 
-/// POST /v1/blobs/presign-upload
-///
-/// Returns a signed URL the client uploads to directly via HTTP PUT. We don't
-/// proxy bytes through the backend — saves CPU + bandwidth, and means a
-/// 100MB interview recording uploads as fast as the client's link allows.
-pub async fn presign_upload(
-    State(state): State<AppState>,
-    Json(req): Json<PresignRequest>,
-) -> Result<Json<PresignResponse>, AppError> {
-    validate_key(&req.key)?;
-    let ttl = ttl_from_request(req.ttl_seconds)?;
-
-    let mut put = state
-        .r2
-        .client
-        .put_object()
-        .bucket(&state.r2.bucket)
-        .key(&req.key);
-    if let Some(ct) = &req.content_type {
-        put = put.content_type(ct);
-    }
-
-    let presigning = PresigningConfig::expires_in(ttl).context("invalid presigning TTL")?;
-    let signed = put
-        .presigned(presigning)
-        .await
-        .context("failed to sign upload URL")?;
-
-    Ok(Json(PresignResponse {
-        url: signed.uri().to_string(),
-        key: req.key,
-        expires_at: Utc::now() + ChronoDuration::from_std(ttl).unwrap_or_default(),
-    }))
-}
-
 /// POST /v1/blobs/presign-download
 ///
-/// Returns a signed URL the client fetches via HTTP GET. Same pattern as
-/// upload but for retrieval — useful for "download my application PDF" etc.
+/// Returns a short-lived signed URL for one of the caller's own files.
 pub async fn presign_download(
     State(state): State<AppState>,
+    user: CurrentUser,
     Json(req): Json<PresignRequest>,
 ) -> Result<Json<PresignResponse>, AppError> {
-    validate_key(&req.key)?;
+    validate_key(user.id, &req.key)?;
     let ttl = ttl_from_request(req.ttl_seconds)?;
 
     let presigning = PresigningConfig::expires_in(ttl).context("invalid presigning TTL")?;
@@ -119,15 +73,16 @@ pub async fn presign_download(
     }))
 }
 
-fn validate_key(key: &str) -> Result<(), AppError> {
-    if key.is_empty() || key.contains("..") || key.starts_with('/') {
-        return Err(AppError::BadRequest(format!("invalid blob key: {key}")));
+fn validate_key(user_id: uuid::Uuid, key: &str) -> Result<(), AppError> {
+    if key.is_empty() || key.contains("..") || key.contains('\\') || key.starts_with('/') {
+        return Err(AppError::BadRequest("invalid file key".to_string()));
     }
-    if !ALLOWED_KEY_PREFIXES.iter().any(|p| key.starts_with(p)) {
-        return Err(AppError::BadRequest(format!(
-            "blob key must start with one of: {}",
-            ALLOWED_KEY_PREFIXES.join(", ")
-        )));
+    // Every object a user owns lives under u/{their id}/. Anything else is
+    // reported as not found rather than forbidden, so keys do not leak.
+    let prefix = format!("u/{user_id}/");
+    let rest = key.strip_prefix(&prefix).ok_or(AppError::NotFound)?;
+    if !ALLOWED_SUBDIRS.iter().any(|p| rest.starts_with(p)) {
+        return Err(AppError::NotFound);
     }
     Ok(())
 }

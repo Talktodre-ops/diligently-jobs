@@ -5,6 +5,7 @@
 //! back. Each generation is an immutable row (newest = current), mirroring the
 //! cv_versions / events append style.
 
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::extract::{Json, Path};
 use crate::AppState;
@@ -35,9 +36,11 @@ pub struct CreateResearchRequest {
 /// Persist a freshly synthesized brief. Returns the stored row.
 pub async fn create(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(application_id): Path<Uuid>,
     Json(req): Json<CreateResearchRequest>,
 ) -> Result<Json<CompanyResearch>, AppError> {
+    super::ensure_application(&state.db, user.id, application_id).await?;
     if req.brief.is_null() {
         return Err(AppError::BadRequest("brief must not be null".to_string()));
     }
@@ -47,14 +50,15 @@ pub async fn create(
 
     let row = sqlx::query_as::<_, CompanyResearch>(
         r#"
-        insert into company_research (application_id, brief, sources)
-        values ($1, $2, $3)
+        insert into company_research (application_id, brief, sources, user_id)
+        values ($1, $2, $3, $4)
         returning id, application_id, brief, sources, created_at
         "#,
     )
     .bind(application_id)
     .bind(&req.brief)
     .bind(&sources)
+    .bind(user.id)
     .fetch_one(&state.db)
     .await?;
 
@@ -67,18 +71,20 @@ pub async fn create(
 /// yet (the desktop treats that as "no research run yet").
 pub async fn get_latest(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(application_id): Path<Uuid>,
 ) -> Result<Json<CompanyResearch>, AppError> {
     let row = sqlx::query_as::<_, CompanyResearch>(
         r#"
         select id, application_id, brief, sources, created_at
         from company_research
-        where application_id = $1
+        where application_id = $1 and user_id = $2
         order by created_at desc
         limit 1
         "#,
     )
     .bind(application_id)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;

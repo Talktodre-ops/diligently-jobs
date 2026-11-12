@@ -1,3 +1,4 @@
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::extract::{Json, Path, Query};
 use crate::jobs::{self, handlers::KIND_CV_RENDER};
@@ -48,12 +49,19 @@ pub struct ListCvVersionsQuery {
 /// POST /v1/cv-versions
 pub async fn create(
     State(state): State<AppState>,
+    user: CurrentUser,
     Json(req): Json<CreateCvVersionRequest>,
 ) -> Result<Json<CvVersion>, AppError> {
+    if let Some(app_id) = req.application_id {
+        super::ensure_application(&state.db, user.id, app_id).await?;
+    }
+    if let Some(label) = &req.label {
+        crate::validate::max_len("label", label, 200)?;
+    }
     let cv = sqlx::query_as::<_, CvVersion>(
         r#"
-        insert into cv_versions (application_id, sections, r2_blob_key, label)
-        values ($1, $2, $3, $4)
+        insert into cv_versions (application_id, sections, r2_blob_key, label, user_id)
+        values ($1, $2, $3, $4, $5)
         returning id, application_id, sections, r2_blob_key, r2_pdf_key, r2_docx_key, label, created_at
         "#,
     )
@@ -61,6 +69,7 @@ pub async fn create(
     .bind(&req.sections)
     .bind(&req.r2_blob_key)
     .bind(&req.label)
+    .bind(user.id)
     .fetch_one(&state.db)
     .await?;
     Ok(Json(cv))
@@ -69,6 +78,7 @@ pub async fn create(
 /// GET /v1/cv-versions
 pub async fn list(
     State(state): State<AppState>,
+    user: CurrentUser,
     Query(q): Query<ListCvVersionsQuery>,
 ) -> Result<Json<Vec<CvVersion>>, AppError> {
     let limit = q.limit.unwrap_or(50).clamp(1, 500);
@@ -78,13 +88,14 @@ pub async fn list(
             r#"
             select id, application_id, sections, r2_blob_key, r2_pdf_key, r2_docx_key, label, created_at
             from cv_versions
-            where application_id = $1
+            where application_id = $1 and user_id = $3
             order by created_at desc
             limit $2
             "#,
         )
         .bind(app_id)
         .bind(limit)
+        .bind(user.id)
         .fetch_all(&state.db)
         .await?
     } else if q.base_only.unwrap_or(false) {
@@ -92,12 +103,13 @@ pub async fn list(
             r#"
             select id, application_id, sections, r2_blob_key, r2_pdf_key, r2_docx_key, label, created_at
             from cv_versions
-            where application_id is null
+            where application_id is null and user_id = $2
             order by created_at desc
             limit $1
             "#,
         )
         .bind(limit)
+        .bind(user.id)
         .fetch_all(&state.db)
         .await?
     } else {
@@ -105,11 +117,13 @@ pub async fn list(
             r#"
             select id, application_id, sections, r2_blob_key, r2_pdf_key, r2_docx_key, label, created_at
             from cv_versions
+            where user_id = $2
             order by created_at desc
             limit $1
             "#,
         )
         .bind(limit)
+        .bind(user.id)
         .fetch_all(&state.db)
         .await?
     };
@@ -120,16 +134,18 @@ pub async fn list(
 /// GET /v1/cv-versions/:id
 pub async fn get_one(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<CvVersion>, AppError> {
     let cv = sqlx::query_as::<_, CvVersion>(
         r#"
         select id, application_id, sections, r2_blob_key, r2_pdf_key, r2_docx_key, label, created_at
         from cv_versions
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;
@@ -147,20 +163,23 @@ pub async fn get_one(
 /// duplicate.
 pub async fn enqueue_render(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // 404 fast if the CV doesn't exist — saves a job that would just fail.
-    let exists: Option<(Uuid,)> = sqlx::query_as("select id from cv_versions where id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await?;
+    let exists: Option<(Uuid,)> =
+        sqlx::query_as("select id from cv_versions where id = $1 and user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&state.db)
+            .await?;
     if exists.is_none() {
         return Err(AppError::NotFound);
     }
 
     let payload_match = json!({ "cv_version_id": id });
 
-    if let Some(existing) = jobs::find_active(&state.db, KIND_CV_RENDER, &payload_match)
+    if let Some(existing) = jobs::find_active(&state.db, user.id, KIND_CV_RENDER, &payload_match)
         .await
         .map_err(AppError::Db)?
     {
@@ -170,7 +189,7 @@ pub async fn enqueue_render(
         ));
     }
 
-    let job = jobs::enqueue(&state.db, KIND_CV_RENDER, payload_match, 3).await?;
+    let job = jobs::enqueue(&state.db, user.id, KIND_CV_RENDER, payload_match, 3).await?;
     Ok((
         StatusCode::ACCEPTED,
         Json(json!({ "job_id": job.id, "status": job.status, "deduped": false })),

@@ -64,91 +64,65 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/v1/auth/sessions/{id}", delete(a::revoke_session));
 
-    // Protected routes — every request must carry a valid Bearer token.
-    // `route_layer` only applies to routes added BEFORE the call, so routes go first.
-    let protected = Router::new()
-        // Bearer check ping
-        .route("/v1/me", get(routes::me::me))
-        // Events spine
-        .route(
-            "/v1/events",
-            post(routes::events::append).get(routes::events::list),
-        )
-        // Applications — central projection
+    // Resource routes. Every handler takes `CurrentUser`, which rejects a
+    // signed-out request with 401, and scopes every query to that user.
+    use routes::{
+        applications, ats_scores, blobs, cover_letters, cv_versions, events, interviews,
+        jobs as job_routes, research,
+    };
+    let resources = Router::new()
+        .route("/v1/events", post(events::append).get(events::list))
         .route(
             "/v1/applications",
-            post(routes::applications::create).get(routes::applications::list),
+            post(applications::create).get(applications::list),
         )
         .route(
             "/v1/applications/{id}",
-            get(routes::applications::get_one).patch(routes::applications::patch),
+            get(applications::get_one).patch(applications::patch),
         )
         .route(
             "/v1/applications/{id}/timeline",
-            get(routes::applications::timeline),
+            get(applications::timeline),
         )
-        // Company research — web-sourced briefs (synthesized on the desktop)
         .route(
             "/v1/applications/{id}/research",
-            post(routes::research::create).get(routes::research::get_latest),
+            post(research::create).get(research::get_latest),
         )
-        // Cover letters — AIDA letters; render reuses the job worker
         .route(
             "/v1/applications/{id}/cover-letters",
-            post(routes::cover_letters::create).get(routes::cover_letters::get_latest),
+            post(cover_letters::create).get(cover_letters::get_latest),
         )
         .route(
             "/v1/cover-letters/{id}/render",
-            post(routes::cover_letters::enqueue_render),
+            post(cover_letters::enqueue_render),
         )
-        // Upwork proposals — AIDA proposals (no render; copy-paste artifact)
-        .route(
-            "/v1/applications/{id}/proposals",
-            post(routes::proposals::create).get(routes::proposals::get_latest),
-        )
-        // ATS scores — async LLM scoring of a CV vs the JD
         .route(
             "/v1/applications/{id}/ats-score",
-            post(routes::ats_scores::enqueue).get(routes::ats_scores::get_latest),
+            post(ats_scores::enqueue).get(ats_scores::get_latest),
         )
-        // CV versions — immutable snapshots
         .route(
             "/v1/cv-versions",
-            post(routes::cv_versions::create).get(routes::cv_versions::list),
+            post(cv_versions::create).get(cv_versions::list),
         )
-        .route("/v1/cv-versions/{id}", get(routes::cv_versions::get_one))
+        .route("/v1/cv-versions/{id}", get(cv_versions::get_one))
         .route(
             "/v1/cv-versions/{id}/render",
-            post(routes::cv_versions::enqueue_render),
+            post(cv_versions::enqueue_render),
         )
-        // Async job status (used by the desktop to poll render progress)
-        .route("/v1/jobs/{id}", get(routes::jobs::get_one))
-        // Interviews — capture sessions
+        .route("/v1/jobs/{id}", get(job_routes::get_one))
         .route(
             "/v1/interviews",
-            post(routes::interviews::start).get(routes::interviews::list),
+            post(interviews::start).get(interviews::list),
         )
         .route(
             "/v1/interviews/{id}",
-            get(routes::interviews::get_one).patch(routes::interviews::patch),
+            get(interviews::get_one).patch(interviews::patch),
         )
-        // R2 blob presigning
-        .route(
-            "/v1/blobs/presign-upload",
-            post(routes::blobs::presign_upload),
-        )
-        .route(
-            "/v1/blobs/presign-download",
-            post(routes::blobs::presign_download),
-        )
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth::require_bearer,
-        ));
+        .route("/v1/blobs/presign-download", post(blobs::presign_download));
 
     Router::new()
         .merge(public)
-        .merge(protected)
+        .merge(resources)
         .layer(middleware::from_fn_with_state(
             state.clone(),
             auth::csrf::require_allowed_origin,

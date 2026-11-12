@@ -21,9 +21,9 @@ pub const KIND_ATS_SCORE: &str = "ats_score";
 /// is stored on `jobs.result` for the client to read via GET /v1/jobs/:id.
 pub async fn dispatch(state: &AppState, job: &Job) -> anyhow::Result<Value> {
     match job.kind.as_str() {
-        KIND_CV_RENDER => cv_render(state, &job.payload).await,
-        KIND_COVER_LETTER_RENDER => cover_letter_render(state, &job.payload).await,
-        KIND_ATS_SCORE => ats_score(state, &job.payload).await,
+        KIND_CV_RENDER => cv_render(state, job.user_id, &job.payload).await,
+        KIND_COVER_LETTER_RENDER => cover_letter_render(state, job.user_id, &job.payload).await,
+        KIND_ATS_SCORE => ats_score(state, job.user_id, &job.payload).await,
         other => Err(anyhow!("unknown job kind: {other}")),
     }
 }
@@ -31,7 +31,11 @@ pub async fn dispatch(state: &AppState, job: &Job) -> anyhow::Result<Value> {
 /// Payload: { "cover_letter_id": "<uuid>" }
 ///
 /// Output: { "pdf_key": "...", "docx_key": "...", "cover_letter_id": "..." }
-async fn cover_letter_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
+async fn cover_letter_render(
+    state: &AppState,
+    user_id: Uuid,
+    payload: &Value,
+) -> anyhow::Result<Value> {
     let cover_letter_id = payload
         .get("cover_letter_id")
         .and_then(Value::as_str)
@@ -44,10 +48,11 @@ async fn cover_letter_render(state: &AppState, payload: &Value) -> anyhow::Resul
         r#"
         select application_id, doc
         from cover_letters
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(cover_letter_id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await
     .context("load cover_letter")?
@@ -66,8 +71,8 @@ async fn cover_letter_render(state: &AppState, payload: &Value) -> anyhow::Resul
 
     // `letters/` is the whitelisted prefix in routes::blobs (presign rejects
     // anything else, e.g. the old `cover-letters/`).
-    let pdf_key = format!("letters/{cover_letter_id}.pdf");
-    let docx_key = format!("letters/{cover_letter_id}.docx");
+    let pdf_key = format!("u/{user_id}/letters/{cover_letter_id}.pdf");
+    let docx_key = format!("u/{user_id}/letters/{cover_letter_id}.docx");
 
     state
         .r2
@@ -89,20 +94,21 @@ async fn cover_letter_render(state: &AppState, payload: &Value) -> anyhow::Resul
         update cover_letters
         set r2_pdf_key = $2,
             r2_docx_key = $3
-        where id = $1
+        where id = $1 and user_id = $4
         "#,
     )
     .bind(cover_letter_id)
     .bind(&pdf_key)
     .bind(&docx_key)
+    .bind(user_id)
     .execute(&state.db)
     .await
     .context("update cover_letters render keys")?;
 
     sqlx::query(
         r#"
-        insert into events (kind, payload, application_id)
-        values ('cover_letter_rendered', $1, $2)
+        insert into events (kind, payload, application_id, user_id)
+        values ('cover_letter_rendered', $1, $2, $3)
         "#,
     )
     .bind(json!({
@@ -111,6 +117,7 @@ async fn cover_letter_render(state: &AppState, payload: &Value) -> anyhow::Resul
         "docx_key": docx_key,
     }))
     .bind(row.application_id)
+    .bind(user_id)
     .execute(&state.db)
     .await
     .context("append cover_letter_rendered event")?;
@@ -124,10 +131,11 @@ async fn cover_letter_render(state: &AppState, payload: &Value) -> anyhow::Resul
 
 /// Candidate header (name + contacts) from the most recent structured base CV,
 /// for the flat fallback which has no header of its own. None if none exists.
-async fn latest_base_header(db: &sqlx::PgPool) -> Option<render::resume::Header> {
+async fn latest_base_header(db: &sqlx::PgPool, user_id: Uuid) -> Option<render::resume::Header> {
     let rows = sqlx::query_scalar::<_, Value>(
-        "select sections from cv_versions where application_id is null order by created_at desc limit 50",
+        "select sections from cv_versions where application_id is null and user_id = $1 order by created_at desc limit 50",
     )
+    .bind(user_id)
     .fetch_all(db)
     .await
     .ok()?;
@@ -138,7 +146,7 @@ async fn latest_base_header(db: &sqlx::PgPool) -> Option<render::resume::Header>
 /// Payload: { "cv_version_id": "<uuid>" }
 ///
 /// Output: { "pdf_key": "...", "docx_key": "...", "cv_version_id": "..." }
-async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
+async fn cv_render(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::Result<Value> {
     let cv_version_id = payload
         .get("cv_version_id")
         .and_then(Value::as_str)
@@ -153,10 +161,11 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
         r#"
         select application_id, sections, label
         from cv_versions
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(cv_version_id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await
     .context("load cv_version")?
@@ -167,10 +176,11 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
             r#"
             select company, role
             from applications
-            where id = $1
+            where id = $1 and user_id = $2
             "#,
         )
         .bind(app_id)
+        .bind(user_id)
         .fetch_optional(&state.db)
         .await
         .context("load application context")?
@@ -196,7 +206,7 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
             // Flat sections: render their real content, borrowing the header
             // (name + contacts) from the latest structured base CV.
             tracing::info!(cv_version_id = %cv_version_id, "rendering cv via flat-sections path (no structured ResumeDoc)");
-            let base_header = latest_base_header(&state.db).await;
+            let base_header = latest_base_header(&state.db, user_id).await;
             let pdf =
                 render::latex::render_flat_cv(&cv.sections, app.as_ref(), base_header.as_ref())
                     .await
@@ -206,8 +216,8 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
         }
     };
 
-    let pdf_key = format!("cvs/{cv_version_id}.pdf");
-    let docx_key = format!("cvs/{cv_version_id}.docx");
+    let pdf_key = format!("u/{user_id}/cvs/{cv_version_id}.pdf");
+    let docx_key = format!("u/{user_id}/cvs/{cv_version_id}.docx");
 
     state
         .r2
@@ -229,12 +239,13 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
         update cv_versions
         set r2_pdf_key = $2,
             r2_docx_key = $3
-        where id = $1
+        where id = $1 and user_id = $4
         "#,
     )
     .bind(cv_version_id)
     .bind(&pdf_key)
     .bind(&docx_key)
+    .bind(user_id)
     .execute(&state.db)
     .await
     .context("update cv_versions render keys")?;
@@ -250,13 +261,14 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
                 latest_cv_pdf_key     = $3,
                 latest_cv_docx_key    = $4,
                 latest_cv_rendered_at = now()
-            where id = $1
+            where id = $1 and user_id = $5
             "#,
         )
         .bind(app_id)
         .bind(cv_version_id)
         .bind(&pdf_key)
         .bind(&docx_key)
+        .bind(user_id)
         .execute(&state.db)
         .await
         .context("update applications latest_cv_*")?;
@@ -265,8 +277,8 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
     // Audit log.
     sqlx::query(
         r#"
-        insert into events (kind, payload, application_id)
-        values ('cv_rendered', $1, $2)
+        insert into events (kind, payload, application_id, user_id)
+        values ('cv_rendered', $1, $2, $3)
         "#,
     )
     .bind(json!({
@@ -275,6 +287,7 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
         "docx_key": docx_key,
     }))
     .bind(cv.application_id)
+    .bind(user_id)
     .execute(&state.db)
     .await
     .context("append cv_rendered event")?;
@@ -348,7 +361,7 @@ fn extract_json_object(s: &str) -> anyhow::Result<Value> {
 /// the latest base CV) against the JD via the LLM, stores an `ats_scores` row,
 /// and emits an `ats_scored` event.
 /// Output: { "ats_score_id": "...", "cv_version_id": "...", "score": n }
-async fn ats_score(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
+async fn ats_score(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::Result<Value> {
     let application_id = payload
         .get("application_id")
         .and_then(Value::as_str)
@@ -359,9 +372,10 @@ async fn ats_score(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
 
     let (jd_raw, requirements, role, _company) =
         sqlx::query_as::<_, (String, Option<Value>, Option<String>, Option<String>)>(
-            "select jd_raw, requirements, role, company from applications where id = $1",
+            "select jd_raw, requirements, role, company from applications where id = $1 and user_id = $2",
         )
         .bind(application_id)
+        .bind(user_id)
         .fetch_optional(&state.db)
         .await
         .context("load application")?
@@ -369,17 +383,19 @@ async fn ats_score(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
 
     // Prefer the latest CV tied to this application; fall back to the latest base CV.
     let cv = match sqlx::query_as::<_, (Uuid, Value)>(
-        "select id, sections from cv_versions where application_id = $1 order by created_at desc limit 1",
+        "select id, sections from cv_versions where application_id = $1 and user_id = $2 order by created_at desc limit 1",
     )
     .bind(application_id)
+    .bind(user_id)
     .fetch_optional(&state.db)
     .await
     .context("load tailored cv")?
     {
         Some(c) => Some(c),
         None => sqlx::query_as::<_, (Uuid, Value)>(
-            "select id, sections from cv_versions where application_id is null order by created_at desc limit 1",
+            "select id, sections from cv_versions where application_id is null and user_id = $1 order by created_at desc limit 1",
         )
+        .bind(user_id)
         .fetch_optional(&state.db)
         .await
         .context("load base cv")?,
@@ -440,19 +456,21 @@ async fn ats_score(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
     });
 
     let ats_id: Uuid = sqlx::query_scalar(
-        "insert into ats_scores (application_id, cv_version_id, score, breakdown) values ($1, $2, $3, $4) returning id",
+        "insert into ats_scores (application_id, cv_version_id, score, breakdown, user_id) values ($1, $2, $3, $4, $5) returning id",
     )
     .bind(application_id)
     .bind(cv_id)
     .bind(score)
     .bind(&breakdown)
+    .bind(user_id)
     .fetch_one(&state.db)
     .await
     .context("insert ats_score")?;
 
-    sqlx::query("insert into events (kind, payload, application_id) values ('ats_scored', $1, $2)")
+    sqlx::query("insert into events (kind, payload, application_id, user_id) values ('ats_scored', $1, $2, $3)")
         .bind(json!({ "score": score, "cv_version_id": cv_id }))
         .bind(application_id)
+        .bind(user_id)
         .execute(&state.db)
         .await
         .context("append ats_scored event")?;

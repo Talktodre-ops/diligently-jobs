@@ -5,6 +5,7 @@ use axum::extract::State;
 use serde::Serialize;
 use uuid::Uuid;
 
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::jobs::{self, Job};
 use crate::AppState;
@@ -37,9 +38,10 @@ impl From<Job> for JobView {
 /// GET /v1/jobs/:id
 pub async fn get_one(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<JobView>, AppError> {
-    let job = jobs::get_by_id(&state.db, id)
+    let job = jobs::get_by_id(&state.db, user.id, id)
         .await?
         .ok_or(AppError::NotFound)?;
     Ok(Json(job.into()))

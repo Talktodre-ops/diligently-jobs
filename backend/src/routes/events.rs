@@ -1,3 +1,4 @@
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::extract::{Json, Query};
 use crate::AppState;
@@ -48,15 +49,20 @@ pub struct ListEventsQuery {
 /// know its assigned `id` and `created_at`.
 pub async fn append(
     State(state): State<AppState>,
+    user: CurrentUser,
     Json(req): Json<AppendEventRequest>,
 ) -> Result<Json<Event>, AppError> {
     if req.kind.trim().is_empty() {
         return Err(AppError::BadRequest("kind must be non-empty".to_string()));
     }
+    crate::validate::max_len("kind", &req.kind, 100)?;
+    if let Some(app_id) = req.application_id {
+        super::ensure_application(&state.db, user.id, app_id).await?;
+    }
     let event = sqlx::query_as::<_, Event>(
         r#"
-        insert into events (kind, payload, application_id, device_id)
-        values ($1, $2, $3, $4)
+        insert into events (kind, payload, application_id, device_id, user_id)
+        values ($1, $2, $3, $4, $5)
         returning id, kind, payload, application_id, device_id, created_at
         "#,
     )
@@ -64,6 +70,7 @@ pub async fn append(
     .bind(&req.payload)
     .bind(req.application_id)
     .bind(&req.device_id)
+    .bind(user.id)
     .fetch_one(&state.db)
     .await?;
     Ok(Json(event))
@@ -75,6 +82,7 @@ pub async fn append(
 /// `since=<last seen created_at>` on the next page to skip already-seen rows.
 pub async fn list(
     State(state): State<AppState>,
+    user: CurrentUser,
     Query(q): Query<ListEventsQuery>,
 ) -> Result<Json<Vec<Event>>, AppError> {
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
@@ -84,7 +92,8 @@ pub async fn list(
         select id, kind, payload, application_id, device_id, created_at
         from events
         where
-            ($1::text is null or kind = $1)
+            user_id = $5
+            and ($1::text is null or kind = $1)
             and ($2::uuid is null or application_id = $2)
             and ($3::timestamptz is null or created_at > $3)
         order by created_at desc
@@ -95,6 +104,7 @@ pub async fn list(
     .bind(q.application_id)
     .bind(q.since)
     .bind(limit)
+    .bind(user.id)
     .fetch_all(&state.db)
     .await?;
 

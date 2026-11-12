@@ -1,3 +1,4 @@
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::extract::{Json, Path, Query};
 use crate::AppState;
@@ -51,18 +52,23 @@ pub struct ListInterviewsQuery {
 /// and `ended_at = null`. Desktop client should PATCH when the session ends.
 pub async fn start(
     State(state): State<AppState>,
+    user: CurrentUser,
     Json(req): Json<StartInterviewRequest>,
 ) -> Result<Json<Interview>, AppError> {
+    if let Some(app_id) = req.application_id {
+        super::ensure_application(&state.db, user.id, app_id).await?;
+    }
     let iv = sqlx::query_as::<_, Interview>(
         r#"
-        insert into interviews (application_id, notes)
-        values ($1, $2)
+        insert into interviews (application_id, notes, user_id)
+        values ($1, $2, $3)
         returning id, application_id, started_at, ended_at, transcript, ai_messages,
                   r2_audio_key, notes, created_at
         "#,
     )
     .bind(req.application_id)
     .bind(&req.notes)
+    .bind(user.id)
     .fetch_one(&state.db)
     .await?;
     Ok(Json(iv))
@@ -75,6 +81,7 @@ pub async fn start(
 /// is being set and `ended_at` isn't yet recorded.
 pub async fn patch(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
     Json(req): Json<EndInterviewRequest>,
 ) -> Result<Json<Interview>, AppError> {
@@ -90,7 +97,7 @@ pub async fn patch(
             r2_audio_key  = coalesce($4, r2_audio_key),
             notes         = coalesce($5, notes),
             ended_at      = coalesce(ended_at, $6)
-        where id = $1
+        where id = $1 and user_id = $7
         returning id, application_id, started_at, ended_at, transcript, ai_messages,
                   r2_audio_key, notes, created_at
         "#,
@@ -101,6 +108,7 @@ pub async fn patch(
     .bind(&req.r2_audio_key)
     .bind(&req.notes)
     .bind(ended_at)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;
@@ -110,6 +118,7 @@ pub async fn patch(
 /// GET /v1/interviews
 pub async fn list(
     State(state): State<AppState>,
+    user: CurrentUser,
     Query(q): Query<ListInterviewsQuery>,
 ) -> Result<Json<Vec<Interview>>, AppError> {
     let limit = q.limit.unwrap_or(50).clamp(1, 500);
@@ -118,13 +127,14 @@ pub async fn list(
         select id, application_id, started_at, ended_at, transcript, ai_messages,
                r2_audio_key, notes, created_at
         from interviews
-        where ($1::uuid is null or application_id = $1)
+        where user_id = $3 and ($1::uuid is null or application_id = $1)
         order by started_at desc
         limit $2
         "#,
     )
     .bind(q.application_id)
     .bind(limit)
+    .bind(user.id)
     .fetch_all(&state.db)
     .await?;
     Ok(Json(rows))
@@ -133,6 +143,7 @@ pub async fn list(
 /// GET /v1/interviews/:id
 pub async fn get_one(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Interview>, AppError> {
     let iv = sqlx::query_as::<_, Interview>(
@@ -140,10 +151,11 @@ pub async fn get_one(
         select id, application_id, started_at, ended_at, transcript, ai_messages,
                r2_audio_key, notes, created_at
         from interviews
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;

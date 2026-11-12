@@ -26,6 +26,8 @@ pub const STUCK_RUNNING_AFTER: ChronoDuration = ChronoDuration::minutes(5);
 #[derive(Debug, Serialize, FromRow)]
 pub struct Job {
     pub id: Uuid,
+    /// Owner. Handlers scope every read and write, and storage keys, to it.
+    pub user_id: Uuid,
     pub kind: String,
     pub payload: serde_json::Value,
     pub status: String,
@@ -44,38 +46,41 @@ pub struct Job {
 /// the client for status polling.
 pub async fn enqueue(
     pool: &PgPool,
+    user_id: Uuid,
     kind: &str,
     payload: serde_json::Value,
     max_attempts: i32,
 ) -> Result<Job, AppError> {
     let job = sqlx::query_as::<_, Job>(
         r#"
-        insert into jobs (kind, payload, max_attempts)
-        values ($1, $2, $3)
+        insert into jobs (kind, payload, max_attempts, user_id)
+        values ($1, $2, $3, $4)
         returning
-            id, kind, payload, status, result, attempts, max_attempts,
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
             last_error, scheduled_at, started_at, completed_at, created_at, updated_at
         "#,
     )
     .bind(kind)
     .bind(&payload)
     .bind(max_attempts)
+    .bind(user_id)
     .fetch_one(pool)
     .await?;
     Ok(job)
 }
 
-pub async fn get_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Job>, AppError> {
+pub async fn get_by_id(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Option<Job>, AppError> {
     let job = sqlx::query_as::<_, Job>(
         r#"
         select
-            id, kind, payload, status, result, attempts, max_attempts,
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
             last_error, scheduled_at, started_at, completed_at, created_at, updated_at
         from jobs
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user_id)
     .fetch_optional(pool)
     .await?;
     Ok(job)
@@ -90,7 +95,7 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
     let candidate: Option<Job> = sqlx::query_as::<_, Job>(
         r#"
         select
-            id, kind, payload, status, result, attempts, max_attempts,
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
             last_error, scheduled_at, started_at, completed_at, created_at, updated_at
         from jobs
         where status = 'queued' and scheduled_at <= now()
@@ -115,7 +120,7 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
             started_at = coalesce(started_at, now())
         where id = $1
         returning
-            id, kind, payload, status, result, attempts, max_attempts,
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
             last_error, scheduled_at, started_at, completed_at, created_at, updated_at
         "#,
     )
@@ -212,16 +217,18 @@ pub async fn recover_stuck(pool: &PgPool) -> Result<u64, sqlx::Error> {
 /// `payload_match` is already queued or running.
 pub async fn find_active(
     pool: &PgPool,
+    user_id: Uuid,
     kind: &str,
     payload_match: &serde_json::Value,
 ) -> Result<Option<Job>, sqlx::Error> {
     sqlx::query_as::<_, Job>(
         r#"
         select
-            id, kind, payload, status, result, attempts, max_attempts,
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
             last_error, scheduled_at, started_at, completed_at, created_at, updated_at
         from jobs
         where kind = $1
+          and user_id = $3
           and status in ('queued', 'running')
           and payload @> $2
         order by created_at desc
@@ -230,6 +237,7 @@ pub async fn find_active(
     )
     .bind(kind)
     .bind(payload_match)
+    .bind(user_id)
     .fetch_optional(pool)
     .await
 }
