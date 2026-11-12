@@ -112,16 +112,16 @@
     {\Large {{ header.title | tex }}} \\ \vspace{5pt}
     \small
 {%- if header.email %}
-    \href{mailto:{{ header.email }}}{\raisebox{-0.2\height}\faEnvelope\  \underline{ {{- header.email | tex -}} }} ~
+    \href{mailto:{{ header.email | url }}}{\raisebox{-0.2\height}\faEnvelope\  \underline{ {{- header.email | tex -}} }} ~
 {%- endif %}
 {%- if header.linkedin %}
-    \href{ {{- header.linkedin.url -}} }{\raisebox{-0.2\height}\faLinkedin\ \underline{ {{- header.linkedin.display | tex -}} }}  ~
+    \href{ {{- header.linkedin.url | url -}} }{\raisebox{-0.2\height}\faLinkedin\ \underline{ {{- header.linkedin.display | tex -}} }}  ~
 {%- endif %}
 {%- if header.github %}
-    \href{ {{- header.github.url -}} }{\raisebox{-0.2\height}\faGithub\ \underline{ {{- header.github.display | tex -}} }} ~
+    \href{ {{- header.github.url | url -}} }{\raisebox{-0.2\height}\faGithub\ \underline{ {{- header.github.display | tex -}} }} ~
 {%- endif %}
 {%- if header.website %}
-    \href{ {{- header.website.url -}} }{\raisebox{-0.2\height}\faGlobe\ \underline{ {{- header.website.display | tex -}} }}
+    \href{ {{- header.website.url | url -}} }{\raisebox{-0.2\height}\faGlobe\ \underline{ {{- header.website.display | tex -}} }}
 {%- endif %}
 {%- if header.phone %}
     {%- if header.email or header.linkedin or header.github or header.website %} ~ {% endif %}
@@ -189,7 +189,7 @@
       \resumeItem{
         {%- if p.name %}\textbf{ {{- p.name | tex -}} }: {% endif -%}
         {{ p.description | tex }}
-        {%- if p.link %}: \href{ {{- p.link.url -}} }{ {{- p.link.display | tex -}} }{% endif -%}
+        {%- if p.link %}: \href{ {{- p.link.url | url -}} }{ {{- p.link.display | tex -}} }{% endif -%}
       }
 {%- endfor %}
     \resumeItemListEnd

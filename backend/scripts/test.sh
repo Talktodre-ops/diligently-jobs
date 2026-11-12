@@ -18,4 +18,14 @@ export TEST_S3_ENDPOINT="http://127.0.0.1:59000"
 export DATABASE_URL="$TEST_DATABASE_URL"
 unset R2_ENDPOINT R2_BUCKET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY LLM_API_KEY ANTHROPIC_API_KEY TAVILY_API_KEY RESEND_API_KEY || true
 
+# Render tests compile real PDFs. Use the pinned Tectonic in tools/ (gitignored),
+# fetching it once if missing. Same version and URL as the Dockerfile.
+TECTONIC_VERSION=0.15.0
+if [ ! -x tools/tectonic ]; then
+  mkdir -p tools
+  curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+    | tar -xz -C tools tectonic
+fi
+export TECTONIC_BIN="$PWD/tools/tectonic"
+
 cargo test "$@"

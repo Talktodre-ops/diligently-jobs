@@ -159,6 +159,12 @@ fn check_link(path: &str, link: &Option<Link>) -> Result<(), String> {
                 "{path}.url must start with https://, http:// or mailto:"
             ));
         }
+        if l.url
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control() || matches!(c, '\\' | '{' | '}'))
+        {
+            return Err(format!("{path}.url contains characters a link cannot have"));
+        }
     }
     Ok(())
 }
