@@ -4,14 +4,11 @@
 //! confirmed, required for anything that spends AI budget) as an argument;
 //! the extractor rejects with 401/403 before the handler runs.
 
-pub mod bearer;
 pub mod csrf;
 pub mod password;
 pub mod routes;
 pub mod session;
 pub mod token;
-
-pub use bearer::require_bearer;
 
 use axum::extract::{ConnectInfo, FromRequestParts};
 use axum::http::request::Parts;

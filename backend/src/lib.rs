@@ -7,6 +7,7 @@ pub mod db;
 pub mod error;
 pub mod extract;
 pub mod jobs;
+pub mod legacy;
 pub mod llm;
 pub mod mail;
 pub mod r2;

@@ -8,7 +8,9 @@
 -- Rows hanging off an application carry their own user_id (for direct
 -- scoping, cascade on account delete, and row-level security later) and a
 -- composite foreign key to applications (id, user_id), so the database itself
--- refuses a child row that points at another user's application.
+-- refuses a child row that points at another user's application. The keys
+-- cascade on update, so moving an application to a new owner moves its
+-- children with it.
 
 do $$
 begin
@@ -73,36 +75,36 @@ alter table ats_scores alter column user_id set not null;
 alter table applications add constraint applications_id_user_key unique (id, user_id);
 
 alter table gap_analyses add constraint gap_analyses_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table tailored_bullets add constraint tailored_bullets_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table cover_letters add constraint cover_letters_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table company_research add constraint company_research_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table proposals add constraint proposals_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table ats_scores add constraint ats_scores_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table cv_versions add constraint cv_versions_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table interviews add constraint interviews_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 alter table chat_conversations add constraint chat_conversations_application_owner_fkey
-    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade;
+    foreign key (application_id, user_id) references applications (id, user_id) on delete cascade on update cascade;
 
 -- ats_scores.cv_version_id must point at the same user's CV.
 alter table cv_versions add constraint cv_versions_id_user_key unique (id, user_id);
 alter table ats_scores add constraint ats_scores_cv_owner_fkey
-    foreign key (cv_version_id, user_id) references cv_versions (id, user_id) on delete set null (cv_version_id);
+    foreign key (cv_version_id, user_id) references cv_versions (id, user_id) on delete set null (cv_version_id) on update cascade;
 
 -- Read paths: lists are always per user, newest first.
 create index applications_user_updated_idx on applications (user_id, updated_at desc);

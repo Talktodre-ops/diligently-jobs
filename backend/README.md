@@ -9,7 +9,7 @@ R2 URLs for blobs, append-only `events` table as the spine.
 ```bash
 # 1. Set up .env from the template
 cp .env.example .env
-# (fill in DATABASE_URL, R2_*, generate BEARER_TOKEN)
+# (fill in DATABASE_URL and R2_*)
 
 # 2. Run with Docker (recommended for dev — hot reload via cargo-watch)
 docker compose up
@@ -58,7 +58,7 @@ backend/
 │   ├── config.rs           # env loading + validation
 │   ├── db.rs               # sqlx Postgres pool init + migrate
 │   ├── r2.rs               # Cloudflare R2 client (S3-compatible)
-│   ├── auth.rs             # bearer-token Tower middleware
+│   ├── auth/               # passwords, sessions, CSRF, /v1/auth routes
 │   ├── error.rs            # AppError + IntoResponse
 │   └── routes/
 │       ├── mod.rs
@@ -74,7 +74,6 @@ backend/
 | Var | Purpose | Required |
 |---|---|---|
 | `BIND_ADDR` | host:port to listen on | yes |
-| `BEARER_TOKEN` | shared secret with the desktop app | yes |
 | `DATABASE_URL` | Postgres connection string (Neon pooler endpoint) | yes |
 | `R2_ENDPOINT` | `https://<account>.r2.cloudflarestorage.com` | yes |
 | `R2_REGION` | always `auto` for R2 | optional (default `auto`) |
@@ -85,18 +84,21 @@ backend/
 
 ## Auth model
 
-Single user, single shared secret. Every request to a protected route must carry:
+Email and password accounts (argon2id). A successful sign-in sets an HttpOnly,
+SameSite=Lax session cookie holding a random token; only its SHA-256 is stored
+in `sessions`, so signing out or resetting a password ends sessions immediately.
+State-changing requests must come from an origin in `ALLOWED_ORIGINS`. Every
+resource is owned by one user and every query is scoped to the signed-in user;
+`tests/isolation_test.rs` guards that. `/health` is public.
 
+Data from the single-user desktop era belongs to a placeholder owner after the
+tenancy migration. Move it to your account once you have signed up:
+
+```bash
+cargo run -- claim-legacy --email you@example.com
 ```
-Authorization: Bearer <BEARER_TOKEN>
-```
 
-Compared in constant time (`subtle::ConstantTimeEq`) to avoid timing-leak side-channels.
-`/health` is public — deployment platforms (Tailscale, Fly, k8s) can probe it without
-holding the secret.
-
-To rotate: regenerate `BEARER_TOKEN`, redeploy backend, rebuild the desktop app
-with the matching value, reinstall.
+See `docs/decisions/` for why sessions are cookies rather than JWTs.
 
 ## Deployment options
 
@@ -104,7 +106,7 @@ with the matching value, reinstall.
 |---|---|---|
 | Local Docker | dev iteration | `docker compose up` |
 | Tailscale-only VPS (recommended) | personal use | Hetzner/Fly box, bind to `100.x.x.x:8787`, only your tailnet sees it |
-| Public + bearer | quick & dirty | Bind `0.0.0.0`, rely on bearer + TLS terminator (Caddy/nginx). Higher attack surface. |
+| Public | standard | Bind `0.0.0.0` behind a TLS terminator (Caddy/nginx), set `TRUST_PROXY=true` and `COOKIE_SECURE=true`. |
 | Localhost | air-gapped | API + desktop both on same machine, bind `127.0.0.1:8787` |
 
 ## Migrations

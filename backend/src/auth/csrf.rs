@@ -18,7 +18,7 @@ pub async fn require_allowed_origin(
     req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    if is_safe(req.method()) || has_bearer(req.headers()) {
+    if is_safe(req.method()) {
         return Ok(next.run(req).await);
     }
     match request_origin(req.headers()) {
@@ -34,14 +34,6 @@ pub async fn require_allowed_origin(
 
 fn is_safe(m: &Method) -> bool {
     matches!(*m, Method::GET | Method::HEAD | Method::OPTIONS)
-}
-
-/// Bearer-token clients (the frozen desktop app) do not use cookies, so CSRF
-/// does not apply to them. This exemption goes away with bearer auth.
-fn has_bearer(h: &HeaderMap) -> bool {
-    h.get(header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.starts_with("Bearer "))
 }
 
 /// `scheme://host[:port]` from Origin, falling back to Referer.

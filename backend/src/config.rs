@@ -7,7 +7,6 @@ use std::net::SocketAddr;
 #[derive(Clone, Debug)]
 pub struct Config {
     pub bind_addr: SocketAddr,
-    pub bearer_token: String,
     pub database_url: String,
     pub r2: R2Config,
     pub web: WebConfig,
@@ -53,14 +52,6 @@ impl Config {
             .parse()
             .context("BIND_ADDR is not a valid socket address (expected host:port)")?;
 
-        let bearer_token = required_env("BEARER_TOKEN")?;
-        if bearer_token.len() < 32 {
-            anyhow::bail!(
-                "BEARER_TOKEN is too short ({} chars); use at least 32 hex chars",
-                bearer_token.len()
-            );
-        }
-
         let database_url = required_env("DATABASE_URL")?;
         if !database_url.starts_with("postgres://") && !database_url.starts_with("postgresql://") {
             anyhow::bail!("DATABASE_URL must start with postgres:// or postgresql://");
@@ -98,7 +89,6 @@ impl Config {
 
         Ok(Self {
             bind_addr,
-            bearer_token,
             database_url,
             r2,
             web,

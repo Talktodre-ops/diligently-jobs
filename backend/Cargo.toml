@@ -49,9 +49,6 @@ dotenvy = "0.15"
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
-# Constant-time comparison for bearer-token auth
-subtle = "2.6"
-
 # DOCX rendering for ATS-friendly CV exports.
 docx-rs = "0.4"
 

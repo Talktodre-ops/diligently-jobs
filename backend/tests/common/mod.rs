@@ -115,7 +115,6 @@ impl TestApp {
 
         let config = Config {
             bind_addr: "127.0.0.1:0".parse().unwrap(),
-            bearer_token: TEST_BEARER.to_string(),
             database_url: url,
             r2: r2_cfg,
             web: WebConfig {

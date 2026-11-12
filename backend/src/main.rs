@@ -11,6 +11,12 @@ async fn main() -> Result<()> {
     init_tracing();
 
     let config = Config::from_env()?;
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if !args.is_empty() {
+        return run_command(&config, &args).await;
+    }
+
     let bind_addr = config.bind_addr;
     tracing::info!(%bind_addr, "starting diligently-api");
 
@@ -88,6 +94,28 @@ async fn shutdown_signal() {
         _ = terminate => {},
     }
     tracing::info!("shutdown signal received — draining");
+}
+
+/// One-off admin commands. They run migrations first so they work against a
+/// database the new server has not started on yet.
+async fn run_command(config: &Config, args: &[String]) -> Result<()> {
+    match args {
+        [cmd, flag, email] if cmd == "claim-legacy" && flag == "--email" => {
+            let db = db::init_pool(&config.database_url).await?;
+            db::migrate(&db).await?;
+            let report = diligently_api::legacy::claim(&db, email).await?;
+            if report.total() == 0 {
+                println!("nothing to claim: no legacy owner or no legacy rows");
+            } else {
+                for (table, n) in &report.moved {
+                    println!("{table}: {n}");
+                }
+                println!("moved {} rows to {email}", report.total());
+            }
+            Ok(())
+        }
+        _ => anyhow::bail!("usage: diligently-api [claim-legacy --email <account email>]"),
+    }
 }
 
 fn init_tracing() {
