@@ -16,6 +16,7 @@ pub mod rate_limit;
 pub mod render;
 pub mod routes;
 pub mod validate;
+pub mod web;
 
 use axum::{
     http::{header, HeaderValue, Method},
@@ -41,6 +42,7 @@ pub struct AppState {
     pub mailer: Arc<dyn mail::Mailer>,
     pub limiter: Arc<rate_limit::RateLimiter>,
     pub ai: Arc<dyn ai::Llm>,
+    pub web: Arc<dyn web::WebSearch>,
 }
 
 pub fn build_router(state: AppState) -> Router {
