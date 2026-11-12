@@ -36,37 +36,43 @@ async fn run(state: AppState) -> anyhow::Result<()> {
     tracing::info!("jobs: worker started");
 
     loop {
-        match super::claim_next(&state.db).await {
-            Ok(Some(job)) => {
-                let job_id = job.id;
-                let kind = job.kind.clone();
-                tracing::info!(%job_id, %kind, attempt = job.attempts, "jobs: claimed");
-
-                match super::handlers::dispatch(&state, &job).await {
-                    Ok(result) => {
-                        if let Err(err) = super::mark_done(&state.db, job_id, result).await {
-                            tracing::error!(%job_id, ?err, "jobs: mark_done failed");
-                        } else {
-                            tracing::info!(%job_id, %kind, "jobs: done");
-                        }
-                    }
-                    Err(handler_err) => {
-                        let msg = format!("{handler_err:#}");
-                        tracing::warn!(%job_id, %kind, error = %msg, "jobs: handler failed");
-                        if let Err(err) = super::mark_failed(&state.db, &job, &msg).await {
-                            tracing::error!(%job_id, ?err, "jobs: mark_failed failed");
-                        }
-                    }
-                }
-                // Loop immediately — there might be more work queued.
-            }
-            Ok(None) => {
-                sleep(IDLE_POLL_INTERVAL).await;
-            }
+        match process_one(&state).await {
+            Ok(true) => {} // Loop immediately; there might be more work queued.
+            Ok(false) => sleep(IDLE_POLL_INTERVAL).await,
             Err(err) => {
                 tracing::error!(?err, "jobs: claim_next errored, backing off 5s");
                 sleep(Duration::from_secs(5)).await;
             }
         }
     }
+}
+
+/// Claim and run at most one ready job. Returns `Ok(false)` when the queue had
+/// nothing ready. The worker loop calls this; tests call it directly so job
+/// execution is deterministic instead of racing a background task.
+pub async fn process_one(state: &AppState) -> Result<bool, sqlx::Error> {
+    let Some(job) = super::claim_next(&state.db).await? else {
+        return Ok(false);
+    };
+    let job_id = job.id;
+    let kind = job.kind.clone();
+    tracing::info!(%job_id, %kind, attempt = job.attempts, "jobs: claimed");
+
+    match super::handlers::dispatch(state, &job).await {
+        Ok(result) => {
+            if let Err(err) = super::mark_done(&state.db, job_id, result).await {
+                tracing::error!(%job_id, ?err, "jobs: mark_done failed");
+            } else {
+                tracing::info!(%job_id, %kind, "jobs: done");
+            }
+        }
+        Err(handler_err) => {
+            let msg = format!("{handler_err:#}");
+            tracing::warn!(%job_id, %kind, error = %msg, "jobs: handler failed");
+            if let Err(err) = super::mark_failed(&state.db, &job, &msg).await {
+                tracing::error!(%job_id, ?err, "jobs: mark_failed failed");
+            }
+        }
+    }
+    Ok(true)
 }

@@ -67,7 +67,9 @@ tera = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [dev-dependencies]
+http-body-util = "0.1.5"
 tokio   = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = { version = "0.5.3", features = ["util"] }
 
 [profile.release]
 opt-level     = 3
