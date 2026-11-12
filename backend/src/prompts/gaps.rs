@@ -92,7 +92,12 @@ pub fn parse(v: Value, doc: &ResumeDoc) -> Result<Vec<Gap>, String> {
                 g.ask
                     .map(|a| clean(&a).chars().take(300).collect::<String>())
                     .filter(|a| !a.is_empty())
-                    .or_else(|| Some(format!("Have you worked with {}?", g.requirement)))
+                    .or_else(|| {
+                        Some(format!(
+                            "Does your experience cover this: {}?",
+                            g.requirement
+                        ))
+                    })
             };
             g
         })
@@ -134,7 +139,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             filled[0].ask.as_deref(),
-            Some("Have you worked with Kubernetes?")
+            Some("Does your experience cover this: Kubernetes?")
         );
     }
 }
