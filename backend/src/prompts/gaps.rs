@@ -87,7 +87,12 @@ pub fn parse(v: Value, doc: &ResumeDoc) -> Result<Vec<Gap>, String> {
             g.ask = if g.status == "covered" {
                 None
             } else {
-                g.ask.map(|a| clean(&a).chars().take(300).collect())
+                // Every open gap needs a question for the Gaps screen; the
+                // model sometimes leaves one out.
+                g.ask
+                    .map(|a| clean(&a).chars().take(300).collect::<String>())
+                    .filter(|a| !a.is_empty())
+                    .or_else(|| Some(format!("Have you worked with {}?", g.requirement)))
             };
             g
         })
@@ -119,5 +124,17 @@ mod tests {
         assert_eq!(gaps[1].status, "partial");
         assert_eq!(gaps[1].evidence, None);
         assert_eq!(gaps[2].ask.as_deref(), Some("Have you handled HIPAA data?"));
+
+        let filled = parse(
+            json!({ "gaps": [
+                { "requirement": "Kubernetes", "importance": "nice_to_have", "status": "partial", "evidence": null, "ask": null }
+            ] }),
+            &doc,
+        )
+        .unwrap();
+        assert_eq!(
+            filled[0].ask.as_deref(),
+            Some("Have you worked with Kubernetes?")
+        );
     }
 }

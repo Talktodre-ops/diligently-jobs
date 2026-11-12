@@ -657,7 +657,13 @@ async fn letter_step(
 /// Score shown while the user reviews: moves from the master CV's score to
 /// the projected score in proportion to the proposals accepted so far.
 /// Instant and free; a real rescore is available on demand.
+///
+/// Rewrites only rephrase facts already in the CV, so a projected score
+/// below the starting score is scorer noise (seen live: 88 before, 84
+/// projected). Accepting a suggestion must not appear to make things worse,
+/// so the estimate never drops below the starting score.
 pub fn estimate(before: i64, projected: i64, decided: i64, total: i64) -> i64 {
+    let projected = projected.max(before);
     if total <= 0 {
         return before;
     }
@@ -768,5 +774,10 @@ mod tests {
         assert_eq!(estimate(80, 86, 3, 3), 86);
         assert_eq!(estimate(80, 86, 9, 3), 86, "clamped");
         assert_eq!(estimate(80, 86, 0, 0), 80);
+        assert_eq!(
+            estimate(88, 84, 2, 3),
+            88,
+            "a noisy lower projection never pulls the score down"
+        );
     }
 }
