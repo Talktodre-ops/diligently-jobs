@@ -13,3 +13,4 @@ deleted. What went wrong, or nearly did, goes in `../lessons/`.
 - [[2026-11-12-tenancy-by-user-id]]: user_id on every row, composite keys to the parent, legacy data claimed explicitly
 - [[2026-11-12-platform-ai-with-metering]]: platform keys, a ledger per AI call, kill switch, daily cap, plan limits as data
 - [[2026-11-12-nothing-reaches-the-cv-without-a-decision]]: tailored CV is master plus decisions only; generated text may not invent numbers, enforced in code
+- [[2026-11-12-row-level-security-deferred]]: not yet; scoped queries, composite keys and the isolation gate hold the line, with the path written down
