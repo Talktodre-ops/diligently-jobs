@@ -68,5 +68,4 @@ impl R2 {
             .with_context(|| format!("R2 PutObject failed for key `{}`", key))?;
         Ok(())
     }
-
 }

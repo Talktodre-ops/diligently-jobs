@@ -154,11 +154,10 @@ pub async fn enqueue_render(
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     // 404 fast if the CV doesn't exist — saves a job that would just fail.
-    let exists: Option<(Uuid,)> =
-        sqlx::query_as("select id from cv_versions where id = $1")
-            .bind(id)
-            .fetch_optional(&state.db)
-            .await?;
+    let exists: Option<(Uuid,)> = sqlx::query_as("select id from cv_versions where id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
     if exists.is_none() {
         return Err(AppError::NotFound);
     }

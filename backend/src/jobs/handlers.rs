@@ -188,8 +188,8 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
             let pdf = render::latex::render_cv(doc)
                 .await
                 .context("latex render_cv failed")?;
-            let docx = render::docx::render_resume_doc(doc)
-                .context("docx render_resume_doc failed")?;
+            let docx =
+                render::docx::render_resume_doc(doc).context("docx render_resume_doc failed")?;
             (pdf, docx)
         }
         None => {
@@ -197,11 +197,11 @@ async fn cv_render(state: &AppState, payload: &Value) -> anyhow::Result<Value> {
             // (name + contacts) from the latest structured base CV.
             tracing::info!(cv_version_id = %cv_version_id, "rendering cv via flat-sections path (no structured ResumeDoc)");
             let base_header = latest_base_header(&state.db).await;
-            let pdf = render::latex::render_flat_cv(&cv.sections, app.as_ref(), base_header.as_ref())
-                .await
-                .context("latex render_flat_cv failed")?;
-            let docx = render::docx::render_cv(&cv, app.as_ref())
-                .context("docx render failed")?;
+            let pdf =
+                render::latex::render_flat_cv(&cv.sections, app.as_ref(), base_header.as_ref())
+                    .await
+                    .context("latex render_flat_cv failed")?;
+            let docx = render::docx::render_cv(&cv, app.as_ref()).context("docx render failed")?;
             (pdf, docx)
         }
     };

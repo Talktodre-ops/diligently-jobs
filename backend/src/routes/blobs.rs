@@ -70,8 +70,7 @@ pub async fn presign_upload(
         put = put.content_type(ct);
     }
 
-    let presigning = PresigningConfig::expires_in(ttl)
-        .context("invalid presigning TTL")?;
+    let presigning = PresigningConfig::expires_in(ttl).context("invalid presigning TTL")?;
     let signed = put
         .presigned(presigning)
         .await
@@ -95,8 +94,7 @@ pub async fn presign_download(
     validate_key(&req.key)?;
     let ttl = ttl_from_request(req.ttl_seconds)?;
 
-    let presigning = PresigningConfig::expires_in(ttl)
-        .context("invalid presigning TTL")?;
+    let presigning = PresigningConfig::expires_in(ttl).context("invalid presigning TTL")?;
     let mut get = state
         .r2
         .client

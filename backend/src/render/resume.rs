@@ -108,8 +108,6 @@ pub fn parse_resume_doc(value: &serde_json::Value) -> Option<ResumeDoc> {
     if !value.is_object() {
         return None;
     }
-    if value.get("header").is_none() {
-        return None;
-    }
+    value.get("header")?;
     serde_json::from_value::<ResumeDoc>(value.clone()).ok()
 }

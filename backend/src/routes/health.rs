@@ -37,7 +37,10 @@ async fn ping_postgres(state: &AppState) -> ComponentStatus {
         .fetch_one(&state.db)
         .await
     {
-        Ok(_) => ComponentStatus { ok: true, detail: None },
+        Ok(_) => ComponentStatus {
+            ok: true,
+            detail: None,
+        },
         Err(e) => ComponentStatus {
             ok: false,
             detail: Some(e.to_string()),
@@ -47,7 +50,10 @@ async fn ping_postgres(state: &AppState) -> ComponentStatus {
 
 async fn ping_r2(state: &AppState) -> ComponentStatus {
     match state.r2.ping().await {
-        Ok(_) => ComponentStatus { ok: true, detail: None },
+        Ok(_) => ComponentStatus {
+            ok: true,
+            detail: None,
+        },
         Err(e) => ComponentStatus {
             ok: false,
             detail: Some(e.to_string()),

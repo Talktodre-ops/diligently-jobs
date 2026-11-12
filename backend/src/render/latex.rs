@@ -204,8 +204,8 @@ fn expand_template(doc: &ResumeDoc) -> Result<String> {
     tera.add_raw_template("cv.tex.tera", TEMPLATE_CV_TERA)
         .context("register cv.tex.tera with Tera")?;
 
-    let ctx = tera::Context::from_serialize(doc)
-        .context("serialize ResumeDoc into Tera context")?;
+    let ctx =
+        tera::Context::from_serialize(doc).context("serialize ResumeDoc into Tera context")?;
 
     tera.render("cv.tex.tera", &ctx)
         .context("render cv.tex.tera")

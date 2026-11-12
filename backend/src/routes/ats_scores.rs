@@ -38,11 +38,10 @@ pub async fn enqueue(
     State(state): State<AppState>,
     Path(application_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let exists: Option<(Uuid,)> =
-        sqlx::query_as("select id from applications where id = $1")
-            .bind(application_id)
-            .fetch_optional(&state.db)
-            .await?;
+    let exists: Option<(Uuid,)> = sqlx::query_as("select id from applications where id = $1")
+        .bind(application_id)
+        .fetch_optional(&state.db)
+        .await?;
     if exists.is_none() {
         return Err(AppError::NotFound);
     }

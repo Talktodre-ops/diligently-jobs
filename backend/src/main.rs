@@ -28,7 +28,9 @@ async fn main() -> Result<()> {
     // exponential backoff and the user sees a clear error in the UI.
     match render::latex::probe_tectonic().await {
         Ok(version) => tracing::info!(%version, "tectonic ready"),
-        Err(err) => tracing::warn!(error = %err, "tectonic probe failed — cv_render jobs will fail until this is fixed"),
+        Err(err) => {
+            tracing::warn!(error = %err, "tectonic probe failed — cv_render jobs will fail until this is fixed")
+        }
     }
 
     let state = AppState {

@@ -90,10 +90,7 @@ pub fn build_router(state: AppState) -> Router {
             "/v1/cv-versions",
             post(routes::cv_versions::create).get(routes::cv_versions::list),
         )
-        .route(
-            "/v1/cv-versions/{id}",
-            get(routes::cv_versions::get_one),
-        )
+        .route("/v1/cv-versions/{id}", get(routes::cv_versions::get_one))
         .route(
             "/v1/cv-versions/{id}/render",
             post(routes::cv_versions::enqueue_render),
@@ -110,7 +107,10 @@ pub fn build_router(state: AppState) -> Router {
             get(routes::interviews::get_one).patch(routes::interviews::patch),
         )
         // R2 blob presigning
-        .route("/v1/blobs/presign-upload", post(routes::blobs::presign_upload))
+        .route(
+            "/v1/blobs/presign-upload",
+            post(routes::blobs::presign_upload),
+        )
         .route(
             "/v1/blobs/presign-download",
             post(routes::blobs::presign_download),

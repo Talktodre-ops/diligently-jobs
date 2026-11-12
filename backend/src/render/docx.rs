@@ -236,10 +236,7 @@ pub fn render_resume_doc(doc: &ResumeDoc) -> anyhow::Result<Vec<u8>> {
 
 /// Legacy flat-sections DOCX. Used when `cv_versions.sections` is the old
 /// `Vec<CvSection>` shape (no structured ResumeDoc).
-pub fn render_cv(
-    cv: &CvVersionRow,
-    app: Option<&ApplicationContext>,
-) -> anyhow::Result<Vec<u8>> {
+pub fn render_cv(cv: &CvVersionRow, app: Option<&ApplicationContext>) -> anyhow::Result<Vec<u8>> {
     let sections = super::parse_sections(&cv.sections)?;
 
     let header_role = app

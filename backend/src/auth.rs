@@ -26,7 +26,9 @@ pub async fn require_bearer(
 
     let token = header
         .strip_prefix("Bearer ")
-        .ok_or(AppError::Unauthorized("Authorization header must be `Bearer <token>`"))?;
+        .ok_or(AppError::Unauthorized(
+            "Authorization header must be `Bearer <token>`",
+        ))?;
 
     let expected = state.config.bearer_token.as_bytes();
     let provided = token.as_bytes();

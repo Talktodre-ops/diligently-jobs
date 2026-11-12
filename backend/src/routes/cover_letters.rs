@@ -101,21 +101,19 @@ pub async fn enqueue_render(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let exists: Option<(Uuid,)> =
-        sqlx::query_as("select id from cover_letters where id = $1")
-            .bind(id)
-            .fetch_optional(&state.db)
-            .await?;
+    let exists: Option<(Uuid,)> = sqlx::query_as("select id from cover_letters where id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
     if exists.is_none() {
         return Err(AppError::NotFound);
     }
 
     let payload_match = json!({ "cover_letter_id": id });
 
-    if let Some(existing) =
-        jobs::find_active(&state.db, KIND_COVER_LETTER_RENDER, &payload_match)
-            .await
-            .map_err(AppError::Db)?
+    if let Some(existing) = jobs::find_active(&state.db, KIND_COVER_LETTER_RENDER, &payload_match)
+        .await
+        .map_err(AppError::Db)?
     {
         return Ok((
             StatusCode::ACCEPTED,

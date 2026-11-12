@@ -26,7 +26,10 @@ async fn run(state: AppState) -> anyhow::Result<()> {
     // Recover stuck jobs from a previous crash.
     match super::recover_stuck(&state.db).await {
         Ok(0) => {}
-        Ok(n) => tracing::info!(reset = n, "jobs: re-queued stuck 'running' rows from prior boot"),
+        Ok(n) => tracing::info!(
+            reset = n,
+            "jobs: re-queued stuck 'running' rows from prior boot"
+        ),
         Err(err) => tracing::warn!(?err, "jobs: stuck-job recovery failed (continuing)"),
     }
 
