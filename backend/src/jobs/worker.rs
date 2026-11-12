@@ -13,6 +13,9 @@ use crate::AppState;
 /// short bursts and 1s feels instant without hammering Postgres.
 const IDLE_POLL_INTERVAL: Duration = Duration::from_secs(1);
 
+/// How often due follow-up reminders are checked.
+const REMINDER_SWEEP_EVERY: Duration = Duration::from_secs(60);
+
 /// Spawn the worker as a background tokio task. Returns immediately.
 pub fn spawn(state: AppState) {
     tokio::spawn(async move {
@@ -35,7 +38,16 @@ async fn run(state: AppState) -> anyhow::Result<()> {
 
     tracing::info!("jobs: worker started");
 
+    let mut last_sweep = std::time::Instant::now() - REMINDER_SWEEP_EVERY;
     loop {
+        if last_sweep.elapsed() >= REMINDER_SWEEP_EVERY {
+            last_sweep = std::time::Instant::now();
+            match crate::followups::sweep(&state).await {
+                Ok(0) => {}
+                Ok(n) => tracing::info!(sent = n, "reminders: sent"),
+                Err(err) => tracing::error!(?err, "reminders: sweep failed"),
+            }
+        }
         match process_one(&state).await {
             Ok(true) => {} // Loop immediately; there might be more work queued.
             Ok(false) => sleep(IDLE_POLL_INTERVAL).await,

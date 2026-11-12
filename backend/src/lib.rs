@@ -8,6 +8,7 @@ pub mod db;
 pub mod docx_text;
 pub mod error;
 pub mod extract;
+pub mod followups;
 pub mod jobs;
 pub mod legacy;
 pub mod mail;
@@ -168,7 +169,13 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/v1/applications/{id}/pipeline/retry",
             post(tracking::retry_pipeline),
-        );
+        )
+        .route(
+            "/v1/applications/{id}/follow-ups",
+            get(tracking::follow_ups).post(tracking::new_follow_up),
+        )
+        .route("/v1/reminders/{id}/snooze", post(tracking::snooze))
+        .route("/v1/reminders/{id}/done", post(tracking::reminder_done));
 
     Router::new()
         .merge(public)

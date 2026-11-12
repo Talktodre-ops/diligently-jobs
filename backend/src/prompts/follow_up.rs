@@ -21,6 +21,7 @@ Rules:
 - {shape}
 - Reference the role and company. Mention one specific, true detail from the job or the research if there is one.
 - Address the reader as {{name}} so the candidate can fill it in; never invent a person's name.
+- Sign off with the candidate's name exactly as given.
 - No \"just checking in\", \"circling back\", \"touching base\" or \"I'm a perfect fit\". No pressure, no desperation.
 - Never invent facts about the candidate or the company.
 
@@ -39,6 +40,7 @@ pub fn schema() -> Value {
 
 pub fn request(
     channel: &str,
+    candidate: &str,
     role: &str,
     company: &str,
     days_since: i64,
@@ -48,7 +50,7 @@ pub fn request(
         task: TASK,
         system: system(channel),
         user_text: format!(
-            "Role: {role}\nCompany: {company}\nApplied {days_since} days ago.\n\n<context>\n{context}\n</context>"
+            "Candidate: {candidate}\nRole: {role}\nCompany: {company}\nApplied {days_since} days ago.\n\n<context>\n{context}\n</context>"
         ),
         pdf_base64: None,
         schema: schema(),
@@ -57,9 +59,12 @@ pub fn request(
     }
 }
 
-pub fn parse(v: Value, channel: &str) -> Result<Draft, String> {
+pub fn parse(v: Value, channel: &str, candidate: &str) -> Result<Draft, String> {
     let d: Draft = serde_json::from_value(v).map_err(|e| e.to_string())?;
-    let body = clean(&d.body);
+    // A placeholder for the sender is never useful; the model knows the name.
+    let body = clean(&d.body)
+        .replace("{candidate_name}", candidate)
+        .replace("{your_name}", candidate);
     if body.is_empty() || body.chars().count() > 1_500 {
         return Err("draft empty or too long".into());
     }
@@ -79,14 +84,17 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn linkedin_drafts_have_no_subject() {
+    fn linkedin_drafts_have_no_subject_and_sign_with_the_name() {
         assert!(super::super::all_objects_closed(&schema()));
         let d = parse(
-            json!({ "subject": "Hi", "body": "Hi {name}, thanks." }),
+            json!({ "subject": "Hi", "body": "Hi {name}, thanks.\n{candidate_name}" }),
             "linkedin",
+            "Ada Okafor",
         )
         .unwrap();
         assert_eq!(d.subject, None);
-        assert!(parse(json!({ "subject": null, "body": " " }), "email").is_err());
+        assert!(d.body.ends_with("Ada Okafor"), "{}", d.body);
+        assert!(d.body.contains("{name}"), "the reader placeholder stays");
+        assert!(parse(json!({ "subject": null, "body": " " }), "email", "Ada").is_err());
     }
 }

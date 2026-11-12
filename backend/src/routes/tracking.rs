@@ -238,3 +238,110 @@ pub async fn retry_pipeline(
         .await?;
     Ok(Json(json!({ "job_id": job.id, "progress": job.progress })))
 }
+
+/// GET /v1/applications/{id}/follow-ups: newest draft per channel and the
+/// newest reminder, for the Follow-up screen.
+pub async fn follow_ups(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(app_id): Path<Uuid>,
+) -> Result<Json<Value>, AppError> {
+    use crate::followups::{FollowUpOut, FOLLOW_UP_COLS};
+    crate::routes::ensure_application(&state.db, user.id, app_id).await?;
+    let mut drafts = serde_json::Map::new();
+    for ch in crate::prompts::follow_up::CHANNELS {
+        let d = sqlx::query_as::<_, FollowUpOut>(&format!(
+            "select {FOLLOW_UP_COLS} from follow_ups where application_id = $1 and user_id = $2 and channel = $3 order by created_at desc limit 1"
+        ))
+        .bind(app_id)
+        .bind(user.id)
+        .bind(ch)
+        .fetch_optional(&state.db)
+        .await?;
+        drafts.insert((*ch).to_string(), json!(d));
+    }
+    let reminder = sqlx::query_as::<_, ReminderOut>(&format!(
+        "select {REMINDER_COLS} from reminders where application_id = $1 and user_id = $2 and status <> 'cancelled' order by created_at desc limit 1"
+    ))
+    .bind(app_id)
+    .bind(user.id)
+    .fetch_optional(&state.db)
+    .await?;
+    Ok(Json(json!({ "drafts": drafts, "reminder": reminder })))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DraftRequest {
+    pub channel: String,
+}
+
+/// POST /v1/applications/{id}/follow-ups: write a new draft for a channel.
+pub async fn new_follow_up(
+    State(state): State<AppState>,
+    crate::auth::VerifiedUser(user): crate::auth::VerifiedUser,
+    Path(app_id): Path<Uuid>,
+    Json(req): Json<DraftRequest>,
+) -> Result<Json<Value>, AppError> {
+    validate::one_of("channel", &req.channel, crate::prompts::follow_up::CHANNELS)?;
+    crate::routes::ensure_application(&state.db, user.id, app_id).await?;
+    let d = crate::followups::draft(&state, user.id, app_id, &req.channel).await?;
+    Ok(Json(json!({ "draft": d })))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SnoozeRequest {
+    pub days: i64,
+}
+
+/// POST /v1/reminders/{id}/snooze: remind again in 1 to 14 days.
+pub async fn snooze(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(id): Path<Uuid>,
+    Json(req): Json<SnoozeRequest>,
+) -> Result<Json<Value>, AppError> {
+    if !(1..=14).contains(&req.days) {
+        return Err(AppError::validation("days", "Snooze for 1 to 14 days."));
+    }
+    let r = sqlx::query_as::<_, ReminderOut>(&format!(
+        r#"
+        update reminders set status = 'scheduled', attempts = 0, due_at = now() + make_interval(days => $3)
+        where id = $1 and user_id = $2 and status in ('scheduled', 'sent', 'failed')
+        returning {REMINDER_COLS}
+        "#
+    ))
+    .bind(id)
+    .bind(user.id)
+    .bind(req.days as i32)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    Ok(Json(json!({ "reminder": r })))
+}
+
+/// POST /v1/reminders/{id}/done: the user followed up.
+pub async fn reminder_done(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Value>, AppError> {
+    let r = sqlx::query_as::<_, ReminderOut>(&format!(
+        "update reminders set status = 'done' where id = $1 and user_id = $2 and status <> 'cancelled' returning {REMINDER_COLS}"
+    ))
+    .bind(id)
+    .bind(user.id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    event(
+        &state.db,
+        user.id,
+        r.application_id,
+        "followed_up",
+        json!({ "reminder_id": id }),
+    )
+    .await?;
+    Ok(Json(json!({ "reminder": r })))
+}

@@ -229,6 +229,40 @@ pub fn confirm_new_email(to: &str, link: &str, key: String) -> Email {
     )
 }
 
+/// "Time to follow up": the reminder, with the drafted message inline so it
+/// can be copied straight from the email.
+pub fn follow_up_due(
+    to: &str,
+    company: &str,
+    role: &str,
+    link: &str,
+    draft_subject: Option<&str>,
+    draft_body: &str,
+    key: String,
+) -> Email {
+    let intro = format!("It is time to follow up on your application for {role} at {company}. A draft is ready below and in the app.");
+    let draft = match draft_subject {
+        Some(s) => format!("Subject: {s}\n\n{draft_body}"),
+        None => draft_body.to_string(),
+    };
+    let mut e = link_email(
+        to,
+        &format!("Follow up with {company}"),
+        &intro,
+        "Open the follow-up",
+        link,
+        "You can turn these reminders off in Settings.",
+        key,
+    );
+    e.text = format!("{}\n\n---\n{draft}\n---", e.text);
+    e.html = format!(
+        "{}<pre style=\"white-space:pre-wrap;font-family:Inter,Arial,sans-serif;background:#FCF8EC;padding:12px;border-radius:8px\">{}</pre>",
+        e.html,
+        escape_html(&draft)
+    );
+    e
+}
+
 pub fn password_changed(to: &str, key: String) -> Email {
     let text = "Your Diligently password was just changed, and other devices were signed out.\n\nIf this was not you, reset your password now from the sign-in page.\n\nDiligently".to_string();
     let html = format!(

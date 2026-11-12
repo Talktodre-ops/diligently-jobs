@@ -196,14 +196,17 @@ async fn every_prompt_family_against_the_real_api() {
     let d = follow_up::parse(
         run!(follow_up::request(
             "email",
+            "Ada Okafor",
             "Senior Backend Engineer",
             "Halcyon Health",
             6,
             JD
         )),
         "email",
+        "Ada Okafor",
     )
     .expect("follow-up parse");
+    assert!(!d.body.contains("{candidate_name}"));
     println!("  subject: {:?}\n  {}", d.subject, d.body);
 
     println!("\n== cv_parse (real PDF from our renderer)");
