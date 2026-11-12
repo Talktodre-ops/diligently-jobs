@@ -8,6 +8,7 @@ pub mod events;
 pub mod files;
 pub mod gaps;
 pub mod health;
+pub mod home;
 pub mod interviews;
 pub mod jobs;
 pub mod profile;
