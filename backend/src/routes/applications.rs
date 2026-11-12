@@ -17,6 +17,7 @@ pub struct Application {
     pub jd_raw: String,
     pub requirements: Option<serde_json::Value>,
     pub status: String,
+    pub stage: String,
     pub submitted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -39,6 +40,8 @@ pub struct CreateApplicationRequest {
 #[derive(Debug, Deserialize)]
 pub struct ListApplicationsQuery {
     pub status: Option<String>,
+    /// saved, applied, interviewing, offer or closed (the Jobs tabs).
+    pub stage: Option<String>,
     pub limit: Option<i64>,
 }
 
@@ -67,7 +70,7 @@ pub async fn create(
         returning id, company, role, jd_raw, requirements, status,
                   submitted_at, created_at, updated_at,
                   latest_cv_version_id, latest_cv_pdf_key,
-                  latest_cv_docx_key, latest_cv_rendered_at
+                  latest_cv_docx_key, latest_cv_rendered_at, stage
         "#,
     )
     .bind(&req.jd_raw)
@@ -88,14 +91,18 @@ pub async fn list(
     Query(q): Query<ListApplicationsQuery>,
 ) -> Result<Json<Vec<Application>>, AppError> {
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
+    if let Some(stage) = &q.stage {
+        crate::validate::one_of("stage", stage, crate::routes::tracking::STAGES)?;
+    }
     let apps = sqlx::query_as::<_, Application>(
         r#"
         select id, company, role, jd_raw, requirements, status,
                submitted_at, created_at, updated_at,
                latest_cv_version_id, latest_cv_pdf_key,
-               latest_cv_docx_key, latest_cv_rendered_at
+               latest_cv_docx_key, latest_cv_rendered_at, stage
         from applications
         where user_id = $3 and ($1::text is null or status = $1)
+          and ($4::text is null or stage = $4)
         order by updated_at desc
         limit $2
         "#,
@@ -103,6 +110,7 @@ pub async fn list(
     .bind(q.status.as_deref())
     .bind(limit)
     .bind(user.id)
+    .bind(q.stage.as_deref())
     .fetch_all(&state.db)
     .await?;
     Ok(Json(apps))
@@ -119,7 +127,7 @@ pub async fn get_one(
         select id, company, role, jd_raw, requirements, status,
                submitted_at, created_at, updated_at,
                latest_cv_version_id, latest_cv_pdf_key,
-               latest_cv_docx_key, latest_cv_rendered_at
+               latest_cv_docx_key, latest_cv_rendered_at, stage
         from applications
         where id = $1 and user_id = $2
         "#,
@@ -154,7 +162,7 @@ pub async fn patch(
         returning id, company, role, jd_raw, requirements, status,
                   submitted_at, created_at, updated_at,
                   latest_cv_version_id, latest_cv_pdf_key,
-                  latest_cv_docx_key, latest_cv_rendered_at
+                  latest_cv_docx_key, latest_cv_rendered_at, stage
         "#,
     )
     .bind(id)

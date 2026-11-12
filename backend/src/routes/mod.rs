@@ -13,6 +13,7 @@ pub mod jobs;
 pub mod profile;
 pub mod research;
 pub mod review;
+pub mod tracking;
 pub mod uploads;
 pub mod workspace;
 
