@@ -26,13 +26,19 @@ curl http://localhost:8787/health
 # {"status":"ok","postgres":{"ok":true,...},"r2":{"ok":true,...}}
 ```
 
-## Smoke test
+## Tests
 
 ```bash
-# Server must be running
-just smoke
-# or: cargo test -- --ignored --nocapture
+scripts/test.sh            # starts local test services if needed, runs cargo test
+scripts/test.sh auth       # filter, same as cargo test
+scripts/test-services.sh down
 ```
+
+The suite runs only against a throwaway Postgres on 127.0.0.1:55432 and a
+SeaweedFS S3 emulator on 127.0.0.1:59000, both in Docker with tmpfs storage.
+Each test gets its own migrated database. The harness refuses any database or
+storage URL that is not localhost, so it can never reach the database or bucket
+in `.env`. See `docs/decisions/2026-11-12-tests-run-on-local-services-only.md`.
 
 ## Project layout
 
@@ -47,7 +53,8 @@ backend/
 ├── .env                    # YOUR creds (gitignored)
 ├── migrations/             # sqlx migrations live here (NNNN_<name>.sql)
 ├── src/
-│   ├── main.rs             # axum router + startup
+│   ├── lib.rs              # AppState + router (used by main and tests)
+│   ├── main.rs             # startup, worker, graceful shutdown
 │   ├── config.rs           # env loading + validation
 │   ├── db.rs               # sqlx Postgres pool init + migrate
 │   ├── r2.rs               # Cloudflare R2 client (S3-compatible)
@@ -56,8 +63,10 @@ backend/
 │   └── routes/
 │       ├── mod.rs
 │       └── health.rs       # GET /health (public — pings PG + R2)
+├── scripts/                # test.sh, test-services.sh
 └── tests/
-    └── health_test.rs      # #[ignore]-marked integration tests
+    ├── common/mod.rs       # per-test database + real router harness
+    └── health_test.rs
 ```
 
 ## Environment variables

@@ -18,13 +18,9 @@ dev:
 run:
     cargo run --bin diligently-api
 
-# Cargo test (unit tests only — skips ignored integration tests)
+# Full test suite against local throwaway Postgres + S3 emulator
 test:
-    cargo test
-
-# Smoke test against a running server (must be up at $DILIGENTLY_API_URL)
-smoke:
-    cargo test -- --ignored --nocapture
+    scripts/test.sh
 
 # Format + lint
 fmt:
