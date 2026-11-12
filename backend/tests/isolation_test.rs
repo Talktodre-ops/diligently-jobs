@@ -8,15 +8,8 @@ use axum::http::StatusCode;
 use common::{Client, TestApp};
 use serde_json::{json, Value};
 
-const PW: &str = "a long enough passphrase";
-
 async fn user<'a>(app: &'a TestApp, email: &str) -> Client<'a> {
-    let c = app.client();
-    let res = c
-        .post("/v1/auth/signup", json!({ "email": email, "password": PW }))
-        .await;
-    assert_eq!(res.status, StatusCode::CREATED, "{}", res.body);
-    c
+    common::verified_user(app, email).await
 }
 
 struct Seed {
@@ -41,22 +34,22 @@ async fn seed(a: &Client<'_>) -> Seed {
     assert_eq!(res.status, StatusCode::OK, "{}", res.body);
     let cv_id = res.body["id"].as_str().unwrap().to_string();
 
-    let res = a
-        .post(
-            &format!("/v1/applications/{app_id}/cover-letters"),
-            json!({ "body": "Dear Halcyon", "doc": {} }),
-        )
-        .await;
-    assert_eq!(res.status, StatusCode::OK, "{}", res.body);
-    let letter_id = res.body["id"].as_str().unwrap().to_string();
-
-    let res = a
-        .post(
-            &format!("/v1/applications/{app_id}/research"),
-            json!({ "brief": {"overview": "Health data"} }),
-        )
-        .await;
-    assert_eq!(res.status, StatusCode::OK, "{}", res.body);
+    // Letters and research are written by the pipeline; seed them directly.
+    let letter_id: uuid::Uuid = sqlx::query_scalar(
+        "insert into cover_letters (application_id, user_id, body, doc) select id, user_id, 'Dear Halcyon', '{\"candidate_name\": \"Ada\", \"paragraphs\": [\"Hi\"]}' from applications where id = $1::uuid returning id",
+    )
+    .bind(&app_id)
+    .fetch_one(&a.app.state.db)
+    .await
+    .unwrap();
+    let letter_id = letter_id.to_string();
+    sqlx::query(
+        "insert into company_research (application_id, user_id, brief) select id, user_id, '{\"overview\": \"Health data\"}' from applications where id = $1::uuid",
+    )
+    .bind(&app_id)
+    .execute(&a.app.state.db)
+    .await
+    .unwrap();
 
     let res = a
         .post(
@@ -201,13 +194,18 @@ async fn user_b_cannot_change_or_attach_to_user_a() {
         ),
         (
             "POST",
-            format!("/v1/applications/{}/research", s.app_id),
-            json!({ "brief": {"x": 1} }),
+            format!("/v1/applications/{}/research/refresh", s.app_id),
+            json!({}),
         ),
         (
             "POST",
-            format!("/v1/applications/{}/cover-letters", s.app_id),
-            json!({ "body": "B", "doc": {} }),
+            format!("/v1/applications/{}/cover-letters/regenerate", s.app_id),
+            json!({ "tone": "warm" }),
+        ),
+        (
+            "PATCH",
+            format!("/v1/cover-letters/{}", s.letter_id),
+            json!({ "paragraphs": ["B was here"] }),
         ),
         (
             "POST",

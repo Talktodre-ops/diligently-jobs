@@ -92,14 +92,20 @@ pub fn build_router(state: AppState) -> Router {
             "/v1/applications/{id}/timeline",
             get(applications::timeline),
         )
+        .route("/v1/applications/{id}/research", get(research::get_latest))
         .route(
-            "/v1/applications/{id}/research",
-            post(research::create).get(research::get_latest),
+            "/v1/applications/{id}/research/refresh",
+            post(research::refresh),
         )
         .route(
             "/v1/applications/{id}/cover-letters",
-            post(cover_letters::create).get(cover_letters::get_latest),
+            get(cover_letters::get_latest),
         )
+        .route(
+            "/v1/applications/{id}/cover-letters/regenerate",
+            post(cover_letters::regenerate),
+        )
+        .route("/v1/cover-letters/{id}", patch(cover_letters::edit))
         .route(
             "/v1/cover-letters/{id}/render",
             post(cover_letters::enqueue_render),
