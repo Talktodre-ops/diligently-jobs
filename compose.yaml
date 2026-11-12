@@ -1,0 +1,56 @@
+# Local development stack. Each app runs in its own container with its source
+# bind-mounted, so saving a file rebuilds and restarts that app in place.
+#
+#   docker compose up -d          start in the background
+#   docker compose logs -f api    follow the API (first build takes a few minutes)
+#   docker compose down           stop
+#
+# Rebuild an image (docker compose build api) only after changing its
+# Dockerfile. Ports bind to 127.0.0.1 only; change them with API_PORT and
+# WEB_PORT in your shell or in a root .env file.
+#
+# The web app joins as a `web` service next to `api` and is served on WEB_PORT,
+# which is why APP_BASE_URL and ALLOWED_ORIGINS already point there.
+
+name: diligently
+
+services:
+  api:
+    build:
+      context: backend
+      dockerfile: Dockerfile.dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: diligently-api:dev
+    init: true
+    env_file:
+      - path: backend/.env
+        required: true
+    environment:
+      BIND_ADDR: 0.0.0.0:8787
+      TECTONIC_BIN: tectonic
+      APP_BASE_URL: http://localhost:${WEB_PORT:-5190}
+      ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-5190}
+      COOKIE_SECURE: "false"
+      RUST_LOG: diligently_api=debug,tower_http=info,sqlx=warn
+    ports:
+      - "127.0.0.1:${API_PORT:-8790}:8787"
+    volumes:
+      # :z relabels for SELinux so the container may read the mount.
+      - ./backend:/app:z
+      - api-target:/home/app/target
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8787/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10m
+    restart: unless-stopped
+
+volumes:
+  api-target:
+  cargo-registry:
+  cargo-git:

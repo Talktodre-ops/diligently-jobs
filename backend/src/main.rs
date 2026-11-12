@@ -102,6 +102,12 @@ async fn shutdown_signal() {
 /// database the new server has not started on yet.
 async fn run_command(config: &Config, args: &[String]) -> Result<()> {
     match args {
+        [cmd] if cmd == "migrate" => {
+            let db = db::init_pool(&config.database_url).await?;
+            db::migrate(&db).await?;
+            println!("migrations applied");
+            Ok(())
+        }
         [cmd, flag, email] if cmd == "claim-legacy" && flag == "--email" => {
             let db = db::init_pool(&config.database_url).await?;
             db::migrate(&db).await?;
@@ -116,7 +122,9 @@ async fn run_command(config: &Config, args: &[String]) -> Result<()> {
             }
             Ok(())
         }
-        _ => anyhow::bail!("usage: diligently-api [claim-legacy --email <account email>]"),
+        _ => {
+            anyhow::bail!("usage: diligently-api [migrate | claim-legacy --email <account email>]")
+        }
     }
 }
 

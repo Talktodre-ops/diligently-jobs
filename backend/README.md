@@ -11,8 +11,11 @@ per-user data in Postgres, rendered CVs and letters in S3-compatible storage
 cp .env.example .env
 # (fill in DATABASE_URL and R2_*)
 
-# 2. Run with Docker (recommended for dev — hot reload via cargo-watch)
-docker compose up
+# 2. Run with Docker from the repository root (recommended for dev).
+#    The source is bind-mounted and cargo-watch rebuilds on save, so code
+#    changes never need a new container. API on http://127.0.0.1:8790.
+docker compose up -d
+docker compose logs -f api
 
 # 3. Or run locally without Docker
 cargo install cargo-watch        # one-time
@@ -56,7 +59,6 @@ backend/
 ├── Cargo.toml              # deps + [[bin]] name
 ├── Dockerfile              # multi-stage prod image (~80MB)
 ├── Dockerfile.dev          # dev image with rust toolchain + cargo-watch
-├── docker-compose.yml      # dev stack (volume-mounted hot reload)
 ├── justfile                # task runner (just <target>)
 ├── .env.example            # template
 ├── .env                    # YOUR creds (gitignored)
@@ -113,7 +115,7 @@ See `docs/decisions/` for why sessions are cookies rather than JWTs.
 
 | Target | When | How |
 |---|---|---|
-| Local Docker | dev iteration | `docker compose up` |
+| Local Docker | dev iteration | `docker compose up -d` at the repository root |
 | Tailscale-only VPS (recommended) | personal use | Hetzner/Fly box, bind to `100.x.x.x:8787`, only your tailnet sees it |
 | Public | standard | Bind `0.0.0.0` behind a TLS terminator (Caddy/nginx), set `TRUST_PROXY=true` and `COOKIE_SECURE=true`. |
 | Localhost | air-gapped | API + desktop both on same machine, bind `127.0.0.1:8787` |
@@ -127,9 +129,10 @@ just migrate                        # apply
 just migrate-revert                 # roll back the latest
 ```
 
-Migrations run automatically at startup (`db::migrate` in `main.rs`). For schema
-changes that need backfill / non-trivial coordination, run them manually with
-`sqlx migrate run` against the Neon dev branch first.
+Migrations run automatically at startup (`db::migrate` in `main.rs`). To apply
+them without starting the server, run `cargo run --release -- migrate` (or
+`just docker-migrate` inside the dev container). For changes that touch existing
+data, back up first and rehearse on a restored copy before the real database.
 
 ## What's next
 

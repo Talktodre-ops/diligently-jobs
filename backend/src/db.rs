@@ -38,7 +38,28 @@ fn max_connections() -> u32 {
 /// Initialize the Postgres connection pool. Neon recommends connecting through
 /// its pooler endpoint (host contains `-pooler`); we keep our local pool small
 /// because the pooler is doing the real concurrency multiplexing.
+///
+/// A suspended Neon compute can time out the first connection while it wakes
+/// ("Authentication timed out"), so startup retries a few times with backoff
+/// before giving up. A real misconfiguration still fails, about 30s later.
 pub async fn init_pool(database_url: &str) -> Result<PgPool> {
+    const DELAYS_SECS: [u64; 4] = [2, 4, 8, 16];
+    let mut attempt = 0;
+    loop {
+        match connect_once(database_url).await {
+            Ok(pool) => return Ok(pool),
+            Err(err) if attempt < DELAYS_SECS.len() => {
+                let wait = DELAYS_SECS[attempt];
+                attempt += 1;
+                tracing::warn!(error = %format!("{err:#}"), attempt, retry_in_secs = wait, "postgres connect failed, retrying");
+                tokio::time::sleep(Duration::from_secs(wait)).await;
+            }
+            Err(err) => return Err(err),
+        }
+    }
+}
+
+async fn connect_once(database_url: &str) -> Result<PgPool> {
     let database_url = strip_channel_binding(database_url);
     let pool = PgPoolOptions::new()
         .max_connections(max_connections())

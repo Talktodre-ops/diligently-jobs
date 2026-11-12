@@ -1,36 +1,48 @@
-# Dev Dockerfile — keeps the Rust toolchain in the image so `cargo watch` can
-# rebuild inside the container on file change. Volume-mount your source to /app.
-# Much slower to start than the prod image but iteration is sub-second after
-# the first build.
+# Development image for the API. The source is bind-mounted at /app by
+# compose.yaml at the repository root, and cargo-watch rebuilds and restarts
+# the server whenever a watched file changes, so editing code never needs a
+# new container. Rebuild this image only when the toolchain or system
+# packages change.
+#
+# Runs as an unprivileged user whose uid and gid match the host user, so files
+# the container writes into the bind mount stay owned by you.
 
 FROM rust:1.99-bookworm
 
+ARG UID=1000
+ARG GID=1000
 ARG TECTONIC_VERSION=0.15.0
 
-WORKDIR /app
-
-# cargo-watch for hot reload; sqlx-cli for migrations from the host shell
-RUN cargo install cargo-watch --locked --version ^8 \
- && cargo install sqlx-cli --locked --version ^0.8 --no-default-features --features rustls,postgres
-
-# Install tectonic for the cv_render job. Single static musl binary; fetches
-# any missing LaTeX packages from the TeX Live archive on first compile and
-# caches them per-user under ~/.cache/Tectonic.
+# Tectonic renders CV and letter PDFs. It is a single static binary that
+# fetches LaTeX packages on first use and caches them per user.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl fontconfig libfontconfig1 libgraphite2-3 libharfbuzz0b libicu72 \
  && rm -rf /var/lib/apt/lists/* \
  && curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
       | tar -xz -C /usr/local/bin tectonic \
  && chmod +x /usr/local/bin/tectonic \
- && /usr/local/bin/tectonic --version
+ && tectonic --version
 
-# Pre-warm the Cargo registry so the first volume-mounted build is faster
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo fetch && rm -rf src
+RUN cargo install cargo-watch --locked --version ^8
+
+# The build user owns CARGO_HOME (registry and git caches) and a target
+# directory outside the bind mount, so container builds never mix with
+# host builds in backend/target.
+RUN groupadd --gid "${GID}" app \
+ && useradd --uid "${UID}" --gid "${GID}" --create-home --shell /bin/bash app \
+ && chown -R app:app /usr/local/cargo \
+ && mkdir -p /app /home/app/target \
+ && chown app:app /app /home/app/target
+
+USER app
+ENV CARGO_TARGET_DIR=/home/app/target
+WORKDIR /app
+
+# Fill Tectonic's package cache now so the first render is not a 30 to 60
+# second download.
+COPY --chown=app:app templates/cv.tex /tmp/prewarm.tex
+RUN cd /tmp && tectonic --chatter=minimal --outdir /tmp prewarm.tex && rm -f /tmp/prewarm.*
 
 EXPOSE 8787
 
-ENV RUST_LOG=diligently_api=debug,tower_http=info,sqlx=warn
-
-# Default command — overridden by compose to add `cargo watch -x run`
-CMD ["cargo", "run", "--bin", "diligently-api"]
+CMD ["cargo", "watch", "-q", "-w", "src", "-w", "migrations", "-w", "templates", "-w", "build.rs", "-w", "Cargo.toml", "-w", "Cargo.lock", "-x", "run --bin diligently-api"]

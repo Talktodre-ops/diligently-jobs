@@ -30,18 +30,25 @@ lint:
 
 # -- Docker --------------------------------------------------------------------
 
-# Start the dev container (hot reload via cargo-watch)
+# The dev stack lives in compose.yaml at the repository root. Source is
+# bind-mounted and cargo-watch rebuilds on save; no container rebuild needed.
 docker-dev:
-    docker compose up
-
-docker-dev-bg:
-    docker compose up -d
+    docker compose -f ../compose.yaml up -d
 
 docker-logs:
-    docker compose logs -f api
+    docker compose -f ../compose.yaml logs -f api
 
 docker-stop:
-    docker compose down
+    docker compose -f ../compose.yaml down
+
+# Rebuild the dev image (only after editing Dockerfile.dev)
+docker-rebuild:
+    docker compose -f ../compose.yaml build api
+    docker compose -f ../compose.yaml up -d api
+
+# Apply migrations from inside the dev container without restarting the server
+docker-migrate:
+    docker compose -f ../compose.yaml exec api cargo run --bin diligently-api -- migrate
 
 # Build the production image
 docker-build:
@@ -53,9 +60,9 @@ docker-build:
 migrate-new name:
     sqlx migrate add -r {{name}}
 
-# Apply all pending migrations
+# Apply all pending migrations (uses DATABASE_URL from .env)
 migrate:
-    sqlx migrate run
+    cargo run --release --bin diligently-api -- migrate
 
 # Revert the latest migration
 migrate-revert:
