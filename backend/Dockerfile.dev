@@ -3,7 +3,7 @@
 # Much slower to start than the prod image but iteration is sub-second after
 # the first build.
 
-FROM rust:1.83-bookworm
+FROM rust:1.99-bookworm
 
 ARG TECTONIC_VERSION=0.15.0
 

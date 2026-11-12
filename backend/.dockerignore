@@ -9,3 +9,4 @@ target/
 tests/
 .vscode/
 .idea/
+tools/

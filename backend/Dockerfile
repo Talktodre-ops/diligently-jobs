@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1 — recipe (just compute the dep graph for caching)
 # -----------------------------------------------------------------------------
-FROM rust:1.83-bookworm AS chef
+FROM rust:1.99-bookworm AS chef
 WORKDIR /app
 RUN cargo install cargo-chef --locked --version ^0.1
 COPY Cargo.toml Cargo.lock ./
@@ -15,7 +15,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 # -----------------------------------------------------------------------------
 # Stage 2 — cook deps (cached layer, only invalidated when Cargo.lock changes)
 # -----------------------------------------------------------------------------
-FROM rust:1.83-bookworm AS builder
+FROM rust:1.99-bookworm AS builder
 WORKDIR /app
 RUN cargo install cargo-chef --locked --version ^0.1
 COPY --from=chef /app/recipe.json recipe.json
