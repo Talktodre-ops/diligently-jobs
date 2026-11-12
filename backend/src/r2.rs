@@ -68,4 +68,34 @@ impl R2 {
             .with_context(|| format!("R2 PutObject failed for key `{}`", key))?;
         Ok(())
     }
+
+    /// Download an object's bytes.
+    pub async fn get(&self, key: &str) -> Result<Vec<u8>> {
+        let obj = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+            .with_context(|| format!("R2 GetObject failed for key `{key}`"))?;
+        let bytes = obj
+            .body
+            .collect()
+            .await
+            .with_context(|| format!("read R2 object `{key}`"))?;
+        Ok(bytes.into_bytes().to_vec())
+    }
+
+    /// Delete one object. Missing objects are not an error.
+    pub async fn delete(&self, key: &str) -> Result<()> {
+        self.client
+            .delete_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+            .with_context(|| format!("R2 DeleteObject failed for key `{key}`"))?;
+        Ok(())
+    }
 }

@@ -5,12 +5,14 @@ pub mod ai;
 pub mod auth;
 pub mod config;
 pub mod db;
+pub mod docx_text;
 pub mod error;
 pub mod extract;
 pub mod jobs;
 pub mod legacy;
 pub mod llm;
 pub mod mail;
+pub mod prompts;
 pub mod r2;
 pub mod rate_limit;
 pub mod render;
@@ -74,7 +76,7 @@ pub fn build_router(state: AppState) -> Router {
     // signed-out request with 401, and scopes every query to that user.
     use routes::{
         applications, ats_scores, blobs, cover_letters, cv, cv_versions, events, interviews,
-        jobs as job_routes, profile, research,
+        jobs as job_routes, profile, research, uploads,
     };
     let resources = Router::new()
         .route("/v1/events", post(events::append).get(events::list))
@@ -127,7 +129,14 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/blobs/presign-download", post(blobs::presign_download))
         .route("/v1/profile", get(profile::get).patch(profile::patch))
         .route("/v1/cv/master", get(cv::get_master).put(cv::put_master))
-        .route("/v1/usage", get(usage::get));
+        .route("/v1/usage", get(usage::get))
+        .route(
+            "/v1/cv/upload",
+            post(uploads::upload).layer(axum::extract::DefaultBodyLimit::max(
+                uploads::MAX_UPLOAD_BYTES + 64 * 1024,
+            )),
+        )
+        .route("/v1/cv/uploads/{id}", get(uploads::get_upload));
 
     Router::new()
         .merge(public)

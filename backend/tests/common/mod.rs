@@ -309,6 +309,55 @@ impl Client<'_> {
         self.send(Method::GET, path, None).await
     }
 
+    /// POST a multipart form with one file field named `file`.
+    pub async fn upload(
+        &self,
+        path: &str,
+        filename: &str,
+        content_type: &str,
+        bytes: &[u8],
+    ) -> TestResponse {
+        let boundary = "diligently-test-boundary-7MA4YWxkTrZu0gW";
+        let mut body = Vec::new();
+        body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n").as_bytes());
+        body.extend_from_slice(bytes);
+        body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+        let mut builder = Request::builder()
+            .method(Method::POST)
+            .uri(path)
+            .header("origin", APP_ORIGIN)
+            .header(
+                header::CONTENT_TYPE,
+                format!("multipart/form-data; boundary={boundary}"),
+            );
+        if let Some(t) = self.session_token() {
+            builder = builder.header("cookie", format!("dl_session={t}"));
+        }
+        let resp = self
+            .app
+            .router
+            .clone()
+            .oneshot(builder.body(Body::from(body)).unwrap())
+            .await
+            .unwrap();
+        let status = resp.status();
+        let headers = resp.headers().clone();
+        let raw = resp
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body = serde_json::from_slice(&raw).unwrap_or(Value::Null);
+        TestResponse {
+            status,
+            headers,
+            body,
+            raw,
+        }
+    }
+
     pub async fn post(&self, path: &str, body: Value) -> TestResponse {
         self.send(Method::POST, path, Some(body)).await
     }
@@ -320,4 +369,24 @@ impl Client<'_> {
     pub async fn delete(&self, path: &str) -> TestResponse {
         self.send(Method::DELETE, path, None).await
     }
+}
+
+/// Sign up and confirm the email, returning a verified, signed-in client.
+pub async fn verified_user<'a>(app: &'a TestApp, email: &str) -> Client<'a> {
+    let c = app.client();
+    let res = c
+        .post(
+            "/v1/auth/signup",
+            serde_json::json!({ "email": email, "password": "a long enough passphrase" }),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::CREATED, "{}", res.body);
+    let mail = app.mail.last_to(email).expect("verification email");
+    let i = mail.text.find("token=").unwrap() + 6;
+    let token = &mail.text[i..i + 43];
+    let res = c
+        .post("/v1/auth/verify", serde_json::json!({ "token": token }))
+        .await;
+    assert_eq!(res.status, StatusCode::OK);
+    c
 }

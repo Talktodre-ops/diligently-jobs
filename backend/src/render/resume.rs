@@ -236,6 +236,92 @@ pub fn validate(doc: &ResumeDoc) -> Result<(), String> {
     Ok(())
 }
 
+fn cut(s: &mut String, max: usize) {
+    if let Some((i, _)) = s.char_indices().nth(max) {
+        s.truncate(i);
+    }
+}
+
+fn link_ok(l: &Link) -> bool {
+    (l.url.starts_with("https://") || l.url.starts_with("http://") || l.url.starts_with("mailto:"))
+        && !l
+            .url
+            .chars()
+            .any(|c| c.is_whitespace() || c.is_control() || matches!(c, '\\' | '{' | '}'))
+        && l.url.chars().count() <= limits::URL
+}
+
+/// Bring machine-produced documents (a parsed upload) within the limits that
+/// `validate` enforces: cut long text, drop excess entries and unusable
+/// links. Hand edits are validated instead, so the user sees the problem.
+pub fn clamp(doc: &mut ResumeDoc) {
+    use limits::*;
+    let h = &mut doc.header;
+    cut(&mut h.name, NAME);
+    cut(&mut h.title, TITLE);
+    for v in [&mut h.email, &mut h.phone].into_iter().flatten() {
+        cut(v, SHORT);
+    }
+    for l in [&mut h.linkedin, &mut h.github, &mut h.website] {
+        if let Some(link) = l {
+            cut(&mut link.display, SHORT);
+            if !link_ok(link) {
+                *l = None;
+            }
+        }
+    }
+    if let Some(s) = &mut doc.summary {
+        cut(s, SUMMARY);
+    }
+    doc.experience.truncate(ENTRIES);
+    for e in &mut doc.experience {
+        for v in [&mut e.role, &mut e.company, &mut e.start, &mut e.end] {
+            cut(v, SHORT);
+        }
+        if let Some(l) = &mut e.location {
+            cut(l, SHORT);
+        }
+        e.bullets.retain(|b| !b.trim().is_empty());
+        e.bullets.truncate(BULLETS_PER_ENTRY);
+        for b in &mut e.bullets {
+            cut(b, BULLET);
+        }
+    }
+    doc.education.truncate(ENTRIES);
+    for e in &mut doc.education {
+        cut(&mut e.institution, SHORT);
+        cut(&mut e.degree, SHORT);
+        for v in [&mut e.location, &mut e.start, &mut e.end]
+            .into_iter()
+            .flatten()
+        {
+            cut(v, SHORT);
+        }
+    }
+    doc.skills.truncate(SKILL_GROUPS);
+    for g in &mut doc.skills {
+        cut(&mut g.label, SHORT);
+        g.items.retain(|i| !i.trim().is_empty());
+        g.items.truncate(SKILLS_PER_GROUP);
+        for i in &mut g.items {
+            cut(i, SHORT);
+        }
+    }
+    doc.projects.truncate(ENTRIES);
+    for p in &mut doc.projects {
+        if let Some(n) = &mut p.name {
+            cut(n, SHORT);
+        }
+        cut(&mut p.description, BULLET);
+        if let Some(l) = &mut p.link {
+            cut(&mut l.display, SHORT);
+            if !link_ok(l) {
+                p.link = None;
+            }
+        }
+    }
+}
+
 /// Something worth the user's attention before the CV is used, shown on the
 /// Check screen. Not an error: the CV still saves and renders.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]

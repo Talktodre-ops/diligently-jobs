@@ -15,6 +15,7 @@ use crate::AppState;
 pub const KIND_CV_RENDER: &str = "cv_render";
 pub const KIND_COVER_LETTER_RENDER: &str = "cover_letter_render";
 pub const KIND_ATS_SCORE: &str = "ats_score";
+pub const KIND_CV_PARSE: &str = "cv_parse";
 
 /// Run the handler for a job. Errors bubble up to the worker, which marks the
 /// row failed (with retry/backoff per `mark_failed`). Successful return value
@@ -24,6 +25,7 @@ pub async fn dispatch(state: &AppState, job: &Job) -> anyhow::Result<Value> {
         KIND_CV_RENDER => cv_render(state, job.user_id, &job.payload).await,
         KIND_COVER_LETTER_RENDER => cover_letter_render(state, job.user_id, &job.payload).await,
         KIND_ATS_SCORE => ats_score(state, job.user_id, &job.payload).await,
+        KIND_CV_PARSE => cv_parse(state, job.user_id, &job.payload).await,
         other => Err(anyhow!("unknown job kind: {other}")),
     }
 }
@@ -495,4 +497,116 @@ async fn ats_score(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
         "cv_version_id": cv_id,
         "score": score,
     }))
+}
+
+fn uuid_field(payload: &Value, field: &str) -> anyhow::Result<Uuid> {
+    payload
+        .get(field)
+        .and_then(Value::as_str)
+        .ok_or_else(|| anyhow!("payload missing {field}"))?
+        .parse()
+        .with_context(|| format!("payload {field} is not a uuid"))
+}
+
+/// Read an uploaded CV with the model and make it the master CV. Failures
+/// are written to the upload row for the user to see and do not retry, so a
+/// bad file is never billed twice.
+async fn cv_parse(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::Result<Value> {
+    let upload_id = uuid_field(payload, "upload_id")?;
+    let (key, kind): (String, String) = sqlx::query_as(
+        "update cv_uploads set status = 'reading', error = null where id = $1 and user_id = $2 returning storage_key, kind",
+    )
+    .bind(upload_id)
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| anyhow!("upload {upload_id} not found"))?;
+
+    match cv_parse_inner(state, user_id, &key, &kind).await {
+        Ok(cv_id) => {
+            sqlx::query("update cv_uploads set status = 'done', cv_version_id = $3 where id = $1 and user_id = $2")
+                .bind(upload_id)
+                .bind(user_id)
+                .bind(cv_id)
+                .execute(&state.db)
+                .await?;
+            Ok(json!({ "upload_id": upload_id, "cv_version_id": cv_id }))
+        }
+        Err(message) => {
+            sqlx::query("update cv_uploads set status = 'failed', error = $3 where id = $1 and user_id = $2")
+                .bind(upload_id)
+                .bind(user_id)
+                .bind(&message)
+                .execute(&state.db)
+                .await?;
+            Ok(json!({ "upload_id": upload_id, "failed": message }))
+        }
+    }
+}
+
+/// Ok(new master CV id), or Err(a message fit to show the user).
+async fn cv_parse_inner(
+    state: &AppState,
+    user_id: Uuid,
+    key: &str,
+    kind: &str,
+) -> Result<Uuid, String> {
+    use crate::prompts::cv_parse;
+    use base64::prelude::{Engine, BASE64_STANDARD};
+
+    let generic = "We could not read this CV. Try another file, or a PDF export.";
+    let bytes = state.r2.get(key).await.map_err(|e| {
+        tracing::error!(error = %format!("{e:#}"), "cv_parse: storage read failed");
+        "Something went wrong on our side. Upload the file again.".to_string()
+    })?;
+    let source = match kind {
+        "pdf" => cv_parse::Source::Pdf {
+            base64: BASE64_STANDARD.encode(&bytes),
+        },
+        _ => {
+            let text = crate::docx_text::extract(&bytes).map_err(|e| {
+                tracing::warn!(error = %e, "cv_parse: docx text extraction failed");
+                generic.to_string()
+            })?;
+            if text.trim().len() < 50 {
+                return Err("This document has almost no text. Upload the CV itself.".into());
+            }
+            cv_parse::Source::Text(text)
+        }
+    };
+    let res = crate::usage::call(state, user_id, None, cv_parse::request(source))
+        .await
+        .map_err(|e| match e {
+            crate::error::AppError::Db(_) | crate::error::AppError::Internal(_) => {
+                generic.to_string()
+            }
+            other => other.to_string(),
+        })?;
+    let doc = cv_parse::parse(res.value).map_err(|why| {
+        tracing::warn!(%why, "cv_parse: answer rejected");
+        generic.to_string()
+    })?;
+    let cv_id = crate::routes::cv::save_master(&state.db, user_id, &doc, "upload")
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "cv_parse: save failed");
+            generic.to_string()
+        })?;
+    // Move onboarding on, and prefill the profile from the CV where empty.
+    let _ = sqlx::query(
+        r#"
+        update profiles set
+            onboarding_step = case when onboarding_step = 'upload' then 'check' else onboarding_step end,
+            full_name = coalesce(full_name, nullif($2, '')),
+            headline = coalesce(headline, nullif($3, ''))
+        where user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .bind(doc.header.name.trim())
+    .bind(doc.header.title.trim())
+    .execute(&state.db)
+    .await
+    .map_err(|e| tracing::warn!(error = %e, "cv_parse: profile prefill failed"));
+    Ok(cv_id)
 }
