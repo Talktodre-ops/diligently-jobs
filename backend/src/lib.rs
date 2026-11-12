@@ -17,7 +17,7 @@ pub mod validate;
 use axum::{
     http::{header, HeaderValue, Method},
     middleware,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use sqlx::PgPool;
@@ -39,8 +39,28 @@ pub struct AppState {
 }
 
 pub fn build_router(state: AppState) -> Router {
-    // Public routes — no bearer required.
-    let public = Router::new().route("/health", get(routes::health::health));
+    // Public routes: health and the account endpoints, which authenticate
+    // through their own extractors (CurrentUser) where needed.
+    use auth::routes as a;
+    let public = Router::new()
+        .route("/health", get(routes::health::health))
+        .route("/v1/auth/signup", post(a::signup))
+        .route("/v1/auth/signin", post(a::signin))
+        .route("/v1/auth/signout", post(a::signout))
+        .route("/v1/auth/me", get(a::me))
+        .route("/v1/auth/verify", post(a::verify))
+        .route("/v1/auth/resend-verification", post(a::resend_verification))
+        .route("/v1/auth/forgot-password", post(a::forgot_password))
+        .route("/v1/auth/reset-password", post(a::reset_password))
+        .route("/v1/auth/change-password", post(a::change_password))
+        .route("/v1/auth/change-email", post(a::change_email))
+        .route("/v1/auth/confirm-email", post(a::confirm_email))
+        .route("/v1/auth/sessions", get(a::list_sessions))
+        .route(
+            "/v1/auth/sessions/revoke-others",
+            post(a::revoke_other_sessions),
+        )
+        .route("/v1/auth/sessions/{id}", delete(a::revoke_session));
 
     // Protected routes — every request must carry a valid Bearer token.
     // `route_layer` only applies to routes added BEFORE the call, so routes go first.

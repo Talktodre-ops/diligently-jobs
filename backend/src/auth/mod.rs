@@ -7,6 +7,7 @@
 pub mod bearer;
 pub mod csrf;
 pub mod password;
+pub mod routes;
 pub mod session;
 pub mod token;
 
