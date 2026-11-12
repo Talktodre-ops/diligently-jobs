@@ -1,4 +1,4 @@
-//! Read-only job status endpoint. The desktop polls this after enqueueing.
+//! Read-only job status endpoint, polled by the Running screen.
 
 use crate::extract::{Json, Path};
 use axum::extract::State;
@@ -18,7 +18,8 @@ pub struct JobView {
     pub result: Option<serde_json::Value>,
     pub attempts: i32,
     pub max_attempts: i32,
-    pub last_error: Option<String>,
+    /// Steps of a multi-step job, each with a status.
+    pub progress: Option<serde_json::Value>,
 }
 
 impl From<Job> for JobView {
@@ -30,7 +31,9 @@ impl From<Job> for JobView {
             result: j.result,
             attempts: j.attempts,
             max_attempts: j.max_attempts,
-            last_error: j.last_error,
+            // last_error is internal detail (provider messages, SQL); the
+            // client gets status and per-step progress instead.
+            progress: j.progress,
         }
     }
 }

@@ -64,7 +64,7 @@ pub struct ApplicationContext {
 /// Structured cover letter stored in `cover_letters.doc`; both renderers walk
 /// this. The stored doc also carries `recipient`/`role`, ignored here as nothing
 /// renders them.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
 pub struct CoverLetterDoc {
     pub candidate_name: String,
     #[serde(default)]

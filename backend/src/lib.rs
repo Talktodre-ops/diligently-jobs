@@ -11,6 +11,7 @@ pub mod extract;
 pub mod jobs;
 pub mod legacy;
 pub mod mail;
+pub mod pipeline;
 pub mod prompts;
 pub mod r2;
 pub mod rate_limit;
@@ -75,7 +76,7 @@ pub fn build_router(state: AppState) -> Router {
     // signed-out request with 401, and scopes every query to that user.
     use routes::{
         applications, ats_scores, blobs, cover_letters, cv, cv_versions, events, interviews,
-        jobs as job_routes, profile, research, uploads,
+        jobs as job_routes, profile, research, uploads, workspace,
     };
     let resources = Router::new()
         .route("/v1/events", post(events::append).get(events::list))
@@ -135,7 +136,8 @@ pub fn build_router(state: AppState) -> Router {
                 uploads::MAX_UPLOAD_BYTES + 64 * 1024,
             )),
         )
-        .route("/v1/cv/uploads/{id}", get(uploads::get_upload));
+        .route("/v1/cv/uploads/{id}", get(uploads::get_upload))
+        .route("/v1/applications/start", post(workspace::start));
 
     Router::new()
         .merge(public)

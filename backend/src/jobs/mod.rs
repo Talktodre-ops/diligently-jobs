@@ -40,6 +40,8 @@ pub struct Job {
     pub completed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Step-by-step progress for multi-step jobs (the application pipeline).
+    pub progress: Option<serde_json::Value>,
 }
 
 /// Enqueue a job. Returns the persisted row so the caller can hand the id to
@@ -51,19 +53,33 @@ pub async fn enqueue(
     payload: serde_json::Value,
     max_attempts: i32,
 ) -> Result<Job, AppError> {
+    enqueue_with_progress(pool, user_id, kind, payload, max_attempts, None).await
+}
+
+/// Enqueue with initial step progress, so the first poll already lists the
+/// steps the Running screen shows.
+pub async fn enqueue_with_progress(
+    pool: &PgPool,
+    user_id: Uuid,
+    kind: &str,
+    payload: serde_json::Value,
+    max_attempts: i32,
+    progress: Option<serde_json::Value>,
+) -> Result<Job, AppError> {
     let job = sqlx::query_as::<_, Job>(
         r#"
-        insert into jobs (kind, payload, max_attempts, user_id)
-        values ($1, $2, $3, $4)
+        insert into jobs (kind, payload, max_attempts, user_id, progress)
+        values ($1, $2, $3, $4, $5)
         returning
             id, user_id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         "#,
     )
     .bind(kind)
     .bind(&payload)
     .bind(max_attempts)
     .bind(user_id)
+    .bind(progress)
     .fetch_one(pool)
     .await?;
     Ok(job)
@@ -74,7 +90,7 @@ pub async fn get_by_id(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Option<
         r#"
         select
             id, user_id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         from jobs
         where id = $1 and user_id = $2
         "#,
@@ -96,7 +112,7 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
         r#"
         select
             id, user_id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         from jobs
         where status = 'queued' and scheduled_at <= now()
         order by scheduled_at asc
@@ -121,7 +137,7 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
         where id = $1
         returning
             id, user_id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         "#,
     )
     .bind(job.id)
@@ -225,7 +241,7 @@ pub async fn find_active(
         r#"
         select
             id, user_id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         from jobs
         where kind = $1
           and user_id = $3

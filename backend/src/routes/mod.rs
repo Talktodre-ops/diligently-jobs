@@ -11,6 +11,7 @@ pub mod jobs;
 pub mod profile;
 pub mod research;
 pub mod uploads;
+pub mod workspace;
 
 use uuid::Uuid;
 

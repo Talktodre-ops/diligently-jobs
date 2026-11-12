@@ -25,6 +25,7 @@ pub async fn dispatch(state: &AppState, job: &Job) -> anyhow::Result<Value> {
         KIND_COVER_LETTER_RENDER => cover_letter_render(state, job.user_id, &job.payload).await,
         KIND_ATS_SCORE => ats_score(state, job.user_id, &job.payload).await,
         KIND_CV_PARSE => cv_parse(state, job.user_id, &job.payload).await,
+        crate::pipeline::KIND => crate::pipeline::run(state, job).await,
         other => Err(anyhow!("unknown job kind: {other}")),
     }
 }
