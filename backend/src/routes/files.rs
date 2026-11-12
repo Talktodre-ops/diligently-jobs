@@ -186,6 +186,26 @@ pub async fn files(
     })))
 }
 
+#[derive(sqlx::FromRow)]
+struct CvDocRow {
+    id: Uuid,
+    company: Option<String>,
+    role: Option<String>,
+    at: DateTime<Utc>,
+    docx: Option<String>,
+    score: Option<i32>,
+}
+
+#[derive(sqlx::FromRow)]
+struct LetterDocRow {
+    id: Uuid,
+    app_id: Uuid,
+    company: Option<String>,
+    tone: String,
+    body: String,
+    at: DateTime<Utc>,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct DocumentsQuery {
     pub kind: Option<String>,
@@ -202,11 +222,11 @@ pub async fn documents(
     crate::validate::one_of("kind", kind, &["all", "cv", "letter"])?;
     let mut docs: Vec<(DateTime<Utc>, Value)> = Vec::new();
     if kind != "letter" {
-        let rows: Vec<(Uuid, Option<String>, Option<String>, DateTime<Utc>, Option<String>, Option<i32>)> = sqlx::query_as(
+        let rows: Vec<CvDocRow> = sqlx::query_as(
             r#"
-            select a.id, a.company, a.role, a.latest_cv_rendered_at, a.latest_cv_docx_key,
+            select a.id, a.company, a.role, a.latest_cv_rendered_at as at, a.latest_cv_docx_key as docx,
                    (select score from ats_scores s where s.application_id = a.id and s.user_id = a.user_id
-                    and s.kind in ('rescore', 'projected') order by s.kind = 'rescore' desc, s.created_at desc limit 1)
+                    and s.kind in ('rescore', 'projected') order by s.kind = 'rescore' desc, s.created_at desc limit 1) as score
             from applications a
             where a.user_id = $1 and a.latest_cv_pdf_key is not null and a.latest_cv_rendered_at is not null
             "#,
@@ -214,7 +234,15 @@ pub async fn documents(
         .bind(user.id)
         .fetch_all(&state.db)
         .await?;
-        for (id, company, role, at, docx, score) in rows {
+        for CvDocRow {
+            id,
+            company,
+            role,
+            at,
+            docx,
+            score,
+        } in rows
+        {
             docs.push((at, json!({
                 "kind": "cv", "application_id": id, "company": company, "role": role, "score": score,
                 "formats": if docx.is_some() { json!(["pdf", "docx"]) } else { json!(["pdf"]) },
@@ -223,9 +251,9 @@ pub async fn documents(
         }
     }
     if kind != "cv" {
-        let rows: Vec<(Uuid, Uuid, Option<String>, String, String, DateTime<Utc>)> = sqlx::query_as(
+        let rows: Vec<LetterDocRow> = sqlx::query_as(
             r#"
-            select distinct on (l.application_id) l.id, l.application_id, a.company, l.tone, l.body, l.generated_at
+            select distinct on (l.application_id) l.id, l.application_id as app_id, a.company, l.tone, l.body, l.generated_at as at
             from cover_letters l join applications a on a.id = l.application_id and a.user_id = l.user_id
             where l.user_id = $1
             order by l.application_id, l.generated_at desc
@@ -234,14 +262,22 @@ pub async fn documents(
         .bind(user.id)
         .fetch_all(&state.db)
         .await?;
-        for (id, app_id, company, tone, body, at) in rows {
+        for LetterDocRow {
+            id,
+            app_id,
+            company,
+            tone,
+            body,
+            at,
+        } in rows
+        {
             docs.push((at, json!({
                 "kind": "letter", "id": id, "application_id": app_id, "company": company, "tone": tone,
                 "words": body.split_whitespace().count(), "updated_at": at,
             })));
         }
     }
-    docs.sort_by(|a, b| b.0.cmp(&a.0));
+    docs.sort_by_key(|d| std::cmp::Reverse(d.0));
     Ok(Json(
         json!({ "documents": docs.into_iter().map(|(_, v)| v).collect::<Vec<_>>() }),
     ))
