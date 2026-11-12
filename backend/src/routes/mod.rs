@@ -1,3 +1,4 @@
+pub mod account;
 pub mod applications;
 pub mod ats_scores;
 pub mod blobs;

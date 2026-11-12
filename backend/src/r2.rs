@@ -116,4 +116,51 @@ impl R2 {
         let signed = get.presigned(cfg).await.context("sign download URL")?;
         Ok(signed.uri().to_string())
     }
+
+    /// Every key under a prefix, following pagination.
+    pub async fn list_keys(&self, prefix: &str) -> Result<Vec<String>> {
+        let mut keys = Vec::new();
+        let mut token: Option<String> = None;
+        loop {
+            let mut req = self
+                .client
+                .list_objects_v2()
+                .bucket(&self.bucket)
+                .prefix(prefix);
+            if let Some(t) = &token {
+                req = req.continuation_token(t);
+            }
+            let out = req
+                .send()
+                .await
+                .with_context(|| format!("R2 ListObjectsV2 failed for prefix `{prefix}`"))?;
+            keys.extend(
+                out.contents()
+                    .iter()
+                    .filter_map(|o| o.key().map(str::to_string)),
+            );
+            match (out.is_truncated(), out.next_continuation_token()) {
+                (Some(true), Some(t)) => token = Some(t.to_string()),
+                _ => break,
+            }
+        }
+        Ok(keys)
+    }
+
+    /// Delete everything under a prefix. Returns how many objects were
+    /// deleted and how many failed, so the caller can log leftovers.
+    pub async fn delete_prefix(&self, prefix: &str) -> Result<(usize, usize)> {
+        let keys = self.list_keys(prefix).await?;
+        let (mut ok, mut failed) = (0, 0);
+        for k in keys {
+            match self.delete(&k).await {
+                Ok(()) => ok += 1,
+                Err(e) => {
+                    failed += 1;
+                    tracing::error!(key = %k, error = %format!("{e:#}"), "storage delete failed");
+                }
+            }
+        }
+        Ok((ok, failed))
+    }
 }
