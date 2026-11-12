@@ -8,6 +8,7 @@ pub mod error;
 pub mod extract;
 pub mod jobs;
 pub mod llm;
+pub mod mail;
 pub mod r2;
 pub mod render;
 pub mod routes;
@@ -34,6 +35,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub db: PgPool,
     pub r2: R2,
+    pub mailer: Arc<dyn mail::Mailer>,
 }
 
 pub fn build_router(state: AppState) -> Router {

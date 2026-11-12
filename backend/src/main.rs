@@ -33,10 +33,13 @@ async fn main() -> Result<()> {
         }
     }
 
+    let mailer = diligently_api::mail::from_env()?;
+
     let state = AppState {
         config: Arc::new(config),
         db,
         r2,
+        mailer,
     };
 
     // Spawn the in-process job worker. It picks up cv_render (and future
