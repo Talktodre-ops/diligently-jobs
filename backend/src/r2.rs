@@ -98,4 +98,22 @@ impl R2 {
             .with_context(|| format!("R2 DeleteObject failed for key `{key}`"))?;
         Ok(())
     }
+
+    /// A short-lived GET URL for one object. `download_name` sets the file
+    /// name the browser saves it as.
+    pub async fn presign_get(
+        &self,
+        key: &str,
+        ttl: std::time::Duration,
+        download_name: Option<&str>,
+    ) -> Result<String> {
+        let cfg = aws_sdk_s3::presigning::PresigningConfig::expires_in(ttl)
+            .context("invalid presigning TTL")?;
+        let mut get = self.client.get_object().bucket(&self.bucket).key(key);
+        if let Some(name) = download_name {
+            get = get.response_content_disposition(format!("attachment; filename=\"{name}\""));
+        }
+        let signed = get.presigned(cfg).await.context("sign download URL")?;
+        Ok(signed.uri().to_string())
+    }
 }
