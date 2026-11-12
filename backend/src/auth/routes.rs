@@ -18,6 +18,7 @@ use super::{client_ip, password, session, token, CurrentUser};
 use crate::error::AppError;
 use crate::extract::{Json, Path};
 use crate::mail;
+use crate::rate_limit::{self as rl, RateLimiter};
 use crate::validate;
 use crate::AppState;
 
@@ -85,6 +86,18 @@ impl FromRequestParts<AppState> for ClientMeta {
             user_agent: super::user_agent(&parts.headers).map(str::to_string),
         })
     }
+}
+
+impl ClientMeta {
+    /// Rate-limit key for the caller. Without a known IP (tests, odd proxies)
+    /// everyone shares one bucket, which errs on the side of limiting.
+    fn ip_key(&self) -> &str {
+        self.ip.as_deref().unwrap_or("unknown")
+    }
+}
+
+fn limit(limiter: &RateLimiter, l: rl::Limit, key: &str) -> Result<(), AppError> {
+    limiter.check(l, key)
 }
 
 fn with_cookie(status: StatusCode, cookie: HeaderValue, body: impl Serialize) -> Response {
@@ -198,6 +211,7 @@ pub async fn signup(
     meta: ClientMeta,
     Json(req): Json<Credentials>,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::SIGNUP_IP, meta.ip_key())?;
     let email = validate::email("email", &req.email)?;
     password::check_policy(&req.password, &email)?;
     let hash = password::hash(&req.password).await?;
@@ -247,6 +261,8 @@ pub async fn signin(
     meta: ClientMeta,
     Json(req): Json<Credentials>,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::SIGNIN_IP, meta.ip_key())?;
+    limit(&state.limiter, rl::SIGNIN_EMAIL, req.email.trim())?;
     let bad = || AppError::Unauthorized("That email and password do not match.");
     let Ok(email) = validate::email("email", &req.email) else {
         password::verify_dummy(&req.password).await;
@@ -332,8 +348,10 @@ pub struct TokenRequest {
 /// on another device.
 pub async fn verify(
     State(state): State<AppState>,
+    meta: ClientMeta,
     Json(req): Json<TokenRequest>,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::TOKEN_IP, meta.ip_key())?;
     let claimed = claim_email_token(&state.db, req.token.trim(), "verify").await?;
     sqlx::query(
         "update users set email_verified_at = coalesce(email_verified_at, now()) where id = $1",
@@ -349,6 +367,7 @@ pub async fn resend_verification(
     State(state): State<AppState>,
     user: CurrentUser,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::RESEND_USER, &user.id.to_string())?;
     if !user.is_verified() {
         send_verification(&state, user.id, &user.email).await?;
     }
@@ -367,8 +386,11 @@ pub struct ForgotRequest {
 /// POST /v1/auth/forgot-password. Same 202 whether or not the account exists.
 pub async fn forgot_password(
     State(state): State<AppState>,
+    meta: ClientMeta,
     Json(req): Json<ForgotRequest>,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::FORGOT_IP, meta.ip_key())?;
+    limit(&state.limiter, rl::FORGOT_EMAIL, req.email.trim())?;
     let accepted = (StatusCode::ACCEPTED, Json(Ok { ok: true })).into_response();
     let Ok(email) = validate::email("email", &req.email) else {
         return Ok(accepted);
@@ -405,6 +427,7 @@ pub async fn reset_password(
     meta: ClientMeta,
     Json(req): Json<ResetRequest>,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::TOKEN_IP, meta.ip_key())?;
     if !token::looks_valid(req.token.trim()) {
         return Err(AppError::unprocessable(
             "token_invalid",
@@ -504,6 +527,11 @@ pub async fn change_password(
     user: CurrentUser,
     Json(req): Json<ChangePasswordRequest>,
 ) -> Result<Response, AppError> {
+    limit(
+        &state.limiter,
+        rl::PASSWORD_CHECK_USER,
+        &user.id.to_string(),
+    )?;
     check_current_password(&state.db, user.id, &req.current_password).await?;
     password::check_policy(&req.new_password, &user.email)?;
     let hash = password::hash(&req.new_password).await?;
@@ -547,6 +575,11 @@ pub async fn change_email(
     user: CurrentUser,
     Json(req): Json<ChangeEmailRequest>,
 ) -> Result<Response, AppError> {
+    limit(
+        &state.limiter,
+        rl::PASSWORD_CHECK_USER,
+        &user.id.to_string(),
+    )?;
     check_current_password(&state.db, user.id, &req.password).await?;
     let new_email = validate::email("new_email", &req.new_email)?;
     if new_email == user.email {
@@ -581,8 +614,10 @@ pub async fn change_email(
 /// POST /v1/auth/confirm-email
 pub async fn confirm_email(
     State(state): State<AppState>,
+    meta: ClientMeta,
     Json(req): Json<TokenRequest>,
 ) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::TOKEN_IP, meta.ip_key())?;
     let claimed = claim_email_token(&state.db, req.token.trim(), "change_email").await?;
     let new_email = claimed
         .new_email

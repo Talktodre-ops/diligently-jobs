@@ -131,6 +131,7 @@ impl TestApp {
             db: pool,
             r2,
             mailer: mail.clone(),
+            limiter: Arc::new(diligently_api::rate_limit::RateLimiter::new()),
         };
         let router = build_router(state.clone());
         Self {
