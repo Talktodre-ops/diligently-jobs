@@ -9,6 +9,40 @@ pub mod docx;
 pub mod latex;
 pub mod resume;
 
+/// Page size for rendered documents, from the user's profile preference.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Paper {
+    A4,
+    Letter,
+}
+
+impl Paper {
+    /// `letter` means US Letter; anything else, including unset, is A4.
+    pub fn from_pref(pref: &str) -> Self {
+        if pref == "letter" {
+            Paper::Letter
+        } else {
+            Paper::A4
+        }
+    }
+
+    /// LaTeX class option.
+    pub fn latex_option(self) -> &'static str {
+        match self {
+            Paper::A4 => "a4paper",
+            Paper::Letter => "letterpaper",
+        }
+    }
+
+    /// Width and height in twentieths of a point, as Word stores them.
+    pub fn docx_twips(self) -> (u32, u32) {
+        match self {
+            Paper::A4 => (11906, 16838),
+            Paper::Letter => (12240, 15840),
+        }
+    }
+}
+
 use serde::Deserialize;
 use sqlx::FromRow;
 use uuid::Uuid;

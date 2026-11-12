@@ -63,11 +63,12 @@ async fn cover_letter_render(
         .ok_or_else(|| anyhow!("cover_letter {cover_letter_id} has no structured doc to render"))?;
     let doc = render::parse_cover_letter_doc(&doc_json).context("parse cover_letter doc")?;
 
-    let pdf_bytes = render::latex::render_cover_letter(&doc)
+    let paper = user_paper(state, user_id).await?;
+    let pdf_bytes = render::latex::render_cover_letter(&doc, paper)
         .await
         .context("latex render_cover_letter failed")?;
-    let docx_bytes =
-        render::docx::render_cover_letter_docx(&doc).context("docx render_cover_letter failed")?;
+    let docx_bytes = render::docx::render_cover_letter_docx(&doc, paper)
+        .context("docx render_cover_letter failed")?;
 
     // `letters/` is the whitelisted prefix in routes::blobs (presign rejects
     // anything else, e.g. the old `cover-letters/`).
@@ -131,6 +132,14 @@ async fn cover_letter_render(
 
 /// Candidate header (name + contacts) from the most recent structured base CV,
 /// for the flat fallback which has no header of its own. None if none exists.
+/// The user's paper size preference for renders.
+async fn user_paper(state: &AppState, user_id: Uuid) -> anyhow::Result<render::Paper> {
+    let pref = crate::routes::profile::paper_size(&state.db, user_id)
+        .await
+        .map_err(|e| anyhow!("load paper size: {e}"))?;
+    Ok(render::Paper::from_pref(&pref))
+}
+
 async fn latest_base_header(db: &sqlx::PgPool, user_id: Uuid) -> Option<render::resume::Header> {
     let rows = sqlx::query_scalar::<_, Value>(
         "select c.sections from profiles p join cv_versions c on c.id = p.master_cv_version_id and c.user_id = p.user_id where p.user_id = $1",
@@ -190,16 +199,17 @@ async fn cv_render(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
 
     // Templated path when `cv.sections` parses as a `ResumeDoc`; flat path
     // otherwise.
+    let paper = user_paper(state, user_id).await?;
     let resume_doc = render::resume::parse_resume_doc(&cv.sections);
 
     let (pdf_bytes, docx_bytes) = match &resume_doc {
         Some(doc) => {
             tracing::info!(cv_version_id = %cv_version_id, "rendering cv via templated path (ResumeDoc)");
-            let pdf = render::latex::render_cv(doc)
+            let pdf = render::latex::render_cv(doc, paper)
                 .await
                 .context("latex render_cv failed")?;
-            let docx =
-                render::docx::render_resume_doc(doc).context("docx render_resume_doc failed")?;
+            let docx = render::docx::render_resume_doc(doc, paper)
+                .context("docx render_resume_doc failed")?;
             (pdf, docx)
         }
         None => {
@@ -207,11 +217,16 @@ async fn cv_render(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
             // (name + contacts) from the latest structured base CV.
             tracing::info!(cv_version_id = %cv_version_id, "rendering cv via flat-sections path (no structured ResumeDoc)");
             let base_header = latest_base_header(&state.db, user_id).await;
-            let pdf =
-                render::latex::render_flat_cv(&cv.sections, app.as_ref(), base_header.as_ref())
-                    .await
-                    .context("latex render_flat_cv failed")?;
-            let docx = render::docx::render_cv(&cv, app.as_ref()).context("docx render failed")?;
+            let pdf = render::latex::render_flat_cv(
+                &cv.sections,
+                app.as_ref(),
+                base_header.as_ref(),
+                paper,
+            )
+            .await
+            .context("latex render_flat_cv failed")?;
+            let docx =
+                render::docx::render_cv(&cv, app.as_ref(), paper).context("docx render failed")?;
             (pdf, docx)
         }
     };

@@ -7,7 +7,7 @@
 % (Tectonic's engine).
 %------------------------
 
-\documentclass[letterpaper,10pt]{article}
+\documentclass[{{ paper }},10pt]{article}
 
 \usepackage{latexsym}
 \usepackage[empty]{fullpage}

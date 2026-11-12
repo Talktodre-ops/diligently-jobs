@@ -21,7 +21,8 @@ const ABSTRACT_NUMBERING_ID: usize = 1;
 
 /// Build a Docx pre-loaded with ATS-friendly styles + a bullet numbering def.
 /// Both the flat and structured renderers start from this.
-fn base_docx() -> Docx {
+fn base_docx(paper: super::Paper) -> Docx {
+    let (w, h) = paper.docx_twips();
     let bullet_level = Level::new(
         0,
         Start::new(1),
@@ -35,6 +36,7 @@ fn base_docx() -> Docx {
     let numbering = Numbering::new(NUMBERING_ID, ABSTRACT_NUMBERING_ID);
 
     Docx::new()
+        .page_size(w, h)
         .add_style(
             Style::new("Heading1", StyleType::Paragraph)
                 .name("Heading 1")
@@ -84,8 +86,8 @@ fn heading2(text: &str) -> Paragraph {
 /// ATS-friendly DOCX from a structured `ResumeDoc`. Real Word styles, single
 /// column, real bullet lists — same content as the LaTeX PDF, layout tuned
 /// for resume parsers rather than visual fidelity.
-pub fn render_resume_doc(doc: &ResumeDoc) -> anyhow::Result<Vec<u8>> {
-    let mut docx = base_docx().add_paragraph(
+pub fn render_resume_doc(doc: &ResumeDoc, paper: super::Paper) -> anyhow::Result<Vec<u8>> {
+    let mut docx = base_docx(paper).add_paragraph(
         Paragraph::new()
             .style("Heading1")
             .add_run(Run::new().add_text(&doc.header.name)),
@@ -236,7 +238,11 @@ pub fn render_resume_doc(doc: &ResumeDoc) -> anyhow::Result<Vec<u8>> {
 
 /// Legacy flat-sections DOCX. Used when `cv_versions.sections` is the old
 /// `Vec<CvSection>` shape (no structured ResumeDoc).
-pub fn render_cv(cv: &CvVersionRow, app: Option<&ApplicationContext>) -> anyhow::Result<Vec<u8>> {
+pub fn render_cv(
+    cv: &CvVersionRow,
+    app: Option<&ApplicationContext>,
+    paper: super::Paper,
+) -> anyhow::Result<Vec<u8>> {
     let sections = super::parse_sections(&cv.sections)?;
 
     let header_role = app
@@ -244,7 +250,7 @@ pub fn render_cv(cv: &CvVersionRow, app: Option<&ApplicationContext>) -> anyhow:
         .unwrap_or_else(|| cv.label.as_deref().unwrap_or("Curriculum Vitae"));
     let header_company = app.and_then(|a| a.company.as_deref()).unwrap_or("");
 
-    let mut docx = base_docx().add_paragraph(
+    let mut docx = base_docx(paper).add_paragraph(
         Paragraph::new()
             .style("Heading1")
             .add_run(Run::new().add_text(header_role)),
@@ -270,14 +276,17 @@ pub fn render_cv(cv: &CvVersionRow, app: Option<&ApplicationContext>) -> anyhow:
 
 /// ATS-friendly DOCX cover letter (Phase 3, M2). Plain Normal-style
 /// paragraphs — exactly what a recruiter / ATS expects from a letter.
-pub fn render_cover_letter_docx(doc: &super::CoverLetterDoc) -> anyhow::Result<Vec<u8>> {
+pub fn render_cover_letter_docx(
+    doc: &super::CoverLetterDoc,
+    paper: super::Paper,
+) -> anyhow::Result<Vec<u8>> {
     let para = |text: &str| {
         Paragraph::new()
             .style("Normal")
             .add_run(Run::new().add_text(text))
     };
 
-    let mut d = base_docx().add_paragraph(
+    let mut d = base_docx(paper).add_paragraph(
         Paragraph::new()
             .style("Heading1")
             .add_run(Run::new().add_text(&doc.candidate_name)),

@@ -13,6 +13,7 @@ use std::process::Stdio;
 use tokio::process::Command;
 
 use super::resume::{Header, ResumeDoc};
+use super::Paper;
 
 /// Tera-templated CV, driven by `ResumeDoc`.
 ///
@@ -59,8 +60,9 @@ pub async fn render_flat_cv(
     sections: &serde_json::Value,
     app: Option<&super::ApplicationContext>,
     base_header: Option<&Header>,
+    paper: Paper,
 ) -> Result<Vec<u8>> {
-    render_tex(&build_flat_cv_tex(sections, app, base_header)?).await
+    render_tex(&build_flat_cv_tex(sections, app, base_header, paper)?).await
 }
 
 /// Icon contact line (email, linkedin, github, website, phone), styled to
@@ -113,6 +115,7 @@ fn build_flat_cv_tex(
     sections_json: &serde_json::Value,
     app: Option<&super::ApplicationContext>,
     base_header: Option<&Header>,
+    paper: Paper,
 ) -> Result<String> {
     let sections = super::parse_sections(sections_json).context("parse flat sections")?;
 
@@ -130,7 +133,10 @@ fn build_flat_cv_tex(
         .unwrap_or("Curriculum Vitae");
 
     let mut s = String::new();
-    s.push_str("\\documentclass[letterpaper,10pt]{article}\n");
+    s.push_str(&format!(
+        "\\documentclass[{},10pt]{{article}}\n",
+        paper.latex_option()
+    ));
     s.push_str("\\usepackage[empty]{fullpage}\n");
     s.push_str("\\usepackage{titlesec}\n");
     s.push_str("\\usepackage[usenames,dvipsnames]{color}\n");
@@ -192,22 +198,23 @@ fn build_flat_cv_tex(
 /// The template lives at `backend/templates/cv.tex.tera`. Every interpolated
 /// value passes through the `tex` filter which escapes LaTeX specials so user
 /// input can never break compilation.
-pub async fn render_cv(doc: &ResumeDoc) -> Result<Vec<u8>> {
-    let tex_source = expand_template(doc).context("expand Tera template")?;
+pub async fn render_cv(doc: &ResumeDoc, paper: Paper) -> Result<Vec<u8>> {
+    let tex_source = expand_template(doc, paper).context("expand Tera template")?;
     render_tex(&tex_source).await
 }
 
 /// Build the Tera engine, register filters, render `cv.tex.tera` against the
 /// provided `ResumeDoc`. Returns the populated `.tex` source.
-fn expand_template(doc: &ResumeDoc) -> Result<String> {
+fn expand_template(doc: &ResumeDoc, paper: Paper) -> Result<String> {
     let mut tera = tera::Tera::default();
     tera.register_filter("tex", tex_escape_filter);
     tera.register_filter("url", tex_url_filter);
     tera.add_raw_template("cv.tex.tera", TEMPLATE_CV_TERA)
         .context("register cv.tex.tera with Tera")?;
 
-    let ctx =
+    let mut ctx =
         tera::Context::from_serialize(doc).context("serialize ResumeDoc into Tera context")?;
+    ctx.insert("paper", paper.latex_option());
 
     tera.render("cv.tex.tera", &ctx)
         .context("render cv.tex.tera")
@@ -294,16 +301,19 @@ fn tex_escape_filter(
 /// Render a structured cover letter to PDF. Builds a simple, standard
 /// article-class letter (no exotic packages → reliable Tectonic compile) and
 /// runs it through the same Tectonic path as the CV.
-pub async fn render_cover_letter(doc: &super::CoverLetterDoc) -> Result<Vec<u8>> {
-    render_tex(&build_cover_letter_tex(doc)).await
+pub async fn render_cover_letter(doc: &super::CoverLetterDoc, paper: Paper) -> Result<Vec<u8>> {
+    render_tex(&build_cover_letter_tex(doc, paper)).await
 }
 
 /// Assemble the `.tex` source for a cover letter. Each logical block is its own
 /// paragraph (blank-line separated); `parskip` gives the spacing. Every
 /// interpolated value is `tex_escape`d so user content can't break compilation.
-fn build_cover_letter_tex(doc: &super::CoverLetterDoc) -> String {
+fn build_cover_letter_tex(doc: &super::CoverLetterDoc, paper: Paper) -> String {
     let mut s = String::new();
-    s.push_str("\\documentclass[11pt]{article}\n");
+    s.push_str(&format!(
+        "\\documentclass[{},11pt]{{article}}\n",
+        paper.latex_option()
+    ));
     s.push_str("\\usepackage[margin=1in]{geometry}\n");
     s.push_str("\\usepackage{parskip}\n");
     s.push_str("\\usepackage[hidelinks]{hyperref}\n");
@@ -452,7 +462,7 @@ mod tests {
             "projects": [{ "description": "Tool", "link": { "url": r"https://g.co/}\def\x{1}", "display": "g" } }]
         }))
         .unwrap();
-        let tex = expand_template(&doc).unwrap();
+        let tex = expand_template(&doc, Paper::A4).unwrap();
         for needle in [r"\input{/etc", r"\write18", r"\def\x"] {
             assert!(!tex.contains(needle), "found {needle} in rendered TeX");
         }
