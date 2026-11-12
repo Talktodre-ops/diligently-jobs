@@ -1,9 +1,7 @@
 use crate::error::AppError;
+use crate::extract::{Json, Path, Query};
 use crate::AppState;
-use axum::{
-    extract::{Path, Query, State},
-    Json,
-};
+use axum::extract::State;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;

@@ -1,6 +1,7 @@
 use crate::error::AppError;
+use crate::extract::Json;
 use crate::AppState;
-use axum::{extract::State, Json};
+use axum::extract::State;
 use serde::Serialize;
 
 #[derive(Serialize)]

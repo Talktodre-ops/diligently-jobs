@@ -5,14 +5,10 @@
 //! cv-render / cover-letter enqueue pattern.
 
 use crate::error::AppError;
+use crate::extract::{Json, Path};
 use crate::jobs::{self, handlers::KIND_ATS_SCORE};
 use crate::AppState;
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::json;

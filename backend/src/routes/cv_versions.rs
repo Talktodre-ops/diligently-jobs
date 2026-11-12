@@ -1,12 +1,8 @@
 use crate::error::AppError;
+use crate::extract::{Json, Path, Query};
 use crate::jobs::{self, handlers::KIND_CV_RENDER};
 use crate::AppState;
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

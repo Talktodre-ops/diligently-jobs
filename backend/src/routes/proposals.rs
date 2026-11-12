@@ -7,11 +7,9 @@
 //! cover_letters / company_research append style (newest row = current).
 
 use crate::error::AppError;
+use crate::extract::{Json, Path};
 use crate::AppState;
-use axum::{
-    extract::{Path, State},
-    Json,
-};
+use axum::extract::State;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;

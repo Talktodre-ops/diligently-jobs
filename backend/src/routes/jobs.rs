@@ -1,9 +1,7 @@
 //! Read-only job status endpoint. The desktop polls this after enqueueing.
 
-use axum::{
-    extract::{Path, State},
-    Json,
-};
+use crate::extract::{Json, Path};
+use axum::extract::State;
 use serde::Serialize;
 use uuid::Uuid;
 

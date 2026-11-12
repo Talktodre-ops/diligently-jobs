@@ -5,11 +5,13 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod error;
+pub mod extract;
 pub mod jobs;
 pub mod llm;
 pub mod r2;
 pub mod render;
 pub mod routes;
+pub mod validate;
 
 use axum::{
     http::{header, HeaderValue, Method},
