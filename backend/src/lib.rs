@@ -125,6 +125,10 @@ pub fn build_router(state: AppState) -> Router {
     Router::new()
         .merge(public)
         .merge(protected)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::csrf::require_allowed_origin,
+        ))
         .with_state(state)
         .layer(cors_layer())
         .layer(TraceLayer::new_for_http())

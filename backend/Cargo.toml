@@ -65,6 +65,10 @@ tera = "1"
 # LLM client for the async ATS scoring job (OpenAI-compatible /chat/completions).
 # rustls (not native-tls) to avoid a system OpenSSL dependency, matching sqlx.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+argon2 = "0.6.0"
+sha2 = "0.11.1"
+base64 = "0.23.1"
+rand = "0.10.3"
 
 [dev-dependencies]
 http-body-util = "0.1.5"

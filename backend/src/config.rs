@@ -10,6 +10,24 @@ pub struct Config {
     pub bearer_token: String,
     pub database_url: String,
     pub r2: R2Config,
+    pub web: WebConfig,
+}
+
+/// Settings for the browser-facing side: where the web app lives, which
+/// origins may make state-changing requests, and how session cookies are set.
+#[derive(Clone, Debug)]
+pub struct WebConfig {
+    /// Base URL of the web app, used to build links in emails.
+    pub app_base_url: String,
+    /// Origins allowed to make unsafe (POST/PATCH/PUT/DELETE) requests with a
+    /// session cookie. Defaults to the app base URL.
+    pub allowed_origins: Vec<String>,
+    /// Set the Secure flag on cookies. True everywhere except plain-HTTP local
+    /// development and tests.
+    pub cookie_secure: bool,
+    /// Read the client IP from exactly one X-Forwarded-For hop. Only enable
+    /// behind a proxy you control, or clients can spoof their IP.
+    pub trust_proxy: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -56,12 +74,47 @@ impl Config {
             secret_access_key: required_env("R2_SECRET_ACCESS_KEY")?,
         };
 
+        let app_base_url = env::var("APP_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:5173".to_string())
+            .trim_end_matches('/')
+            .to_string();
+        if !app_base_url.starts_with("http://") && !app_base_url.starts_with("https://") {
+            anyhow::bail!("APP_BASE_URL must start with http:// or https://");
+        }
+        let allowed_origins = match env::var("ALLOWED_ORIGINS") {
+            Ok(v) if !v.trim().is_empty() => v
+                .split(',')
+                .map(|o| o.trim().trim_end_matches('/').to_string())
+                .filter(|o| !o.is_empty())
+                .collect(),
+            _ => vec![app_base_url.clone()],
+        };
+        let web = WebConfig {
+            app_base_url,
+            allowed_origins,
+            cookie_secure: env_bool("COOKIE_SECURE", true)?,
+            trust_proxy: env_bool("TRUST_PROXY", false)?,
+        };
+
         Ok(Self {
             bind_addr,
             bearer_token,
             database_url,
             r2,
+            web,
         })
+    }
+}
+
+fn env_bool(key: &str, default: bool) -> Result<bool> {
+    match env::var(key) {
+        Err(_) => Ok(default),
+        Ok(v) => match v.trim().to_ascii_lowercase().as_str() {
+            "" => Ok(default),
+            "1" | "true" | "yes" => Ok(true),
+            "0" | "false" | "no" => Ok(false),
+            other => anyhow::bail!("{key} must be true or false, got `{other}`"),
+        },
     }
 }
 

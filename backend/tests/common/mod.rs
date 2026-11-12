@@ -17,11 +17,12 @@ use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use diligently_api::config::{Config, R2Config};
+use diligently_api::config::{Config, R2Config, WebConfig};
 use diligently_api::r2::R2;
 use diligently_api::{build_router, db, AppState};
 
 pub const TEST_BUCKET: &str = "diligently-test";
+pub const APP_ORIGIN: &str = "http://app.test";
 pub const TEST_BEARER: &str = "test-bearer-token-0123456789abcdef0123456789";
 
 pub struct TestApp {
@@ -116,6 +117,12 @@ impl TestApp {
             bearer_token: TEST_BEARER.to_string(),
             database_url: url,
             r2: r2_cfg,
+            web: WebConfig {
+                app_base_url: APP_ORIGIN.to_string(),
+                allowed_origins: vec![APP_ORIGIN.to_string()],
+                cookie_secure: true,
+                trust_proxy: false,
+            },
         };
         let state = AppState {
             config: Arc::new(config),
@@ -177,6 +184,15 @@ impl TestApp {
         self.request(Method::GET, path, None, &[]).await
     }
 
+    /// A browser-like client: sends the app Origin and keeps the session
+    /// cookie between calls. Create one per simulated user.
+    pub fn client(&self) -> Client<'_> {
+        Client {
+            app: self,
+            cookie: std::sync::Mutex::new(None),
+        }
+    }
+
     /// Run queued jobs until none are ready. Deterministic stand-in for the
     /// background worker.
     pub async fn drain_jobs(&self) -> usize {
@@ -230,5 +246,58 @@ impl Drop for TestApp {
             });
         })
         .join();
+    }
+}
+
+pub struct Client<'a> {
+    pub app: &'a TestApp,
+    cookie: std::sync::Mutex<Option<String>>,
+}
+
+impl Client<'_> {
+    pub fn session_token(&self) -> Option<String> {
+        self.cookie.lock().unwrap().clone()
+    }
+
+    pub fn set_session_token(&self, token: Option<String>) {
+        *self.cookie.lock().unwrap() = token;
+    }
+
+    pub async fn send(&self, method: Method, path: &str, body: Option<Value>) -> TestResponse {
+        let cookie = self.session_token().map(|t| format!("dl_session={t}"));
+        let mut headers: Vec<(&str, &str)> = vec![("origin", APP_ORIGIN)];
+        if let Some(c) = cookie.as_deref() {
+            headers.push(("cookie", c));
+        }
+        let res = self.app.request(method, path, body, &headers).await;
+        for v in res.headers.get_all(header::SET_COOKIE) {
+            let v = v.to_str().unwrap_or("");
+            if let Some(rest) = v.strip_prefix("dl_session=") {
+                let value = rest.split(';').next().unwrap_or("");
+                let cleared = v.contains("Max-Age=0") || value.is_empty();
+                self.set_session_token(if cleared {
+                    None
+                } else {
+                    Some(value.to_string())
+                });
+            }
+        }
+        res
+    }
+
+    pub async fn get(&self, path: &str) -> TestResponse {
+        self.send(Method::GET, path, None).await
+    }
+
+    pub async fn post(&self, path: &str, body: Value) -> TestResponse {
+        self.send(Method::POST, path, Some(body)).await
+    }
+
+    pub async fn patch(&self, path: &str, body: Value) -> TestResponse {
+        self.send(Method::PATCH, path, Some(body)).await
+    }
+
+    pub async fn delete(&self, path: &str) -> TestResponse {
+        self.send(Method::DELETE, path, None).await
     }
 }

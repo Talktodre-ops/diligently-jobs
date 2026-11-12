@@ -16,8 +16,8 @@ pub enum AppError {
     #[error("{0}")]
     Unauthorized(&'static str),
 
-    #[error("{0}")]
-    Forbidden(&'static str),
+    #[error("{message}")]
+    Forbidden { code: &'static str, message: String },
 
     #[error("not found")]
     NotFound,
@@ -60,6 +60,13 @@ impl AppError {
         }
     }
 
+    pub fn forbidden(code: &'static str, message: impl Into<String>) -> Self {
+        AppError::Forbidden {
+            code,
+            message: message.into(),
+        }
+    }
+
     pub fn conflict(code: &'static str, message: impl Into<String>) -> Self {
         AppError::Conflict {
             code,
@@ -77,7 +84,7 @@ impl AppError {
     fn status_and_code(&self) -> (StatusCode, &'static str) {
         match self {
             AppError::Unauthorized(_) => (StatusCode::UNAUTHORIZED, "unauthorized"),
-            AppError::Forbidden(_) => (StatusCode::FORBIDDEN, "forbidden"),
+            AppError::Forbidden { code, .. } => (StatusCode::FORBIDDEN, code),
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             AppError::BadRequest(_) => (StatusCode::BAD_REQUEST, "bad_request"),
             AppError::Validation { .. } => (StatusCode::UNPROCESSABLE_ENTITY, "invalid_input"),
