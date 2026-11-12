@@ -61,6 +61,12 @@ pub const RESEND_USER: Limit = Limit {
     burst: 5,
     per: minutes(60),
 };
+/// AI calls per user: generous for real use, tight enough to stop a script.
+pub const AI_USER: Limit = Limit {
+    name: "ai_user",
+    burst: 40,
+    per: minutes(10),
+};
 pub const PASSWORD_CHECK_USER: Limit = Limit {
     name: "password_check_user",
     burst: 10,
@@ -131,6 +137,7 @@ fn limit_window(name: &str) -> Option<Duration> {
         TOKEN_IP,
         RESEND_USER,
         PASSWORD_CHECK_USER,
+        AI_USER,
     ]
     .iter()
     .find(|l| l.name == name)

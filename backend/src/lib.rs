@@ -15,6 +15,7 @@ pub mod r2;
 pub mod rate_limit;
 pub mod render;
 pub mod routes;
+pub mod usage;
 pub mod validate;
 pub mod web;
 
@@ -125,7 +126,8 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/v1/blobs/presign-download", post(blobs::presign_download))
         .route("/v1/profile", get(profile::get).patch(profile::patch))
-        .route("/v1/cv/master", get(cv::get_master).put(cv::put_master));
+        .route("/v1/cv/master", get(cv::get_master).put(cv::put_master))
+        .route("/v1/usage", get(usage::get));
 
     Router::new()
         .merge(public)

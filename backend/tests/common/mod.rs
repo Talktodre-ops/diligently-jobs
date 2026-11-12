@@ -80,6 +80,11 @@ fn with_database(url: &str, db_name: &str) -> String {
 
 impl TestApp {
     pub async fn spawn() -> Self {
+        Self::spawn_with(|_| {}).await
+    }
+
+    /// Like `spawn`, with a chance to adjust the config first (limits, flags).
+    pub async fn spawn_with(adjust: impl FnOnce(&mut Config)) -> Self {
         let admin_url = env_or_panic("TEST_DATABASE_URL");
         assert_local(&admin_url, "TEST_DATABASE_URL");
         let s3_endpoint = env_or_panic("TEST_S3_ENDPOINT");
@@ -125,7 +130,10 @@ impl TestApp {
                 cookie_secure: true,
                 trust_proxy: false,
             },
+            limits: diligently_api::usage::LimitsConfig::default(),
         };
+        let mut config = config;
+        adjust(&mut config);
         let mail = Arc::new(diligently_api::mail::MemoryMailer::default());
         let ai = Arc::new(diligently_api::ai::fake::FakeLlm::new());
         let web = Arc::new(diligently_api::web::FakeWeb::default());

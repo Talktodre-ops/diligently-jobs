@@ -10,6 +10,7 @@ pub struct Config {
     pub database_url: String,
     pub r2: R2Config,
     pub web: WebConfig,
+    pub limits: crate::usage::LimitsConfig,
 }
 
 /// Settings for the browser-facing side: where the web app lives, which
@@ -92,6 +93,7 @@ impl Config {
             database_url,
             r2,
             web,
+            limits: crate::usage::LimitsConfig::from_env()?,
         })
     }
 }
