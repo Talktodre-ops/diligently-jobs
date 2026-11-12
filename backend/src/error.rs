@@ -42,6 +42,10 @@ pub enum AppError {
     #[error("{message}")]
     Unprocessable { code: &'static str, message: String },
 
+    /// A dependency (the AI provider, storage) is down or not configured.
+    #[error("{message}")]
+    Unavailable { code: &'static str, message: String },
+
     #[error("too many requests")]
     RateLimited { retry_after_secs: u64 },
 
@@ -62,6 +66,13 @@ impl AppError {
 
     pub fn forbidden(code: &'static str, message: impl Into<String>) -> Self {
         AppError::Forbidden {
+            code,
+            message: message.into(),
+        }
+    }
+
+    pub fn unavailable(code: &'static str, message: impl Into<String>) -> Self {
+        AppError::Unavailable {
             code,
             message: message.into(),
         }
@@ -91,6 +102,7 @@ impl AppError {
             AppError::Conflict { code, .. } => (StatusCode::CONFLICT, code),
             AppError::Unprocessable { code, .. } => (StatusCode::UNPROCESSABLE_ENTITY, code),
             AppError::RateLimited { .. } => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
+            AppError::Unavailable { code, .. } => (StatusCode::SERVICE_UNAVAILABLE, code),
             AppError::Db(_) | AppError::Internal(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal")
             }

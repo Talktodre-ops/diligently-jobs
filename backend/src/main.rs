@@ -47,6 +47,7 @@ async fn main() -> Result<()> {
         r2,
         mailer,
         limiter: Arc::new(diligently_api::rate_limit::RateLimiter::new()),
+        ai: diligently_api::ai::from_env()?,
     };
 
     // Spawn the in-process job worker. It picks up cv_render (and future

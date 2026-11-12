@@ -27,6 +27,7 @@ pub const TEST_BEARER: &str = "test-bearer-token-0123456789abcdef0123456789";
 
 pub struct TestApp {
     pub state: AppState,
+    pub ai: Arc<diligently_api::ai::fake::FakeLlm>,
     pub mail: Arc<diligently_api::mail::MemoryMailer>,
     pub router: Router,
     pub db_name: String,
@@ -125,16 +126,19 @@ impl TestApp {
             },
         };
         let mail = Arc::new(diligently_api::mail::MemoryMailer::default());
+        let ai = Arc::new(diligently_api::ai::fake::FakeLlm::new());
         let state = AppState {
             config: Arc::new(config),
             db: pool,
             r2,
             mailer: mail.clone(),
             limiter: Arc::new(diligently_api::rate_limit::RateLimiter::new()),
+            ai: ai.clone(),
         };
         let router = build_router(state.clone());
         Self {
             state,
+            ai,
             mail,
             router,
             db_name,

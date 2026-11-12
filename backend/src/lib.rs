@@ -1,6 +1,7 @@
 //! Diligently API library crate. `main.rs` is a thin binary over this so
 //! integration tests can build the real router against a test database.
 
+pub mod ai;
 pub mod auth;
 pub mod config;
 pub mod db;
@@ -39,6 +40,7 @@ pub struct AppState {
     pub r2: R2,
     pub mailer: Arc<dyn mail::Mailer>,
     pub limiter: Arc<rate_limit::RateLimiter>,
+    pub ai: Arc<dyn ai::Llm>,
 }
 
 pub fn build_router(state: AppState) -> Router {
