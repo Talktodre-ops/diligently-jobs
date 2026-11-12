@@ -8,7 +8,6 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use super::Job;
-use crate::llm::Llm;
 use crate::render;
 use crate::AppState;
 
@@ -316,89 +315,20 @@ async fn cv_render(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
     }))
 }
 
-const ATS_SYSTEM_PROMPT: &str = r#"You are an ATS (applicant tracking system) résumé scorer. Compare a candidate's CV against a specific job and return how well the CV would pass an ATS keyword/skills match for THIS job.
-
-Score 0–100 reflecting: coverage of the job's required skills/keywords, alignment of relevant experience, and presence of standard résumé sections. Be strict and consistent — a generic CV with few of the job's keywords scores low; a closely-matched one scores high.
-
-Output ONLY a JSON object with this exact shape (no markdown, no prose):
-{
-  "score": 0-100 integer,
-  "matched_keywords": ["keywords/skills from the job that ARE evidenced in the CV"],
-  "missing_keywords": ["required keywords/skills from the job NOT found in the CV"],
-  "sections": [{ "name": "Summary|Experience|Skills|Education|Projects", "present": true|false }],
-  "notes": "one or two sentences on the biggest gaps to close"
-}"#;
-
-/// Recursively collect non-empty string values from a jsonb value — flattens
-/// either the flat `CVSection[]` shape or a structured `ResumeDoc` into text
-/// without needing to know the exact schema.
-fn collect_strings(v: &Value, out: &mut Vec<String>) {
-    match v {
-        Value::String(s) => {
-            let t = s.trim();
-            if !t.is_empty() {
-                out.push(t.to_string());
-            }
-        }
-        Value::Array(a) => a.iter().for_each(|x| collect_strings(x, out)),
-        Value::Object(o) => o.values().for_each(|x| collect_strings(x, out)),
-        _ => {}
-    }
-}
-
-/// UTF-8-safe truncation to at most `max` bytes.
-fn truncate_str(s: &str, max: usize) -> String {
-    if s.len() <= max {
-        return s.to_string();
-    }
-    let mut end = max;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    s[..end].to_string()
-}
-
-/// Parse a JSON object from model output; tolerate stray prose by slicing from
-/// the first `{` to the last `}` if a direct parse fails.
-fn extract_json_object(s: &str) -> anyhow::Result<Value> {
-    if let Ok(v) = serde_json::from_str::<Value>(s) {
-        return Ok(v);
-    }
-    if let (Some(a), Some(b)) = (s.find('{'), s.rfind('}')) {
-        if b > a {
-            return Ok(serde_json::from_str::<Value>(&s[a..=b])?);
-        }
-    }
-    Err(anyhow!("no JSON object found in model output"))
-}
-
-/// Payload: { "application_id": "<uuid>" }
-///
-/// Scores the application's most relevant CV (latest tailored for the app, else
-/// the latest base CV) against the JD via the LLM, stores an `ats_scores` row,
-/// and emits an `ats_scored` event.
-/// Output: { "ats_score_id": "...", "cv_version_id": "...", "score": n }
+/// Score the application's newest CV (or the master CV) against its job.
 async fn ats_score(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::Result<Value> {
-    let application_id = payload
-        .get("application_id")
-        .and_then(Value::as_str)
-        .ok_or_else(|| anyhow!("ats_score payload missing application_id"))?;
-    let application_id: Uuid = application_id
-        .parse()
-        .context("ats_score application_id is not a valid uuid")?;
+    use crate::prompts::{ats_score as prompt, cv_for_prompt};
 
-    let (jd_raw, requirements, role, _company) =
-        sqlx::query_as::<_, (String, Option<Value>, Option<String>, Option<String>)>(
-            "select jd_raw, requirements, role, company from applications where id = $1 and user_id = $2",
-        )
-        .bind(application_id)
-        .bind(user_id)
-        .fetch_optional(&state.db)
-        .await
-        .context("load application")?
-        .ok_or_else(|| anyhow!("application {application_id} not found"))?;
+    let application_id = uuid_field(payload, "application_id")?;
+    let (jd_raw,): (String,) =
+        sqlx::query_as("select jd_raw from applications where id = $1 and user_id = $2")
+            .bind(application_id)
+            .bind(user_id)
+            .fetch_optional(&state.db)
+            .await
+            .context("load application")?
+            .ok_or_else(|| anyhow!("application {application_id} not found"))?;
 
-    // Prefer the latest CV tied to this application; fall back to the latest base CV.
     let cv = match sqlx::query_as::<_, (Uuid, Value)>(
         "select id, sections from cv_versions where application_id = $1 and user_id = $2 order by created_at desc limit 1",
     )
@@ -415,61 +345,25 @@ async fn ats_score(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
         .bind(user_id)
         .fetch_optional(&state.db)
         .await
-        .context("load base cv")?,
+        .context("load master cv")?,
     };
-    let (cv_id, sections) =
-        cv.ok_or_else(|| anyhow!("no CV found to score — upload or tailor a CV first"))?;
+    let (cv_id, sections) = cv.ok_or_else(|| anyhow!("no CV to score; upload a CV first"))?;
+    let doc = render::resume::parse_resume_doc(&sections)
+        .ok_or_else(|| anyhow!("CV {cv_id} is in the legacy format and cannot be scored"))?;
 
-    let mut parts: Vec<String> = Vec::new();
-    collect_strings(&sections, &mut parts);
-    let cv_text = truncate_str(&parts.join("\n"), 6000);
-
-    let mut jd = String::new();
-    if let Some(req) = &requirements {
-        if let Some(arr) = req.get("required").and_then(Value::as_array) {
-            let v: Vec<&str> = arr.iter().filter_map(Value::as_str).collect();
-            if !v.is_empty() {
-                jd.push_str(&format!("REQUIRED: {}\n", v.join(", ")));
-            }
-        }
-        if let Some(arr) = req.get("keywords").and_then(Value::as_array) {
-            let v: Vec<&str> = arr.iter().filter_map(Value::as_str).collect();
-            if !v.is_empty() {
-                jd.push_str(&format!("KEYWORDS: {}\n", v.join(", ")));
-            }
-        }
-    }
-    jd.push_str("\nJOB DESCRIPTION:\n");
-    jd.push_str(&truncate_str(&jd_raw, 4000));
-
-    let user_msg = format!(
-        "TARGET ROLE: {}\n{}\n\nCANDIDATE CV:\n{}",
-        role.unwrap_or_default(),
-        jd,
-        if cv_text.trim().is_empty() {
-            "(empty CV)"
-        } else {
-            cv_text.as_str()
-        }
-    );
-
-    let llm = Llm::from_env()?;
-    let content = llm
-        .chat_json(ATS_SYSTEM_PROMPT, &user_msg)
-        .await
-        .context("ATS LLM scoring call failed")?;
-    let parsed = extract_json_object(&content).context("ATS LLM output was not valid JSON")?;
-
-    let score = parsed
-        .get("score")
-        .and_then(Value::as_i64)
-        .unwrap_or(0)
-        .clamp(0, 100) as i32;
+    let res = crate::usage::call(
+        state,
+        user_id,
+        Some(application_id),
+        prompt::request(&cv_for_prompt(&doc), &jd_raw),
+    )
+    .await
+    .map_err(|e| anyhow!("{e}"))?;
+    let scored = prompt::parse(res.value).map_err(|e| anyhow!("ATS answer rejected: {e}"))?;
     let breakdown = json!({
-        "matched_keywords": parsed.get("matched_keywords").cloned().unwrap_or_else(|| json!([])),
-        "missing_keywords": parsed.get("missing_keywords").cloned().unwrap_or_else(|| json!([])),
-        "sections": parsed.get("sections").cloned().unwrap_or_else(|| json!([])),
-        "notes": parsed.get("notes").cloned().unwrap_or(Value::Null),
+        "matched_keywords": scored.matched_keywords,
+        "missing_keywords": scored.missing_keywords,
+        "notes": scored.notes,
     });
 
     let ats_id: Uuid = sqlx::query_scalar(
@@ -477,26 +371,21 @@ async fn ats_score(state: &AppState, user_id: Uuid, payload: &Value) -> anyhow::
     )
     .bind(application_id)
     .bind(cv_id)
-    .bind(score)
+    .bind(scored.score as i32)
     .bind(&breakdown)
     .bind(user_id)
     .fetch_one(&state.db)
     .await
     .context("insert ats_score")?;
-
     sqlx::query("insert into events (kind, payload, application_id, user_id) values ('ats_scored', $1, $2, $3)")
-        .bind(json!({ "score": score, "cv_version_id": cv_id }))
+        .bind(json!({ "score": scored.score, "cv_version_id": cv_id }))
         .bind(application_id)
         .bind(user_id)
         .execute(&state.db)
         .await
         .context("append ats_scored event")?;
 
-    Ok(json!({
-        "ats_score_id": ats_id,
-        "cv_version_id": cv_id,
-        "score": score,
-    }))
+    Ok(json!({ "ats_score_id": ats_id, "cv_version_id": cv_id, "score": scored.score }))
 }
 
 fn uuid_field(payload: &Value, field: &str) -> anyhow::Result<Uuid> {
