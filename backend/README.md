@@ -1,8 +1,8 @@
 # Diligently — backend
 
-Rust + Axum + sqlx + Postgres (Neon) + R2. Single-user audit-log service that the
-desktop client and any companion devices write to. Bearer-token auth, presigned
-R2 URLs for blobs, append-only `events` table as the spine.
+Rust (Axum) API for the hosted Diligently web app: accounts and sessions,
+per-user data in Postgres, rendered CVs and letters in S3-compatible storage
+(Cloudflare R2), and an in-process job worker for rendering and AI work.
 
 ## Quickstart
 
