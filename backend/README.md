@@ -34,6 +34,15 @@ scripts/test.sh auth       # filter, same as cargo test
 scripts/test-services.sh down
 ```
 
+To try the whole product by hand, run the API against the same local services
+with your AI keys and walk every screen's endpoints (41 checks, a few cents of
+AI per run):
+
+```bash
+DEV_RESET=1 scripts/dev-local.sh > /tmp/diligently-dev.log 2>&1 &
+DEV_SERVER_LOG=/tmp/diligently-dev.log python3 scripts/walkthrough.py
+```
+
 The suite runs only against a throwaway Postgres on 127.0.0.1:55432 and a
 SeaweedFS S3 emulator on 127.0.0.1:59000, both in Docker with tmpfs storage.
 Each test gets its own migrated database. The harness refuses any database or
