@@ -181,6 +181,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/account/export", get(account::export))
         .route("/v1/account", delete(account::delete));
 
+    let cors = cors_layer(&state.config.web);
     Router::new()
         .merge(public)
         .merge(resources)
@@ -188,50 +189,92 @@ pub fn build_router(state: AppState) -> Router {
             state.clone(),
             auth::csrf::require_allowed_origin,
         ))
+        .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_BYTES))
+        .layer(middleware::from_fn(request_timeout))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            security_headers,
+        ))
         .with_state(state)
-        .layer(cors_layer())
+        .layer(cors)
         .layer(TraceLayer::new_for_http())
 }
 
-/// CORS for the desktop in `npm run dev` mode (Vite at localhost:1420) and
-/// for packaged Tauri webview origins (tauri://localhost on macOS/Linux,
-/// https://tauri.localhost on Windows).
-///
-/// We don't allow `Any` because that would forbid the `Authorization` header
-/// echo browsers need for the bearer flow. Listing concrete origins keeps the
-/// preflight clean. Override via the `CORS_ALLOWED_ORIGINS` env var
-/// (comma-separated) if you add a new origin (e.g. a future web dashboard).
-fn cors_layer() -> CorsLayer {
-    let defaults: Vec<HeaderValue> = [
-        "http://localhost:1420",
-        "http://localhost:1421",
-        "http://tauri.localhost",
-        "https://tauri.localhost",
-        "tauri://localhost",
-    ]
-    .into_iter()
-    .filter_map(|s| s.parse().ok())
-    .collect();
-
-    let origins: Vec<HeaderValue> = match std::env::var("CORS_ALLOWED_ORIGINS") {
-        Ok(env) if !env.trim().is_empty() => env
-            .split(',')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .filter_map(|s| s.parse().ok())
-            .collect(),
-        _ => defaults,
-    };
-
+/// CORS for the web app when it is served from another origin. Only the
+/// origins in ALLOWED_ORIGINS may call with credentials (the session cookie).
+/// A same-origin deployment never triggers CORS at all.
+fn cors_layer(web: &config::WebConfig) -> CorsLayer {
+    let origins: Vec<HeaderValue> = web
+        .allowed_origins
+        .iter()
+        .filter_map(|s| s.parse().ok())
+        .collect();
     CorsLayer::new()
         .allow_origin(AllowOrigin::list(origins))
+        .allow_credentials(true)
         .allow_methods([
             Method::GET,
             Method::POST,
+            Method::PUT,
             Method::PATCH,
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
+        .allow_headers([header::CONTENT_TYPE])
         .max_age(std::time::Duration::from_secs(600))
+}
+
+/// Headers every API response carries. The API serves JSON and files only,
+/// so the content policy forbids everything; HSTS is sent when cookies are
+/// Secure, i.e. behind HTTPS.
+async fn security_headers(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    req: axum::extract::Request,
+    next: middleware::Next,
+) -> axum::response::Response {
+    let mut resp = next.run(req).await;
+    let h = resp.headers_mut();
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    h.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
+    h.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
+    );
+    if state.config.web.cookie_secure {
+        h.insert(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+        );
+    }
+    if !h.contains_key(header::CACHE_CONTROL) {
+        h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
+    resp
+}
+
+/// Longest a request may run. The slowest legitimate ones (an inline letter
+/// or research call) take seconds; this only stops a stuck request from
+/// holding a connection forever.
+pub const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+
+/// Largest JSON body accepted. The upload route raises its own limit.
+pub const MAX_BODY_BYTES: usize = 1024 * 1024;
+
+async fn request_timeout(
+    req: axum::extract::Request,
+    next: middleware::Next,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    match tokio::time::timeout(REQUEST_TIMEOUT, next.run(req)).await {
+        Ok(resp) => resp,
+        Err(_) => error::AppError::unavailable("timeout", "That took too long. Try again.")
+            .into_response(),
+    }
 }

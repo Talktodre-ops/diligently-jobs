@@ -42,10 +42,14 @@ async fn ping_postgres(state: &AppState) -> ComponentStatus {
             ok: true,
             detail: None,
         },
-        Err(e) => ComponentStatus {
-            ok: false,
-            detail: Some(e.to_string()),
-        },
+        Err(e) => {
+            // Detail goes to the log; this endpoint is public.
+            tracing::error!(error = %format!("{e:#}"), "health check failed");
+            ComponentStatus {
+                ok: false,
+                detail: Some("unavailable".to_string()),
+            }
+        }
     }
 }
 
@@ -55,9 +59,13 @@ async fn ping_r2(state: &AppState) -> ComponentStatus {
             ok: true,
             detail: None,
         },
-        Err(e) => ComponentStatus {
-            ok: false,
-            detail: Some(e.to_string()),
-        },
+        Err(e) => {
+            // Detail goes to the log; this endpoint is public.
+            tracing::error!(error = %format!("{e:#}"), "health check failed");
+            ComponentStatus {
+                ok: false,
+                detail: Some("unavailable".to_string()),
+            }
+        }
     }
 }

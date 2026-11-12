@@ -49,6 +49,9 @@ pub enum AppError {
     #[error("too many requests")]
     RateLimited { retry_after_secs: u64 },
 
+    #[error("That request is too large.")]
+    TooLarge,
+
     #[error("database error: {0}")]
     Db(#[from] sqlx::Error),
 
@@ -103,6 +106,7 @@ impl AppError {
             AppError::Unprocessable { code, .. } => (StatusCode::UNPROCESSABLE_ENTITY, code),
             AppError::RateLimited { .. } => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
             AppError::Unavailable { code, .. } => (StatusCode::SERVICE_UNAVAILABLE, code),
+            AppError::TooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "too_large"),
             AppError::Db(_) | AppError::Internal(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal")
             }
@@ -140,6 +144,9 @@ impl IntoResponse for AppError {
 
 impl From<JsonRejection> for AppError {
     fn from(rej: JsonRejection) -> Self {
+        if rej.status() == StatusCode::PAYLOAD_TOO_LARGE {
+            return AppError::TooLarge;
+        }
         AppError::BadRequest(format!("invalid JSON body: {}", rej.body_text()))
     }
 }
