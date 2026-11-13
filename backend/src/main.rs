@@ -108,6 +108,16 @@ async fn run_command(config: &Config, args: &[String]) -> Result<()> {
             println!("migrations applied");
             Ok(())
         }
+        [cmd, f1, email, f2, password]
+            if cmd == "dev-seed" && f1 == "--email" && f2 == "--password" =>
+        {
+            diligently_api::devseed::ensure_local_database(&config.database_url)?;
+            let db = db::init_pool(&config.database_url).await?;
+            db::migrate(&db).await?;
+            let id = diligently_api::devseed::seed(&db, email, password, "Ada Okafor").await?;
+            println!("seeded {email} ({id}): verified, onboarded, sample master CV");
+            Ok(())
+        }
         [cmd, flag, email] if cmd == "claim-legacy" && flag == "--email" => {
             let db = db::init_pool(&config.database_url).await?;
             db::migrate(&db).await?;
@@ -123,7 +133,7 @@ async fn run_command(config: &Config, args: &[String]) -> Result<()> {
             Ok(())
         }
         _ => {
-            anyhow::bail!("usage: diligently-api [migrate | claim-legacy --email <account email>]")
+            anyhow::bail!("usage: diligently-api [migrate | claim-legacy --email <account email> | dev-seed --email <e> --password <p>]")
         }
     }
 }

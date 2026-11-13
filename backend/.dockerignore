@@ -10,3 +10,4 @@ tests/
 .vscode/
 .idea/
 tools/
+.outbox/

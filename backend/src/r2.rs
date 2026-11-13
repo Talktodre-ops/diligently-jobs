@@ -11,6 +11,9 @@ use aws_sdk_s3::Client;
 #[derive(Clone)]
 pub struct R2 {
     pub client: Client,
+    /// Signs download links. Same as `client` unless R2_PUBLIC_ENDPOINT
+    /// gives the browser a different address for the bucket.
+    presign_client: Client,
     pub bucket: String,
 }
 
@@ -24,23 +27,33 @@ impl R2 {
             "diligently-r2",
         );
 
+        let client = Self::client_for(&cfg.endpoint, &cfg.region, creds.clone()).await;
+        let presign_client = match &cfg.public_endpoint {
+            Some(public) if public != &cfg.endpoint => {
+                Self::client_for(public, &cfg.region, creds).await
+            }
+            _ => client.clone(),
+        };
+        Self {
+            client,
+            presign_client,
+            bucket: cfg.bucket.clone(),
+        }
+    }
+
+    async fn client_for(endpoint: &str, region: &str, creds: Credentials) -> Client {
         let aws_cfg = aws_config::defaults(BehaviorVersion::latest())
-            .region(Region::new(cfg.region.clone()))
-            .endpoint_url(cfg.endpoint.clone())
+            .region(Region::new(region.to_string()))
+            .endpoint_url(endpoint.to_string())
             .credentials_provider(creds)
             .load()
             .await;
-
-        // R2 requires path-style addressing — virtual-host style isn't supported
-        // for arbitrary bucket names on the standard endpoint.
+        // Path-style addressing: R2 does not support virtual-host style for
+        // arbitrary bucket names on the standard endpoint.
         let s3_cfg = aws_sdk_s3::config::Builder::from(&aws_cfg)
             .force_path_style(true)
             .build();
-
-        Self {
-            client: Client::from_conf(s3_cfg),
-            bucket: cfg.bucket.clone(),
-        }
+        Client::from_conf(s3_cfg)
     }
 
     /// Cheap-ish ping for /health. HeadBucket is small and S3-standard.
@@ -109,7 +122,11 @@ impl R2 {
     ) -> Result<String> {
         let cfg = aws_sdk_s3::presigning::PresigningConfig::expires_in(ttl)
             .context("invalid presigning TTL")?;
-        let mut get = self.client.get_object().bucket(&self.bucket).key(key);
+        let mut get = self
+            .presign_client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key);
         if let Some(name) = download_name {
             get = get.response_content_disposition(format!("attachment; filename=\"{name}\""));
         }
@@ -162,5 +179,36 @@ impl R2 {
             }
         }
         Ok((ok, failed))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg(public: Option<&str>) -> R2Config {
+        R2Config {
+            endpoint: "http://s3:8333".into(),
+            public_endpoint: public.map(str::to_string),
+            region: "us-east-1".into(),
+            bucket: "b".into(),
+            access_key_id: "k".into(),
+            secret_access_key: "s".into(),
+        }
+    }
+
+    #[tokio::test]
+    async fn download_links_use_the_public_endpoint_when_set() {
+        let ttl = std::time::Duration::from_secs(60);
+        let r2 = R2::new(&cfg(Some("http://localhost:8339"))).await;
+        let url = r2.presign_get("u/1/cv.pdf", ttl, None).await.unwrap();
+        assert!(
+            url.starts_with("http://localhost:8339/b/u/1/cv.pdf?"),
+            "{url}"
+        );
+
+        let r2 = R2::new(&cfg(None)).await;
+        let url = r2.presign_get("u/1/cv.pdf", ttl, None).await.unwrap();
+        assert!(url.starts_with("http://s3:8333/b/u/1/cv.pdf?"), "{url}");
     }
 }

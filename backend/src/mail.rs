@@ -42,6 +42,51 @@ impl Mailer for LogMailer {
     }
 }
 
+/// Local development mailer: logs the message and also writes it as a JSON
+/// file into a directory (MAIL_OUTBOX_DIR), so browser tests can read the
+/// verification and reset links a real inbox would get.
+pub struct FileMailer {
+    dir: std::path::PathBuf,
+}
+
+impl FileMailer {
+    pub fn new(dir: impl Into<std::path::PathBuf>) -> anyhow::Result<Self> {
+        let dir = dir.into();
+        std::fs::create_dir_all(&dir)
+            .with_context(|| format!("create mail outbox {}", dir.display()))?;
+        Ok(Self { dir })
+    }
+}
+
+impl Mailer for FileMailer {
+    fn send(&self, email: Email) -> SendFuture<'_> {
+        Box::pin(async move {
+            tracing::info!(to = %email.to, subject = %email.subject, "mail (not sent, written to outbox)\n{}", email.text);
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_micros();
+            let safe_to: String = email
+                .to
+                .chars()
+                .map(|c| {
+                    if c.is_ascii_alphanumeric() || c == '.' || c == '@' {
+                        c
+                    } else {
+                        '_'
+                    }
+                })
+                .collect();
+            let path = self.dir.join(format!("{stamp}-{safe_to}.json"));
+            let body = json!({ "to": email.to, "subject": email.subject, "text": email.text });
+            tokio::fs::write(&path, serde_json::to_vec_pretty(&body)?)
+                .await
+                .with_context(|| format!("write {}", path.display()))?;
+            Ok(())
+        })
+    }
+}
+
 /// Test mailer: keeps every message so tests can assert on it.
 #[derive(Default)]
 pub struct MemoryMailer {
@@ -138,10 +183,16 @@ pub fn from_env() -> anyhow::Result<std::sync::Arc<dyn Mailer>> {
                 from,
             )?))
         }
-        _ => {
-            tracing::warn!("mail: RESEND_API_KEY not set, emails are only logged");
-            Ok(std::sync::Arc::new(LogMailer))
-        }
+        _ => match std::env::var("MAIL_OUTBOX_DIR") {
+            Ok(dir) if !dir.trim().is_empty() => {
+                tracing::warn!(outbox = %dir.trim(), "mail: RESEND_API_KEY not set, emails go to the outbox directory");
+                Ok(std::sync::Arc::new(FileMailer::new(dir.trim())?))
+            }
+            _ => {
+                tracing::warn!("mail: RESEND_API_KEY not set, emails are only logged");
+                Ok(std::sync::Arc::new(LogMailer))
+            }
+        },
     }
 }
 
@@ -288,6 +339,28 @@ mod tests {
         assert!(e.text.contains("https://app/x?token=a&b"));
         assert!(e.html.contains("https://app/x?token=a&amp;b"));
         assert!(!e.html.contains("token=a&b"));
+    }
+
+    #[tokio::test]
+    async fn file_mailer_writes_one_json_file_per_message() {
+        let dir = tempfile::tempdir().unwrap();
+        let m = FileMailer::new(dir.path().join("outbox")).unwrap();
+        m.send(verify_email(
+            "ada@example.com",
+            "https://app/verify?token=t1",
+            "k".into(),
+        ))
+        .await
+        .unwrap();
+        let files: Vec<_> = std::fs::read_dir(dir.path().join("outbox"))
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .collect();
+        assert_eq!(files.len(), 1);
+        let v: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&files[0]).unwrap()).unwrap();
+        assert_eq!(v["to"], "ada@example.com");
+        assert!(v["text"].as_str().unwrap().contains("token=t1"));
     }
 
     #[tokio::test]

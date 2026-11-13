@@ -5,6 +5,7 @@ pub mod ai;
 pub mod auth;
 pub mod config;
 pub mod db;
+pub mod devseed;
 pub mod docx_text;
 pub mod error;
 pub mod extract;

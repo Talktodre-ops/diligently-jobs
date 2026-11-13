@@ -33,6 +33,11 @@ pub struct WebConfig {
 #[derive(Clone, Debug)]
 pub struct R2Config {
     pub endpoint: String,
+    /// Endpoint written into presigned download links, when the browser
+    /// reaches the bucket at a different address than the server does (local
+    /// Docker: the server uses http://s3:8333, the browser localhost). None
+    /// means links use `endpoint`.
+    pub public_endpoint: Option<String>,
     pub region: String,
     pub bucket: String,
     pub access_key_id: String,
@@ -60,6 +65,10 @@ impl Config {
 
         let r2 = R2Config {
             endpoint: required_env("R2_ENDPOINT")?,
+            public_endpoint: env::var("R2_PUBLIC_ENDPOINT")
+                .ok()
+                .map(|v| v.trim().to_string())
+                .filter(|v| !v.is_empty()),
             region: env::var("R2_REGION").unwrap_or_else(|_| "auto".to_string()),
             bucket: required_env("R2_BUCKET")?,
             access_key_id: required_env("R2_ACCESS_KEY_ID")?,

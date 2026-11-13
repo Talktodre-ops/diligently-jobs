@@ -112,6 +112,7 @@ impl TestApp {
 
         let r2_cfg = R2Config {
             endpoint: s3_endpoint,
+            public_endpoint: None,
             region: "us-east-1".to_string(),
             bucket: TEST_BUCKET.to_string(),
             access_key_id: "test".to_string(),
