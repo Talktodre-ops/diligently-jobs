@@ -228,15 +228,27 @@ async fn score(
     doc: &ResumeDoc,
     jd: &str,
 ) -> anyhow::Result<ats_score::AtsScore> {
-    let res = crate::usage::call(
-        state,
-        uid,
-        Some(app_id),
-        ats_score::request(&prompts::cv_for_prompt(doc), jd),
-    )
-    .await
-    .map_err(ai)?;
-    ats_score::parse(res.value).map_err(|e| anyhow!("score rejected: {e}"))
+    // A rejected answer gets one more try before the step fails: the score is
+    // cheap next to re-running the whole pipeline step.
+    let mut last_err = String::new();
+    for attempt in 1..=2 {
+        let res = crate::usage::call(
+            state,
+            uid,
+            Some(app_id),
+            ats_score::request(&prompts::cv_for_prompt(doc), jd),
+        )
+        .await
+        .map_err(ai)?;
+        match ats_score::parse(res.value) {
+            Ok(s) => return Ok(s),
+            Err(e) => {
+                tracing::warn!(%app_id, attempt, error = %e, "score answer rejected");
+                last_err = e;
+            }
+        }
+    }
+    Err(anyhow!("score rejected: {last_err}"))
 }
 
 async fn insert_score(

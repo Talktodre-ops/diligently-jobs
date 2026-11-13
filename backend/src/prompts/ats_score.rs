@@ -47,7 +47,13 @@ pub fn request(cv_text: &str, jd: &str) -> LlmRequest {
 
 pub fn parse(v: Value) -> Result<AtsScore, String> {
     let mut s: AtsScore = serde_json::from_value(v).map_err(|e| e.to_string())?;
-    s.score = s.score.clamp(0, 100);
+    // Any CV scored against any job gets something. Zero or less is a broken
+    // answer (seen in practice next to notes calling the CV a strong match),
+    // and storing it would show the user "match 0".
+    if s.score <= 0 {
+        return Err(format!("score {} is not a real score", s.score));
+    }
+    s.score = s.score.min(100);
     s.notes = clean(&s.notes).chars().take(500).collect();
     s.matched_keywords.truncate(40);
     s.missing_keywords.truncate(40);
@@ -64,5 +70,13 @@ mod tests {
         assert!(super::super::all_objects_closed(&schema()));
         let s = parse(json!({ "score": 140, "matched_keywords": [], "missing_keywords": ["Go"], "notes": "x" })).unwrap();
         assert_eq!(s.score, 100);
+    }
+
+    #[test]
+    fn zero_or_negative_score_is_rejected() {
+        for bad in [0, -5] {
+            let v = json!({ "score": bad, "matched_keywords": ["Go"], "missing_keywords": [], "notes": "Strong match" });
+            assert!(parse(v).is_err(), "score {bad} must be rejected");
+        }
     }
 }

@@ -236,3 +236,36 @@ async fn start_validates_input_and_prerequisites() {
         .await;
     assert_eq!(res.body["error"]["code"], "plan_limit_reached");
 }
+
+#[tokio::test]
+async fn a_zero_score_is_asked_again_and_never_stored() {
+    let app = TestApp::spawn().await;
+    let c = ready_user(&app, "ada@example.com").await;
+    answer_everything(&app);
+    app.ai.answer(
+        "ats_score",
+        json!({ "score": 0, "matched_keywords": ["Go"], "missing_keywords": [], "notes": "Strong match" }),
+    );
+
+    let res = c
+        .post("/v1/applications/start", json!({ "jd_text": JD }))
+        .await;
+    let app_id = res.body["application_id"].as_str().unwrap().to_string();
+    app.drain_jobs().await;
+
+    assert_eq!(
+        app.ai.calls("ats_score"),
+        2,
+        "one retry, then the step fails"
+    );
+    assert_eq!(
+        count(
+            &app,
+            "select count(*) from ats_scores where application_id = $1::uuid",
+            &app_id
+        )
+        .await,
+        0,
+        "a score of 0 is never stored"
+    );
+}
