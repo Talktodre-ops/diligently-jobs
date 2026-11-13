@@ -1,0 +1,28 @@
+/* A reading view, not the page: it follows the app theme. The Page view is
+   the white paper. */
+.doc {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 20px; font-family: var(--font-doc); display: flex; flex-direction: column; gap: 18px;
+}
+.head { display: flex; flex-direction: column; gap: 2px; }
+.name { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.2; }
+.title { margin: 0; font-size: 15px; color: var(--ink-3); }
+.contact { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--font-ui); font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.section { display: flex; flex-direction: column; gap: 10px; }
+.label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.text { margin: 0; font-size: 16px; line-height: 1.5; }
+.entry { display: flex; flex-direction: column; gap: 2px; }
+.entry + .entry { margin-top: 10px; }
+.entryHead { font-size: 16px; font-weight: 600; }
+.entryMeta { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-3); }
+.bullets { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.5; }
+.mark { background: var(--butter); color: var(--aubergine); border-radius: 2px; padding: 0 1px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.small { font-family: var(--font-ui); font-size: 13px; overflow-wrap: anywhere; }
+.skills { margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 16px; line-height: 1.5; }
+.skillRow dt { display: inline; font-weight: 600; }
+.skillRow dt::after { content: ': '; }
+.skillRow dd { display: inline; margin: 0; }
+
+@media (min-width: 640px) {
+  .doc { padding: 36px 40px; }
+}

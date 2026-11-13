@@ -1,0 +1,7 @@
+.group { display: inline-flex; padding: 2px; border-radius: var(--radius-pill); background: var(--line); }
+.option {
+  min-height: 40px; min-width: 44px; padding: 0 14px; border: 0; border-radius: var(--radius-pill);
+  background: transparent; color: var(--ink-3); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.option:hover { color: var(--ink); }
+.option[aria-pressed='true'] { background: var(--aubergine); color: var(--butter); }

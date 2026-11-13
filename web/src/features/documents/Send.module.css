@@ -1,0 +1,91 @@
+.layout { flex: 1; display: flex; flex-direction: column; }
+.main { flex: 1; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 18px; }
+.h1 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: -0.015em; }
+
+.fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.legend { font-size: 13px; font-weight: 600; padding: 0 0 8px; }
+.option {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; min-height: 64px;
+  border: 1.5px solid var(--line); background: var(--surface); cursor: pointer;
+}
+.option:has(:checked) { border-color: var(--ink); }
+.option:has(:focus-visible) { outline: 2px solid var(--persimmon); outline-offset: 2px; }
+.radio {
+  appearance: none; width: 22px; height: 22px; flex: none; margin: 0; border-radius: 50%;
+  border: 2px solid var(--ink); display: inline-grid; place-content: center; cursor: pointer;
+}
+.radio::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); transform: scale(0); transition: transform 120ms; }
+.radio:checked::before { transform: scale(1); }
+.radio:focus-visible { outline: none; }
+.optionText { flex: 1; min-width: 0; }
+.optionLabel { display: block; font-size: 15px; font-weight: 600; }
+.optionNote { display: block; font-size: 13px; color: var(--ink-2); }
+
+.letterRow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.noLetter { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.5; }
+
+.files { display: flex; flex-direction: column; gap: 8px; }
+.filesTitle { font-size: 13px; font-weight: 600; }
+.fileList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fileRow { display: flex; align-items: center; gap: 10px; font-size: 14px; min-width: 0; }
+.ext { padding: 4px 8px; border-radius: 6px; background: var(--persimmon-tint); color: var(--aubergine); font-size: 12px; font-weight: 600; flex: none; }
+.fileName { overflow-wrap: anywhere; }
+.preparing { margin: 0; font-size: 14px; color: var(--ink-2); }
+.renderError { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+
+.side {
+  position: sticky; bottom: 0; z-index: 5; background: var(--paper); border-top: 1px solid var(--line);
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px;
+}
+.sideNote { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.dialogText { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .main, .side { padding-left: max(32px, calc((100% - 640px) / 2)); padding-right: max(32px, calc((100% - 640px) / 2)); }
+}
+@media (min-width: 1024px) {
+  .layout {
+    flex: none; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 48px; align-items: start;
+    padding: 16px 48px 64px; max-width: 1180px; width: 100%; margin: 0 auto;
+  }
+  .main { padding: 0; }
+  .h1 { font-size: 40px; }
+  .side {
+    position: sticky; top: 24px; bottom: auto; border: 1px solid var(--line); border-radius: var(--radius-md);
+    background: var(--surface); padding: 20px; gap: 16px;
+  }
+}
+
+/* Done: the dark celebration screen. Its colours are fixed, like the board. */
+.done { flex: 1; min-height: 100dvh; background: var(--aubergine); color: var(--butter); display: flex; }
+.doneInner { flex: 1; display: flex; flex-direction: column; gap: 18px; padding: 64px 24px calc(32px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+.tick { width: 80px; height: 80px; border-radius: 50%; background: var(--persimmon); color: var(--aubergine); display: flex; align-items: center; justify-content: center; }
+.doneTitle { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: -0.02em; }
+.doneText { margin: 0; font-size: 16px; line-height: 1.5; color: var(--on-dark-2); }
+.remind { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.remindLabel { font-size: 13px; font-weight: 600; }
+.remindChoices { display: flex; gap: 8px; flex-wrap: wrap; }
+.remindChip {
+  height: var(--tap); padding: 0 16px; border-radius: var(--radius-pill); border: 1.5px solid var(--butter);
+  background: transparent; color: var(--butter); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.remindChip[aria-pressed='true'] { background: var(--butter); color: var(--aubergine); }
+.remindChip:disabled { opacity: 0.6; cursor: not-allowed; }
+.remindChip:focus-visible, .homeLink:focus-visible, .againLink:focus-visible { outline: 2px solid var(--butter); outline-offset: 2px; }
+.remindText { margin: 0; font-size: 14px; color: var(--on-dark-2); }
+.doneLinks { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+.homeLink, .againLink {
+  height: 54px; border-radius: var(--radius-pill); font-size: 16px; font-weight: 600; text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.homeLink { background: var(--butter); color: var(--aubergine); }
+.homeLink:hover { background: var(--butter-soft); color: var(--aubergine); }
+.againLink { border: 1.5px solid var(--butter); color: var(--butter); }
+.againLink:hover { background: var(--aubergine-2); color: var(--butter); }
+
+@media (min-width: 1024px) {
+  .doneInner { justify-content: center; padding-top: 96px; }
+  .doneTitle { font-size: 64px; }
+  .doneLinks { margin-top: 24px; flex-direction: row; }
+  .homeLink, .againLink { padding: 0 28px; }
+}

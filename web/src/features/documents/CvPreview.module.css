@@ -1,0 +1,51 @@
+/* Phone: the document fills the screen on a darker ground; the sheet sticks
+   to the bottom. Desktop: document and a side panel. */
+.phone { flex: 1; display: flex; flex-direction: column; background: var(--paper-deep); border-top: 1px solid var(--line); }
+.phone .stage { flex: 1; padding: 16px 16px 24px; }
+.stage { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.preparing {
+  min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  font-size: 15px; color: var(--ink-2); text-align: center; padding: 24px;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--persimmon); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; transform: scale(0.7); } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+.renderError { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px 0; }
+
+.caption { margin: 4px 0 0; display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 1.45; color: var(--ink-3); }
+.swatch { width: 10px; height: 10px; flex: none; border-radius: 2px; background: var(--butter); border: 1px solid var(--line-strong); transform: translateY(1px); }
+
+.sheet {
+  position: sticky; bottom: 0; z-index: 10; background: var(--paper);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: var(--shadow-sheet);
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px;
+}
+.sheetActions { display: flex; gap: 10px; }
+.sheetActions .send { flex: 1; }
+.changeNote { margin: 0; font-size: 13px; color: var(--ink-2); }
+
+.choices { display: flex; flex-direction: column; gap: 12px; }
+.choice { display: flex; flex-direction: column; gap: 4px; }
+.fileName { font-size: 12px; color: var(--ink-2); padding: 0 6px; overflow-wrap: anywhere; }
+.dialogNote { margin: 0; font-size: 14px; color: var(--ink-2); }
+
+.desk {
+  display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start;
+  padding: 16px 48px 64px; max-width: 1280px; width: 100%; margin: 0 auto;
+}
+.desk .stage { max-width: 860px; width: 100%; justify-self: center; }
+.panel {
+  position: sticky; top: 24px; display: flex; flex-direction: column; gap: 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 20px;
+}
+.panelTitle { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; }
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .phone .stage { padding: 24px 40px 32px; align-items: center; }
+  .phone .stage > * { width: 100%; max-width: 680px; }
+  .sheet { padding-left: max(24px, calc((100% - 680px) / 2)); padding-right: max(24px, calc((100% - 680px) / 2)); }
+}
+@media (min-width: 1440px) {
+  .desk { grid-template-columns: minmax(0, 1fr) 360px; gap: 56px; }
+}

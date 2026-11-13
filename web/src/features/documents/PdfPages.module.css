@@ -1,0 +1,8 @@
+.wrap { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.pages { width: 100%; display: flex; flex-direction: column; gap: 16px; }
+.page { position: relative; width: 100%; background: var(--doc-paper); box-shadow: var(--shadow-page); overflow: hidden; }
+.canvas { display: block; width: 100%; height: 100%; }
+/* Multiply keeps the type crisp under the butter. */
+.mark { position: absolute; background: var(--butter); mix-blend-mode: multiply; border-radius: 1px; pointer-events: none; }
+.error { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; text-align: center; color: var(--ink-2); font-size: 15px; }
+.error p { margin: 0; max-width: 36ch; }

@@ -1,0 +1,87 @@
+.words { font-size: 13px; color: var(--ink-2); margin-right: 8px; white-space: nowrap; }
+.emptyWrap { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; margin: 0 auto; width: 100%; }
+
+.toneBar { padding: 4px 20px 12px; }
+.tones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toneLabel { font-size: 13px; font-weight: 600; margin-right: 4px; }
+.tone {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--tap); padding: 0 14px; border-radius: var(--radius-pill);
+  border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.tone:hover:not(:disabled) { border-color: var(--ink); }
+.tone[aria-pressed='true'] { background: var(--aubergine); color: var(--butter); border-color: var(--aubergine); }
+.tone:disabled { opacity: 0.55; cursor: not-allowed; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+
+.body { flex: 1; padding: 0 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.status:empty { display: none; }
+.status { font-size: 14px; color: var(--ink-2); padding: 0 4px; }
+
+/* The letter is a document: white paper and document ink in both themes. */
+.letter {
+  background: var(--doc-paper); color: var(--doc-ink); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 20px; font-family: var(--font-doc); font-size: 16px; line-height: 1.6;
+  display: flex; flex-direction: column; gap: 14px; transition: opacity 150ms;
+}
+.dimmed { opacity: 0.5; }
+.fixed { margin: 0; }
+.para {
+  display: block; width: 100%; text-align: left; margin: 0 -6px; width: calc(100% + 12px); padding: 2px 6px;
+  border: 0; border-radius: 6px; background: transparent; color: inherit;
+  font-family: inherit; font-size: inherit; line-height: inherit; cursor: text;
+}
+.para:hover:not(:disabled) { background: var(--butter-soft); }
+.para:focus-visible { background: var(--butter-soft); }
+.para:disabled { cursor: default; }
+
+.editor { display: flex; flex-direction: column; gap: 8px; margin: 0 -8px; padding: 10px 8px; border-radius: 10px; background: var(--butter-soft); }
+.editLabel { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--aubergine); }
+.editArea {
+  width: 100%; border-radius: 10px; border: 1.5px solid var(--aubergine-2); background: var(--doc-paper); color: var(--doc-ink);
+  font-family: var(--font-doc); font-size: 16px; line-height: 1.55; padding: 10px 12px; resize: vertical;
+}
+.editArea:focus { outline: none; border-color: var(--persimmon); box-shadow: 0 0 0 3px var(--persimmon-tint); }
+.editError { font-family: var(--font-ui); font-size: 13px; color: var(--danger); font-weight: 500; }
+.editActions { display: flex; gap: 8px; flex-wrap: wrap; font-family: var(--font-ui); }
+/* The editor sits on butter in both themes, so its quiet button keeps light-theme ink. */
+.editActions button:not([type='submit']) { color: var(--aubergine); }
+
+.hint { margin: 0 4px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+
+.footer {
+  position: sticky; bottom: 0; z-index: 5; background: var(--paper);
+  padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
+  display: flex; gap: 10px;
+}
+.footer .use { flex: 1; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%); z-index: 30;
+  padding: 10px 16px; border-radius: var(--radius-pill); background: var(--aubergine); color: var(--butter);
+  font-size: 14px; font-weight: 600; max-width: calc(100vw - 32px); text-align: center;
+}
+
+.desk {
+  display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start;
+  padding: 8px 48px 64px; max-width: 1240px; width: 100%; margin: 0 auto;
+}
+.paperCol { min-width: 0; }
+.desk .letter { padding: 56px 64px; font-size: 17px; max-width: 780px; box-shadow: var(--shadow-page); border: 0; border-radius: 4px; }
+.side {
+  position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 20px;
+}
+.sideActions { display: flex; flex-direction: column; gap: 10px; }
+.sideActions > * { width: 100%; }
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .toneBar, .body { padding-left: 32px; padding-right: 32px; }
+  .body { max-width: 760px; width: 100%; margin: 0 auto; }
+  .toneBar { max-width: 760px; width: 100%; margin: 0 auto; }
+  .letter { padding: 36px 40px; }
+  .footer { padding-left: max(32px, calc((100% - 760px) / 2 + 32px)); padding-right: max(32px, calc((100% - 760px) / 2 + 32px)); }
+}
