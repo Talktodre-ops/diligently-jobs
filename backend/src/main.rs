@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
         db,
         r2,
         mailer,
-        limiter: Arc::new(diligently_api::rate_limit::RateLimiter::new()),
+        limiter: Arc::new(diligently_api::rate_limit::RateLimiter::from_env()?),
         ai: diligently_api::ai::from_env()?,
         web: diligently_api::web::from_env()?,
     };

@@ -86,6 +86,9 @@ services:
       COOKIE_SECURE: "false"
       # Emails land in backend/.outbox as JSON so browser tests can open links.
       MAIL_OUTBOX_DIR: /app/.outbox
+      # Sign-up and sign-in limits x50 so browser test runs do not lock out.
+      # Never set in production. The AI spend limit is not affected.
+      RATE_LIMIT_MULTIPLIER: "50"
       RUST_LOG: diligently_api=debug,tower_http=info,sqlx=warn
     # Create the bucket (idempotent), then hand PID 1 to cargo-watch.
     command:

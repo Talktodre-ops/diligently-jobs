@@ -84,9 +84,21 @@ struct Bucket {
     updated: Instant,
 }
 
-#[derive(Default)]
 pub struct RateLimiter {
     buckets: Mutex<HashMap<(&'static str, String), Bucket>>,
+    /// Scales every abuse limit except the AI one (which guards spend). 1 in
+    /// production; local development raises it through RATE_LIMIT_MULTIPLIER
+    /// so browser test runs do not lock themselves out of sign-up.
+    multiplier: u32,
+}
+
+impl Default for RateLimiter {
+    fn default() -> Self {
+        Self {
+            buckets: Mutex::default(),
+            multiplier: 1,
+        }
+    }
 }
 
 const PRUNE_ABOVE: usize = 50_000;
@@ -96,6 +108,32 @@ impl RateLimiter {
         Self::default()
     }
 
+    pub fn with_multiplier(multiplier: u32) -> Self {
+        Self {
+            multiplier: multiplier.max(1),
+            ..Self::default()
+        }
+    }
+
+    /// RATE_LIMIT_MULTIPLIER from the environment: 1 to 1000, default 1.
+    pub fn from_env() -> anyhow::Result<Self> {
+        match std::env::var("RATE_LIMIT_MULTIPLIER") {
+            Err(_) => Ok(Self::new()),
+            Ok(v) if v.trim().is_empty() => Ok(Self::new()),
+            Ok(v) => match v.trim().parse::<u32>() {
+                Ok(n) if (1..=1000).contains(&n) => {
+                    if n > 1 {
+                        tracing::warn!(multiplier = n, "rate limits relaxed by RATE_LIMIT_MULTIPLIER; never set this in production");
+                    }
+                    Ok(Self::with_multiplier(n))
+                }
+                _ => anyhow::bail!(
+                    "RATE_LIMIT_MULTIPLIER must be a whole number from 1 to 1000, got `{v}`"
+                ),
+            },
+        }
+    }
+
     /// Take one token for `key` under `limit`, or fail with 429 and the number
     /// of seconds until a token is available.
     pub fn check(&self, limit: Limit, key: &str) -> Result<(), AppError> {
@@ -103,6 +141,14 @@ impl RateLimiter {
     }
 
     fn check_at(&self, limit: Limit, key: &str, now: Instant) -> Result<(), AppError> {
+        let limit = if limit.name == AI_USER.name || self.multiplier == 1 {
+            limit
+        } else {
+            Limit {
+                burst: limit.burst.saturating_mul(self.multiplier),
+                ..limit
+            }
+        };
         let rate = f64::from(limit.burst) / limit.per.as_secs_f64(); // tokens per second
         let mut map = self.buckets.lock().expect("rate limiter lock");
         if map.len() > PRUNE_ABOVE {
@@ -186,5 +232,23 @@ mod tests {
         }
         assert!(rl.check_at(L, "ada@example.com", t0).is_err());
         rl.check_at(L, "bo@example.com", t0).unwrap();
+    }
+
+    #[test]
+    fn multiplier_scales_abuse_limits_but_not_the_ai_limit() {
+        let rl = RateLimiter::with_multiplier(3);
+        let now = Instant::now();
+        let n = SIGNUP_IP.burst * 3;
+        for _ in 0..n {
+            assert!(rl.check_at(SIGNUP_IP, "ip", now).is_ok());
+        }
+        assert!(rl.check_at(SIGNUP_IP, "ip", now).is_err());
+        for _ in 0..AI_USER.burst {
+            assert!(rl.check_at(AI_USER, "u", now).is_ok());
+        }
+        assert!(
+            rl.check_at(AI_USER, "u", now).is_err(),
+            "AI spend guard is never relaxed"
+        );
     }
 }
