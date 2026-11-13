@@ -1,4 +1,4 @@
-.main { display: flex; flex-direction: column; gap: 22px; padding: 8px 20px 40px; width: 100%; max-width: 720px; margin: 0 auto; }
+.main { display: flex; flex-direction: column; gap: 22px; padding: 8px var(--page-pad) 40px; width: 100%; max-width: var(--page-max); }
 .section { display: flex; flex-direction: column; gap: 10px; }
 .h { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
 .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -46,5 +46,6 @@
 .danger { background: var(--danger); }
 .danger:hover:not(:disabled) { background: #7E1722; }
 @media (min-width: 1024px) {
-  .main { padding-top: 16px; }
+  .main { display: block; column-count: 2; column-gap: 24px; padding-top: 16px; }
+  .main > * { break-inside: avoid; margin-bottom: 22px; }
 }

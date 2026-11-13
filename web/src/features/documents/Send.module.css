@@ -45,8 +45,8 @@
 }
 @media (min-width: 1024px) {
   .layout {
-    flex: none; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 48px; align-items: start;
-    padding: 16px 48px 64px; max-width: 1180px; width: 100%; margin: 0 auto;
+    flex: none; display: grid; grid-template-columns: minmax(0, 760px) 400px; gap: 48px; align-items: start;
+    padding: 16px var(--page-pad) 64px; max-width: var(--page-max); width: 100%;
   }
   .main { padding: 0; }
   .h1 { font-size: 40px; }

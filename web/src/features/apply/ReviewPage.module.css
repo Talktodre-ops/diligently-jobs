@@ -1,7 +1,7 @@
 .page { flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
 .chip { margin-right: 8px; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--aubergine); color: var(--butter); font-size: 14px; font-weight: 600; white-space: nowrap; }
 
-.layout { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 1120px; margin: 0 auto; }
+.layout { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: var(--page-max); }
 .mainCol { flex: 1; padding: 12px 20px 0; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .titleRow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .h1 { font-family: var(--font-display); font-weight: 400; font-size: 26px; letter-spacing: -0.015em; }
@@ -47,20 +47,20 @@
 
 
 @media (min-width: 834px) {
-  .mainCol { padding: 20px 32px 0; }
-  .footer { margin: auto -32px 0; padding-left: 32px; padding-right: 32px; }
+  .mainCol { padding: 20px var(--page-pad) 0; }
+  .footer { margin: auto calc(-1 * var(--page-pad)) 0; padding-left: var(--page-pad); padding-right: var(--page-pad); }
 }
 
 @media (min-width: 1024px) {
-  .layout { flex-direction: row; align-items: flex-start; gap: 32px; padding: 16px 40px 48px; }
-  .mainCol { flex: 1.5 1 0; padding: 0; }
+  .layout { flex-direction: row; align-items: flex-start; gap: 32px; padding: 16px var(--page-pad) 48px; }
+  .mainCol { flex: 1.5 1 0; padding: 0; max-width: 960px; }
   .h1 { font-size: 32px; }
   .card { padding: 24px; }
   .rewrite { font-size: 17px; }
   .footer { position: static; margin: 0; padding: 0; border: 0; background: none; max-width: 520px; }
   .doneActions { margin-top: 8px; flex-direction: row; max-width: 520px; }
   /* The full list is a desktop aid; phones walk one at a time. */
-  .sideCol { display: flex; flex-direction: column; gap: 10px; flex: 1 1 0; min-width: 280px; max-width: 400px; position: sticky; top: 24px; }
+  .sideCol { display: flex; flex-direction: column; gap: 10px; flex: 1 1 0; min-width: 280px; max-width: 560px; position: sticky; top: 24px; }
   .sideH2 { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
   .sideList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: calc(100dvh - 160px); overflow-y: auto; }
   .sideItem {

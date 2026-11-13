@@ -1,5 +1,5 @@
 .page { flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
-.body { flex: 1; padding: 12px 20px 24px; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 1120px; margin: 0 auto; }
+.body { flex: 1; padding: 12px var(--page-pad) 24px; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: var(--page-max); }
 .intro { display: flex; flex-direction: column; gap: 6px; }
 .h1 { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.1; letter-spacing: -0.015em; }
 .lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); max-width: 60ch; }
@@ -52,14 +52,14 @@
 }
 
 @media (min-width: 834px) {
-  .body { padding: 16px 32px 24px; }
-  .footer { padding-left: 32px; padding-right: 32px; display: flex; justify-content: flex-end; }
+  .body { padding: 16px var(--page-pad) 24px; }
+  .footer { padding-left: var(--page-pad); padding-right: var(--page-pad); display: flex; justify-content: flex-end; }
   .footer > * { width: auto; min-width: 240px; }
 }
 
 @media (min-width: 1024px) {
-  .body { padding: 16px 40px 32px; gap: 20px; }
+  .body { padding: 16px var(--page-pad) 32px; gap: 20px; }
   .h1 { font-size: 34px; }
-  .list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .footer { position: static; border: 0; background: none; padding: 0 40px 48px; max-width: 1120px; margin: 0 auto; width: 100%; justify-content: flex-start; }
+  .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); align-items: start; }
+  .footer { position: static; border: 0; background: none; padding: 0 var(--page-pad) 48px; width: 100%; justify-content: flex-start; }
 }

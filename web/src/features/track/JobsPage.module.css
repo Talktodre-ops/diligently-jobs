@@ -1,4 +1,4 @@
-.page { padding: 0 20px 32px; width: 100%; max-width: 1600px; margin: 0 auto; }
+.page { padding: 0 var(--page-pad) 32px; width: 100%; max-width: var(--page-max); }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 0 12px; }
 .head h1 { font-family: var(--font-display); font-weight: 400; font-size: 32px; letter-spacing: -0.02em; }
 .notice { margin-bottom: 12px; }
@@ -39,7 +39,7 @@
 .emptyTitle { font-size: 16px; font-weight: 600; color: var(--ink); }
 
 @media (min-width: 1024px) {
-  .page { padding: 0 40px 48px; }
+  .page { padding: 0 var(--page-pad) 48px; }
   .head { padding-top: 32px; }
   .tabs { display: none; }
   .board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; align-items: start; }

@@ -1,7 +1,7 @@
-.page { display: flex; flex-direction: column; width: 100%; max-width: 1240px; margin: 0 auto; }
-.header { padding: 20px 20px 12px; }
+.page { display: flex; flex-direction: column; width: 100%; max-width: var(--page-max); }
+.header { padding: 20px var(--page-pad) 12px; }
 .h1 { font-family: var(--font-display); font-weight: 400; font-size: 30px; letter-spacing: -0.015em; }
-.grid { display: flex; flex-direction: column; gap: 16px; padding: 0 20px 24px; }
+.grid { display: flex; flex-direction: column; gap: 16px; padding: 0 var(--page-pad) 24px; }
 .aside { display: flex; flex-direction: column; gap: 16px; }
 .listCol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .panel { display: flex; flex-direction: column; gap: 12px; }
@@ -46,13 +46,14 @@
 .rowWhen { display: none; font-size: 13px; color: var(--ink-2); }
 
 @media (min-width: 640px) {
-  .header { padding: 28px 32px 16px; }
-  .grid { padding: 0 32px 32px; }
+}
+@media (min-width: 640px) {
+  .header { padding: 28px var(--page-pad) 16px; }
 }
 @media (min-width: 1024px) {
-  .header { padding: 40px 48px 20px; }
+  .header { padding: 40px var(--page-pad) 20px; }
   .h1 { font-size: 40px; }
-  .grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 40px; align-items: start; padding: 0 48px 64px; }
+  .grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 40px; align-items: start; padding: 0 var(--page-pad) 64px; }
   .aside { position: sticky; top: 24px; }
   .master { flex-direction: column; align-items: flex-start; padding: 24px; gap: 16px; }
   .master > svg { display: none; }

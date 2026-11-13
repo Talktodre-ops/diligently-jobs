@@ -1,5 +1,5 @@
 .words { font-size: 13px; color: var(--ink-2); margin-right: 8px; white-space: nowrap; }
-.emptyWrap { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; margin: 0 auto; width: 100%; }
+.emptyWrap { padding: 0 var(--page-pad) 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; width: 100%; }
 
 .toneBar { padding: 4px 20px 12px; }
 .tones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -67,10 +67,10 @@
 
 .desk {
   display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start;
-  padding: 8px 48px 64px; max-width: 1240px; width: 100%; margin: 0 auto;
+  padding: 8px var(--page-pad) 64px; max-width: var(--page-max); width: 100%;
 }
 .paperCol { min-width: 0; }
-.desk .letter { padding: 56px 64px; font-size: 17px; max-width: 780px; box-shadow: var(--shadow-page); border: 0; border-radius: 4px; }
+.desk .letter { padding: 56px 64px; font-size: 17px; max-width: 780px; margin-inline: auto; box-shadow: var(--shadow-page); border: 0; border-radius: 4px; }
 .side {
   position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 20px;

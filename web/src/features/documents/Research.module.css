@@ -1,5 +1,5 @@
-.page { padding: 4px 20px 40px; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 1240px; margin: 0 auto; }
-.emptyWrap { padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; margin: 0 auto; width: 100%; }
+.page { padding: 4px var(--page-pad) 40px; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: var(--page-max); }
+.emptyWrap { padding: 0 var(--page-pad) 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; width: 100%; }
 .head { display: flex; flex-direction: column; gap: 6px; }
 .h1 { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.12; letter-spacing: -0.015em; max-width: 30ch; }
 .h1Long { font-size: 23px; line-height: 1.2; max-width: 40ch; }

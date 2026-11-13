@@ -42,6 +42,9 @@
 
   --tabbar-h: 84px;
   --sidebar-w: 248px;
+  /* One gutter for every app-shell page, and one generous left-anchored cap for ultra-wide screens. */
+  --page-pad: clamp(20px, 4vw, 48px);
+  --page-max: 2200px;
 }
 
 /* Dark mode uses Aubergine as the ground. */

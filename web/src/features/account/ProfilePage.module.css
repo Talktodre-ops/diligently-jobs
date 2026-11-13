@@ -1,4 +1,4 @@
-.page { padding: 0 20px 32px; width: 100%; max-width: 1100px; margin: 0 auto; }
+.page { padding: 0 var(--page-pad) 32px; width: 100%; max-width: var(--page-max); }
 .head { display: flex; align-items: center; justify-content: space-between; padding: 20px 0 12px; }
 .head h1 { font-family: var(--font-display); font-weight: 400; font-size: 32px; letter-spacing: -0.02em; }
 .gear { width: var(--tap); height: var(--tap); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); color: var(--ink); }
@@ -36,7 +36,7 @@
 .rotOpen { transform: rotate(90deg); transition: transform 120ms; }
 .accList { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--ink-2); }
 @media (min-width: 1024px) {
-  .page { padding: 0 40px 48px; }
+  .page { padding: 0 var(--page-pad) 48px; }
   .head { padding-top: 32px; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; align-items: start; }
 }
