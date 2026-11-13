@@ -17,6 +17,7 @@ Rules:
 - Never invent anything: no employers, dates, metrics, links or skills that are not in the CV. Use null when a field is missing, and an empty string for a missing start or end date.
 - Strip bullet symbols and leading whitespace from each bullet.
 - header.title is the line under the name, or the most recent job title when there is none.
+- header.location is where the candidate lives as written in the contact details (for example \"Lagos, Nigeria\"); null when the CV does not say. Do not take it from a job entry.
 - Links need both url (full https:// form) and display (the short form a reader sees). Derive one from the other when only one appears.
 - Keep experience in the order the CV uses.
 - skills: one entry per group the CV uses; split items on commas. If the CV has a flat list, use a single group labelled \"Skills\".
@@ -35,6 +36,7 @@ pub fn schema() -> Value {
                 ("title", string()),
                 ("email", nullable(string())),
                 ("phone", nullable(string())),
+                ("location", nullable(string())),
                 ("linkedin", link()),
                 ("github", link()),
                 ("website", link()),
@@ -98,6 +100,16 @@ pub fn request(source: Source) -> LlmRequest {
     }
 }
 
+/// The candidate's own location from the answer's header, for prefilling the
+/// profile. Kept out of `ResumeDoc` so the CV shape does not change.
+pub fn header_location(value: &Value) -> Option<String> {
+    let s = value.pointer("/header/location")?.as_str()?.trim();
+    if s.is_empty() {
+        return None;
+    }
+    Some(s.chars().take(120).collect())
+}
+
 /// Parse the model's answer and fit it within the CV limits.
 pub fn parse(value: Value) -> Result<ResumeDoc, String> {
     let mut doc: ResumeDoc = serde_json::from_value(value)
@@ -136,6 +148,21 @@ mod tests {
             "unsafe link removed rather than failing the upload"
         );
         assert_eq!(doc.experience[0].bullets[0].chars().count(), 600);
+    }
+
+    #[test]
+    fn header_location_is_read_and_trimmed() {
+        let v = json!({ "header": { "location": "  Lagos, Nigeria " } });
+        assert_eq!(header_location(&v).as_deref(), Some("Lagos, Nigeria"));
+        assert_eq!(
+            header_location(&json!({ "header": { "location": null } })),
+            None
+        );
+        assert_eq!(
+            header_location(&json!({ "header": { "location": " " } })),
+            None
+        );
+        assert_eq!(header_location(&json!({})), None);
     }
 
     #[test]

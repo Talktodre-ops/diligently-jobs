@@ -52,6 +52,16 @@ pub enum AppError {
     #[error("That request is too large.")]
     TooLarge,
 
+    /// Any other status with its own stable code, for the few responses the
+    /// variants above do not cover (400 with a specific code, 410, a coded 404).
+    #[error("{message}")]
+    Coded {
+        status: StatusCode,
+        code: &'static str,
+        field: Option<&'static str>,
+        message: String,
+    },
+
     #[error("database error: {0}")]
     Db(#[from] sqlx::Error),
 
@@ -95,6 +105,25 @@ impl AppError {
         }
     }
 
+    pub fn coded(status: StatusCode, code: &'static str, message: impl Into<String>) -> Self {
+        AppError::Coded {
+            status,
+            code,
+            field: None,
+            message: message.into(),
+        }
+    }
+
+    /// A 400 tied to one input, with a code more specific than `invalid_input`.
+    pub fn bad_field(code: &'static str, field: &'static str, message: impl Into<String>) -> Self {
+        AppError::Coded {
+            status: StatusCode::BAD_REQUEST,
+            code,
+            field: Some(field),
+            message: message.into(),
+        }
+    }
+
     fn status_and_code(&self) -> (StatusCode, &'static str) {
         match self {
             AppError::Unauthorized(_) => (StatusCode::UNAUTHORIZED, "unauthorized"),
@@ -107,6 +136,7 @@ impl AppError {
             AppError::RateLimited { .. } => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
             AppError::Unavailable { code, .. } => (StatusCode::SERVICE_UNAVAILABLE, code),
             AppError::TooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "too_large"),
+            AppError::Coded { status, code, .. } => (*status, code),
             AppError::Db(_) | AppError::Internal(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal")
             }
@@ -124,6 +154,13 @@ impl IntoResponse for AppError {
                 json!({ "error": { "code": code, "message": "Something went wrong on our side." } })
             }
             AppError::Validation { field, message } => {
+                json!({ "error": { "code": code, "message": message, "field": field } })
+            }
+            AppError::Coded {
+                field: Some(field),
+                message,
+                ..
+            } => {
                 json!({ "error": { "code": code, "message": message, "field": field } })
             }
             AppError::RateLimited { .. } => {

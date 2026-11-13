@@ -132,6 +132,7 @@ impl TestApp {
                 trust_proxy: false,
             },
             limits: diligently_api::usage::LimitsConfig::default(),
+            google: None,
         };
         let mut config = config;
         adjust(&mut config);

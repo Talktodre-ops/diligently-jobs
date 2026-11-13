@@ -11,6 +11,65 @@ pub struct Config {
     pub r2: R2Config,
     pub web: WebConfig,
     pub limits: crate::usage::LimitsConfig,
+    /// Google sign-in. None when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+    /// are both unset, which turns the feature off.
+    pub google: Option<GoogleConfig>,
+}
+
+pub const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+pub const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
+pub const GOOGLE_USERINFO_URL: &str = "https://openidconnect.googleapis.com/v1/userinfo";
+
+#[derive(Clone)]
+pub struct GoogleConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub auth_url: String,
+    pub token_url: String,
+    pub userinfo_url: String,
+}
+
+// Hand-written so the client secret never reaches a log line.
+impl std::fmt::Debug for GoogleConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GoogleConfig")
+            .field("client_id", &self.client_id)
+            .field("client_secret", &"<redacted>")
+            .field("auth_url", &self.auth_url)
+            .field("token_url", &self.token_url)
+            .field("userinfo_url", &self.userinfo_url)
+            .finish()
+    }
+}
+
+impl GoogleConfig {
+    /// Both credentials set: on. Both unset or empty: off. One without the
+    /// other is a mistake worth failing startup for.
+    pub fn from_env() -> Result<Option<Self>> {
+        let id = optional_env("GOOGLE_CLIENT_ID");
+        let secret = optional_env("GOOGLE_CLIENT_SECRET");
+        let (client_id, client_secret) = match (id, secret) {
+            (None, None) => return Ok(None),
+            (Some(i), Some(s)) => (i, s),
+            _ => anyhow::bail!(
+                "set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither to turn Google sign-in off"
+            ),
+        };
+        let url = |key: &str, default: &str| -> Result<String> {
+            let v = optional_env(key).unwrap_or_else(|| default.to_string());
+            if !v.starts_with("https://") && !v.starts_with("http://") {
+                anyhow::bail!("{key} must be an http(s) URL");
+            }
+            Ok(v)
+        };
+        Ok(Some(Self {
+            client_id,
+            client_secret,
+            auth_url: url("GOOGLE_AUTH_URL", GOOGLE_AUTH_URL)?,
+            token_url: url("GOOGLE_TOKEN_URL", GOOGLE_TOKEN_URL)?,
+            userinfo_url: url("GOOGLE_USERINFO_URL", GOOGLE_USERINFO_URL)?,
+        }))
+    }
 }
 
 /// Settings for the browser-facing side: where the web app lives, which
@@ -103,6 +162,7 @@ impl Config {
             r2,
             web,
             limits: crate::usage::LimitsConfig::from_env()?,
+            google: GoogleConfig::from_env()?,
         })
     }
 }
@@ -117,6 +177,13 @@ fn env_bool(key: &str, default: bool) -> Result<bool> {
             other => anyhow::bail!("{key} must be true or false, got `{other}`"),
         },
     }
+}
+
+fn optional_env(key: &str) -> Option<String> {
+    env::var(key)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
 }
 
 fn required_env(key: &str) -> Result<String> {

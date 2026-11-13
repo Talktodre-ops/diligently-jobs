@@ -212,3 +212,111 @@ async fn another_user_cannot_see_an_upload() {
         "no_master_cv"
     );
 }
+
+fn pasted_cv() -> String {
+    "Ada Okafor\nSenior Backend Engineer\nLagos, Nigeria | ada@example.com\n\n\
+     Experience\nSenior Backend Engineer, Northfold, 2021 to now\n\
+     - Cut reconciliation time by 60% across three ledgers\n\
+     - Led the move from batch files to event streams for 40 partner banks\n\n\
+     Skills\nGo, Rust, Postgres, Kafka\n"
+        .to_string()
+}
+
+#[tokio::test]
+async fn pasted_text_goes_through_the_same_extraction_and_prefills_the_profile() {
+    let app = TestApp::spawn().await;
+    let c = verified_user(&app, "ada@example.com").await;
+    let mut answer = parsed_cv();
+    answer["header"]["location"] = json!("Lagos, Nigeria");
+    app.ai.answer("cv_parse", answer);
+
+    let text = pasted_cv();
+    assert!(text.trim().chars().count() >= 200);
+    let res = c
+        .upload(
+            "/v1/cv/upload",
+            "cv.txt",
+            "text/plain; charset=utf-8",
+            text.as_bytes(),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::ACCEPTED, "{}", res.body);
+    assert_eq!(res.body["upload"]["kind"], "txt");
+    let id = res.body["upload"]["id"].as_str().unwrap().to_string();
+
+    assert_eq!(app.drain_jobs().await, 1);
+    let up = c.get(&format!("/v1/cv/uploads/{id}")).await;
+    assert_eq!(up.body["upload"]["status"], "done", "{}", up.body);
+    let req = &app.ai.requests()[0];
+    assert_eq!(req.task, "cv_parse");
+    assert!(req.pdf_base64.is_none());
+    assert!(
+        req.user_text.contains("Led the move from batch files"),
+        "{}",
+        req.user_text
+    );
+
+    let p = &c.get("/v1/profile").await.body["profile"];
+    assert_eq!(p["full_name"], "Ada Okafor");
+    assert_eq!(p["headline"], "Senior Backend Engineer");
+    assert_eq!(p["location"], "Lagos, Nigeria");
+    assert_eq!(p["onboarding_step"], "check");
+}
+
+#[tokio::test]
+async fn prefill_never_overwrites_what_the_user_set() {
+    let app = TestApp::spawn().await;
+    let c = verified_user(&app, "ada@example.com").await;
+    c.patch(
+        "/v1/profile",
+        json!({ "full_name": "Ada O.", "location": "London" }),
+    )
+    .await;
+    let mut answer = parsed_cv();
+    answer["header"]["location"] = json!("Lagos, Nigeria");
+    app.ai.answer("cv_parse", answer);
+    let res = c
+        .upload(
+            "/v1/cv/upload",
+            "cv.txt",
+            "text/plain",
+            pasted_cv().as_bytes(),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::ACCEPTED, "{}", res.body);
+    app.drain_jobs().await;
+    let p = &c.get("/v1/profile").await.body["profile"];
+    assert_eq!(p["full_name"], "Ada O.");
+    assert_eq!(p["location"], "London");
+    assert_eq!(p["headline"], "Senior Backend Engineer", "empty one filled");
+}
+
+#[tokio::test]
+async fn short_or_unreadable_text_is_refused() {
+    let app = TestApp::spawn().await;
+    let c = verified_user(&app, "ada@example.com").await;
+    let short = format!("   {}   ", "x".repeat(199));
+    let res = c
+        .upload("/v1/cv/upload", "cv.txt", "text/plain", short.as_bytes())
+        .await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST, "{}", res.body);
+    assert_eq!(res.body["error"]["code"], "too_short");
+    assert_eq!(res.body["error"]["field"], "file");
+
+    let mut latin1 = pasted_cv().into_bytes();
+    latin1.push(0xE9);
+    for (name, ct, bytes) in [
+        ("cv.txt", "text/plain", latin1),
+        ("cv.txt", "application/pdf", pasted_cv().into_bytes()),
+    ] {
+        let res = c.upload("/v1/cv/upload", name, ct, &bytes).await;
+        assert_eq!(res.status, StatusCode::UNPROCESSABLE_ENTITY, "{ct}");
+        assert_eq!(res.body["error"]["field"], "file");
+    }
+    assert_eq!(app.ai.requests().len(), 0);
+    let n: i64 = sqlx::query_scalar("select count(*) from cv_uploads")
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    assert_eq!(n, 0);
+}

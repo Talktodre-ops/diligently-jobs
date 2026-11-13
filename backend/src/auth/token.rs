@@ -24,6 +24,16 @@ pub fn looks_valid(token: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
+/// Equality that takes the same time wherever the inputs differ, for
+/// comparing secrets (hashes, state values). Lengths are not secret here.
+pub fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let diff = a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y));
+    std::hint::black_box(diff) == 0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -36,6 +46,14 @@ mod tests {
         assert!(looks_valid(&a), "{a}");
         assert_eq!(hash(&a).len(), 32);
         assert_eq!(hash(&a), hash(&a));
+    }
+
+    #[test]
+    fn ct_eq_matches_only_equal_input() {
+        assert!(ct_eq(b"abc", b"abc"));
+        assert!(!ct_eq(b"abc", b"abd"));
+        assert!(!ct_eq(b"abc", b"abcd"));
+        assert!(ct_eq(b"", b""));
     }
 
     #[test]

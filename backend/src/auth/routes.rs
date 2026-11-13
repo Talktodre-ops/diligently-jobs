@@ -14,7 +14,7 @@ use sqlx::{FromRow, PgPool};
 use std::net::SocketAddr;
 use uuid::Uuid;
 
-use super::{client_ip, password, session, token, CurrentUser};
+use super::{client_ip, code, password, session, token, CurrentUser};
 use crate::error::AppError;
 use crate::extract::{Json, Path};
 use crate::mail;
@@ -91,7 +91,7 @@ impl FromRequestParts<AppState> for ClientMeta {
 impl ClientMeta {
     /// Rate-limit key for the caller. Without a known IP (tests, odd proxies)
     /// everyone shares one bucket, which errs on the side of limiting.
-    fn ip_key(&self) -> &str {
+    pub(crate) fn ip_key(&self) -> &str {
         self.ip.as_deref().unwrap_or("unknown")
     }
 }
@@ -184,10 +184,14 @@ fn link(state: &AppState, path: &str, raw: &str) -> String {
     format!("{}{path}?token={raw}", state.config.web.app_base_url)
 }
 
+/// One email with both a fresh 6-digit code (replacing any earlier one) and
+/// a new single-use link.
 async fn send_verification(state: &AppState, user_id: Uuid, email: &str) -> Result<(), AppError> {
     let (id, raw) = create_email_token(&state.db, user_id, "verify", VERIFY_TTL, None).await?;
+    let verify_code = code::issue(&state.db, user_id).await?;
     let msg = mail::verify_email(
         email,
+        &verify_code,
         &link(state, "/verify-email", &raw),
         format!("verify-{id}"),
     );
@@ -362,6 +366,51 @@ pub async fn verify(
     Ok(Json(Ok { ok: true }).into_response())
 }
 
+#[derive(Deserialize)]
+pub struct CodeRequest {
+    pub code: String,
+}
+
+/// POST /v1/auth/verify-code. The signed-in user types the 6-digit code from
+/// the email. Already verified answers 200 so a double submit is harmless.
+pub async fn verify_code(
+    State(state): State<AppState>,
+    meta: ClientMeta,
+    user: CurrentUser,
+    Json(req): Json<CodeRequest>,
+) -> Result<Response, AppError> {
+    limit(&state.limiter, rl::VERIFY_CODE_IP, meta.ip_key())?;
+    limit(&state.limiter, rl::VERIFY_CODE_USER, &user.id.to_string())?;
+    if !user.is_verified() {
+        match code::check(&state.db, user.id, req.code.trim()).await? {
+            code::Check::Matched => {
+                sqlx::query(
+                    "update users set email_verified_at = coalesce(email_verified_at, now()) where id = $1",
+                )
+                .bind(user.id)
+                .execute(&state.db)
+                .await?;
+            }
+            code::Check::Wrong => {
+                return Err(AppError::bad_field(
+                    "invalid_code",
+                    "code",
+                    "That code is not right. Check the email and try again.",
+                ))
+            }
+            code::Check::Gone => {
+                return Err(AppError::coded(
+                    StatusCode::GONE,
+                    "code_expired",
+                    "This code has expired. Ask for a new one.",
+                ))
+            }
+        }
+    }
+    let u = load_user(&state.db, user.id).await?;
+    Ok(Json(UserEnvelope { user: u.into() }).into_response())
+}
+
 /// POST /v1/auth/resend-verification
 pub async fn resend_verification(
     State(state): State<AppState>,
@@ -396,7 +445,12 @@ pub async fn forgot_password(
         return Ok(accepted);
     };
     let found: Option<(Uuid, String)> = sqlx::query_as(
-        "select id, email from users where lower(email) = lower($1) and password_hash is not null",
+        // Google-only accounts have no password yet and may set one here; the
+        // legacy owner (neither) stays unreachable.
+        r#"
+        select id, email from users
+        where lower(email) = lower($1) and (password_hash is not null or google_sub is not null)
+        "#,
     )
     .bind(&email)
     .fetch_optional(&state.db)

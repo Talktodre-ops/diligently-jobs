@@ -118,13 +118,18 @@ pub async fn revoke_all_except(
 
 /// Read the session token from the Cookie header, if present.
 pub fn token_from_headers(headers: &HeaderMap) -> Option<String> {
+    cookie_from_headers(headers, COOKIE_NAME)
+}
+
+/// Read one cookie by name from the Cookie header(s).
+pub fn cookie_from_headers(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get_all(header::COOKIE)
         .iter()
         .filter_map(|v| v.to_str().ok())
         .flat_map(|v| v.split(';'))
         .filter_map(|pair| pair.trim().split_once('='))
-        .find(|(name, _)| *name == COOKIE_NAME)
+        .find(|(n, _)| *n == name)
         .map(|(_, value)| value.trim().to_string())
 }
 

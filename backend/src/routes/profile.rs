@@ -3,7 +3,8 @@
 
 use axum::extract::State;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
@@ -16,8 +17,9 @@ use crate::AppState;
 pub const PAPER_SIZES: &[&str] = &["a4", "letter"];
 const THEMES: &[&str] = &["system", "light", "dark"];
 const WORK_SETTINGS: &[&str] = &["remote", "hybrid", "onsite"];
-const ONBOARDING_STEPS: &[&str] = &["upload", "check", "targets", "done"];
+const ONBOARDING_STEPS: &[&str] = &["upload", "check", "targets", "first_job", "done"];
 const MAX_TARGET_ROLES: usize = 10;
+const MAX_OPEN_TO: usize = 10;
 
 #[derive(Debug, FromRow)]
 struct ProfileRow {
@@ -26,6 +28,7 @@ struct ProfileRow {
     location: Option<String>,
     target_roles: Vec<String>,
     work_settings: Vec<String>,
+    open_to: Option<Vec<String>>,
     paper_size: String,
     theme: String,
     notify_follow_ups: bool,
@@ -49,6 +52,8 @@ pub struct ProfileOut {
     pub location: Option<String>,
     pub target_roles: Vec<String>,
     pub work_settings: Vec<String>,
+    /// Places the user can work besides `location`. Null until answered.
+    pub open_to: Option<Vec<String>>,
     pub paper_size: String,
     pub theme: String,
     pub notifications: Notifications,
@@ -64,6 +69,7 @@ impl From<ProfileRow> for ProfileOut {
             location: r.location,
             target_roles: r.target_roles,
             work_settings: r.work_settings,
+            open_to: r.open_to,
             paper_size: r.paper_size,
             theme: r.theme,
             notifications: Notifications {
@@ -83,7 +89,7 @@ struct Envelope {
 }
 
 const SELECT: &str = r#"
-    select full_name, headline, location, target_roles, work_settings, paper_size, theme,
+    select full_name, headline, location, target_roles, work_settings, open_to, paper_size, theme,
            notify_follow_ups, notify_interview_prep, notify_product_news, onboarding_step, updated_at
     from profiles where user_id = $1
 "#;
@@ -148,6 +154,42 @@ pub struct ProfilePatch {
     pub theme: Option<String>,
     pub notifications: Option<NotificationsPatch>,
     pub onboarding_step: Option<String>,
+    /// Absent leaves it alone; null or an empty list clears it.
+    #[serde(default, deserialize_with = "present")]
+    pub open_to: Option<Value>,
+}
+
+/// Tell "sent as null" (Some(Value::Null)) apart from "not sent" (None).
+fn present<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Value>, D::Error> {
+    Value::deserialize(d).map(Some)
+}
+
+/// Validated `open_to`: None = leave alone, Some(None) = clear, Some(Some) = set.
+fn open_to_patch(v: &Option<Value>) -> Result<Option<Option<Vec<String>>>, AppError> {
+    let bad = || {
+        AppError::validation(
+            "open_to",
+            format!("open_to must be a list of up to {MAX_OPEN_TO} places"),
+        )
+    };
+    let items = match v {
+        None => return Ok(None),
+        Some(Value::Null) => return Ok(Some(None)),
+        Some(Value::Array(items)) => items,
+        Some(_) => return Err(bad()),
+    };
+    if items.len() > MAX_OPEN_TO {
+        return Err(bad());
+    }
+    let mut out: Vec<String> = Vec::new();
+    for item in items {
+        let s = item.as_str().ok_or_else(bad)?;
+        let s = validate::required_text("open_to", s, 80)?;
+        if !out.iter().any(|x| x.eq_ignore_ascii_case(&s)) {
+            out.push(s);
+        }
+    }
+    Ok(Some(if out.is_empty() { None } else { Some(out) }))
 }
 
 /// Validated text patch: None = leave alone, Some(None) = clear, Some(Some) = set.
@@ -213,6 +255,7 @@ pub async fn patch(
     if let Some(s) = &req.onboarding_step {
         validate::one_of("onboarding_step", s, ONBOARDING_STEPS)?;
     }
+    let open_to = open_to_patch(&req.open_to)?;
     let n = req.notifications.unwrap_or_default();
 
     ensure(&state.db, user.id).await?;
@@ -229,7 +272,8 @@ pub async fn patch(
             notify_follow_ups     = coalesce($12, notify_follow_ups),
             notify_interview_prep = coalesce($13, notify_interview_prep),
             notify_product_news   = coalesce($14, notify_product_news),
-            onboarding_step       = coalesce($15, onboarding_step)
+            onboarding_step       = coalesce($15, onboarding_step),
+            open_to               = case when $16 then $17 else open_to end
         where user_id = $1
         "#,
     )
@@ -248,6 +292,8 @@ pub async fn patch(
     .bind(n.interview_prep)
     .bind(n.product_news)
     .bind(&req.onboarding_step)
+    .bind(open_to.is_some())
+    .bind(open_to.flatten())
     .execute(&state.db)
     .await?;
 

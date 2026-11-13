@@ -110,3 +110,84 @@ async fn profiles_are_per_user() {
         StatusCode::UNAUTHORIZED
     );
 }
+
+#[tokio::test]
+async fn open_to_round_trips_and_clears() {
+    let app = TestApp::spawn().await;
+    let c = user(&app, "ada@example.com").await;
+    assert_eq!(
+        c.get("/v1/profile").await.body["profile"]["open_to"],
+        serde_json::Value::Null,
+        "unanswered until set"
+    );
+    let res = c
+        .patch(
+            "/v1/profile",
+            json!({ "open_to": [" Remote anywhere ", "United Kingdom", "remote anywhere"] }),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.body);
+    assert_eq!(
+        res.body["profile"]["open_to"],
+        json!(["Remote anywhere", "United Kingdom"])
+    );
+    assert_eq!(
+        c.get("/v1/profile").await.body["profile"]["open_to"],
+        json!(["Remote anywhere", "United Kingdom"])
+    );
+
+    // Another field alone leaves it as it was.
+    let res = c.patch("/v1/profile", json!({ "location": "Lagos" })).await;
+    assert_eq!(
+        res.body["profile"]["open_to"],
+        json!(["Remote anywhere", "United Kingdom"])
+    );
+
+    for clear in [json!(null), json!([])] {
+        c.patch("/v1/profile", json!({ "open_to": ["Kenya"] }))
+            .await;
+        let res = c.patch("/v1/profile", json!({ "open_to": clear })).await;
+        assert_eq!(res.status, StatusCode::OK, "{}", res.body);
+        assert_eq!(
+            res.body["profile"]["open_to"],
+            serde_json::Value::Null,
+            "{clear} clears"
+        );
+    }
+}
+
+#[tokio::test]
+async fn open_to_errors_name_the_field() {
+    let app = TestApp::spawn().await;
+    let c = user(&app, "ada@example.com").await;
+    for body in [
+        json!({ "open_to": vec!["x"; 11] }),
+        json!({ "open_to": ["x".repeat(81)] }),
+        json!({ "open_to": ["  "] }),
+        json!({ "open_to": [3] }),
+        json!({ "open_to": "Remote" }),
+    ] {
+        let res = c.patch("/v1/profile", body.clone()).await;
+        assert_eq!(res.status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert_eq!(res.body["error"]["field"], "open_to", "{body}");
+    }
+    let ok = c
+        .patch("/v1/profile", json!({ "open_to": ["x".repeat(80)] }))
+        .await;
+    assert_eq!(ok.status, StatusCode::OK, "80 characters is allowed");
+}
+
+#[tokio::test]
+async fn first_job_is_an_onboarding_step() {
+    let app = TestApp::spawn().await;
+    let c = user(&app, "ada@example.com").await;
+    let res = c
+        .patch("/v1/profile", json!({ "onboarding_step": "first_job" }))
+        .await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.body);
+    assert_eq!(res.body["profile"]["onboarding_step"], "first_job");
+    let res = c
+        .patch("/v1/profile", json!({ "onboarding_step": "done" }))
+        .await;
+    assert_eq!(res.body["profile"]["onboarding_step"], "done");
+}

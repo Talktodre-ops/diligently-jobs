@@ -244,16 +244,33 @@ fn link_email(
     }
 }
 
-pub fn verify_email(to: &str, link: &str, key: String) -> Email {
-    link_email(
-        to,
-        "Confirm your email for Diligently",
-        "Confirm this address to start tailoring your CV.",
-        "Confirm email",
-        link,
-        "The link works once and expires in 24 hours. If you did not sign up, ignore this email.",
-        key,
-    )
+/// Sign-up verification: the 6-digit code on its own line, then the link, so
+/// the person can type the code where they are or follow the link anywhere.
+pub fn verify_email(to: &str, code: &str, link: &str, key: String) -> Email {
+    let intro = "Enter this code in Diligently to confirm your email:";
+    let outro = "The code expires in 30 minutes and the link in 24 hours. If you did not sign up, ignore this email.";
+    let text =
+        format!("{intro}\n\n{code}\n\nOr confirm with this link: {link}\n\n{outro}\n\nDiligently");
+    let html = format!(
+        "<div style=\"font-family:Inter,Arial,sans-serif;color:#3B1C32;max-width:520px\">\
+         <p>{}</p><p style=\"font-size:32px;font-weight:700;letter-spacing:6px;margin:16px 0\">{}</p>\
+         <p>Or confirm with this link:</p><p><a href=\"{}\" style=\"display:inline-block;background:#C2471F;\
+         color:#ffffff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600\">Confirm email</a></p>\
+         <p style=\"font-size:13px;color:#6B4E62\">{}</p><p style=\"font-size:13px;color:#6B4E62\">\
+         If the button does not work, paste this into your browser:<br>{}</p></div>",
+        escape_html(intro),
+        escape_html(code),
+        escape_html(link),
+        escape_html(outro),
+        escape_html(link),
+    );
+    Email {
+        to: to.to_string(),
+        subject: format!("{code} is your Diligently code"),
+        text,
+        html,
+        idempotency_key: key,
+    }
 }
 
 pub fn reset_password(to: &str, link: &str, key: String) -> Email {
@@ -335,7 +352,10 @@ mod tests {
 
     #[test]
     fn link_is_escaped_in_html_and_plain_in_text() {
-        let e = verify_email("a@b.co", "https://app/x?token=a&b", "k".into());
+        let e = verify_email("a@b.co", "123456", "https://app/x?token=a&b", "k".into());
+        assert_eq!(e.subject, "123456 is your Diligently code");
+        assert!(e.text.contains("\n123456\n"), "code on its own line");
+        assert!(e.text.find("123456") < e.text.find("https://app/x"));
         assert!(e.text.contains("https://app/x?token=a&b"));
         assert!(e.html.contains("https://app/x?token=a&amp;b"));
         assert!(!e.html.contains("token=a&b"));
@@ -347,6 +367,7 @@ mod tests {
         let m = FileMailer::new(dir.path().join("outbox")).unwrap();
         m.send(verify_email(
             "ada@example.com",
+            "123456",
             "https://app/verify?token=t1",
             "k".into(),
         ))

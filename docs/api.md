@@ -29,10 +29,13 @@ Branch on `code`; show `message`; `field` names the input when there is one.
 | Status | code | Meaning |
 |---|---|---|
 | 400 | `bad_request` | Malformed JSON, wrong types, bad id in the path |
+| 400 | `invalid_code` (field `code`), `too_short` (field `file`) | A specific input was wrong |
 | 401 | `unauthorized` | No session, or it ended |
 | 403 | `email_not_verified`, `origin_not_allowed` | Not allowed |
 | 404 | `not_found` | Missing, or belongs to someone else (never distinguished) |
+| 404 | `provider_disabled` | Google sign-in is not configured on this server |
 | 409 | `email_taken`, `pipeline_not_failed` | Conflicts with current state |
+| 410 | `code_expired` | The verification code expired, was used up, or was never sent |
 | 413 | `too_large` | JSON body over 1 MiB |
 | 422 | `invalid_input` (with `field`), `token_invalid`, `no_master_cv`, `plan_limit_reached`, `ai_declined`, `link_unreadable`, `no_letter`, `no_summary`, `no_suggestion`, `company_unknown`, `nothing_found` | Understood but cannot be done |
 | 429 | `rate_limited` | Slow down; see `Retry-After` |
@@ -48,12 +51,13 @@ or `failed`.
 
 | Method and path | Body | Response |
 |---|---|---|
-| `POST /v1/auth/signup` | `{ email, password }` | `201 { user }`, sets cookie, sends a verification email |
+| `POST /v1/auth/signup` | `{ email, password }` | `201 { user }`, sets cookie, sends a verification email (code and link) |
 | `POST /v1/auth/signin` | `{ email, password }` | `200 { user }`, sets cookie. Wrong email or password share one 401 |
 | `POST /v1/auth/signout` | none | `204`, clears cookie |
 | `GET /v1/auth/me` | | `{ user }` |
 | `POST /v1/auth/verify` | `{ token }` from the email link | `{ ok: true }`. Works without a session |
-| `POST /v1/auth/resend-verification` | none | `202 { ok: true }` |
+| `POST /v1/auth/verify-code` | `{ code: "123456" }` | `{ user }` now verified. Signed in. `400 invalid_code`, `410 code_expired`, `429`. Already verified: `200 { user }` |
+| `POST /v1/auth/resend-verification` | none | `202 { ok: true }`; a new code replaces the old one |
 | `POST /v1/auth/forgot-password` | `{ email }` | `202 { ok: true }` whether or not the account exists |
 | `POST /v1/auth/reset-password` | `{ token, password }` | `{ user }`, signs this device in and every other device out |
 | `POST /v1/auth/change-password` | `{ current_password, new_password }` | `{ ok: true }`, other devices signed out |
@@ -62,11 +66,34 @@ or `failed`.
 | `GET /v1/auth/sessions` | | `{ sessions: [{ id, user_agent, ip, created_at, last_seen_at, current }] }` |
 | `DELETE /v1/auth/sessions/{id}` | | `204` |
 | `POST /v1/auth/sessions/revoke-others` | none | `{ revoked: n }` |
+| `GET /v1/auth/providers` | | `{ google: true\|false }`. Public |
+| `GET /v1/auth/google/start?next=/path` | | `302` to Google. `404 provider_disabled` when off |
+| `GET /v1/auth/google/callback?code=&state=` | | `302` to `APP_BASE_URL` + `next` with the session cookie set, or to `/signin?error=google` |
 
 `user` is `{ id, email, email_verified, plan, created_at }`. Passwords are 10 to
 128 characters and may not equal the email. Email links point at
 `APP_BASE_URL` + `/verify-email?token=`, `/reset-password?token=` and
 `/confirm-email?token=`; the web app posts the token back.
+
+**Verification code.** The sign-up and resend email is one message, subject
+`<code> is your Diligently code`, with a 6-digit code on its own line and then
+the `/verify-email?token=` link. Either one verifies. The code lasts 30 minutes,
+a new send replaces it, and five wrong tries use it up (then `410`). Checks are
+limited per user and per IP.
+
+**Google sign-in.** Off unless `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are
+set; check `GET /v1/auth/providers` before showing the button. Send the browser
+(a full navigation, not fetch) to `/v1/auth/google/start?next=/where/to/land`.
+`next` must be a path starting with a single `/`; anything else becomes `/`.
+The redirect URI registered with Google is `APP_BASE_URL` +
+`/v1/auth/google/callback`. Google must report the email as verified. Then:
+an account already linked to that Google user signs in; an account with that
+email that is verified gets linked and signs in; an account with that email
+that was never verified gets linked and verified, loses its password and every
+session (whoever registered it did not prove they own the address), then signs
+in; otherwise a new verified account without a password is created. A
+Google-only account cannot sign in with a password until it sets one through
+forgot-password. Any failure lands on `/signin?error=google` with no detail.
 
 ## Profile and settings (Onboarding targets, Profile, Settings)
 
@@ -75,6 +102,7 @@ or `failed`.
 ```json
 { "full_name": "Ada Okafor", "headline": "Senior Backend Engineer", "location": "Lagos",
   "target_roles": ["Backend Engineer"], "work_settings": ["remote", "hybrid"],
+  "open_to": ["Remote anywhere", "United Kingdom"],
   "paper_size": "a4", "theme": "system",
   "notifications": { "follow_ups": true, "interview_prep": true, "product_news": false },
   "onboarding_step": "check", "updated_at": "..." }
@@ -82,8 +110,10 @@ or `failed`.
 
 PATCH changes only the fields sent; an empty string clears a text field.
 `paper_size` is `a4` or `letter`; `theme` is `system`, `light` or `dark`;
-`work_settings` items are `remote`, `hybrid`, `onsite`; `onboarding_step` is
-`upload`, `check`, `targets` or `done`. Unknown fields are refused.
+`work_settings` items are `remote`, `hybrid`, `onsite`; `open_to` is null or up
+to 10 places of 1 to 80 characters each (null or `[]` clears it, and it reads
+back as null); `onboarding_step` is `upload`, `check`, `targets`, `first_job` or
+`done`. Unknown fields are refused.
 
 `GET /v1/usage` (Settings plan card): `{ plan, applications_this_month, monthly_limit, resets_on }`.
 
@@ -91,7 +121,7 @@ PATCH changes only the fields sent; an empty string clears a text field.
 
 | Method and path | Body | Response |
 |---|---|---|
-| `POST /v1/cv/upload` *verified* | multipart, one `file` field, PDF or DOCX up to 5 MB | `202 { upload, job_id }` |
+| `POST /v1/cv/upload` *verified* | multipart, one `file` field: PDF, DOCX or plain UTF-8 text (`.txt`, `text/plain`, at least 200 characters after trimming), up to 5 MB | `202 { upload, job_id }`; text shorter than that is `400 too_short` |
 | `GET /v1/cv/uploads/{id}` | | `{ upload: { id, filename, kind, status, error, cv_version_id, ... } }`; `status` is `queued`, `reading`, `done` or `failed` |
 | `GET /v1/cv/master` | | `{ cv: { id, doc, issues, updated_at } }` or `422 no_master_cv` |
 | `PUT /v1/cv/master` | `{ doc }` | same as GET; saves a new version |
@@ -110,7 +140,10 @@ PATCH changes only the fields sent; an empty string clears a text field.
 ```
 
 `issues` (Check screen) is `[{ path: "experience[1]", message: "Dates are missing for Kestrel." }]`.
-After a successful upload the profile moves to `onboarding_step: "check"`.
+`kind` is `pdf`, `docx` or `txt`; the web app sends pasted text as `cv.txt`.
+After a successful upload the profile moves to `onboarding_step: "check"`, and
+`full_name`, `headline` and `location` are filled from the CV header where the
+profile has none yet.
 
 ## New job and Running
 

@@ -17,11 +17,15 @@ use crate::jobs::{self, handlers::KIND_CV_PARSE};
 use crate::AppState;
 
 pub const MAX_UPLOAD_BYTES: usize = 5 * 1024 * 1024;
+/// Shortest pasted CV worth sending to the model, in characters after trimming.
+pub const MIN_TEXT_CHARS: usize = 200;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
     Pdf,
     Docx,
+    /// Plain UTF-8 text; the web app sends pasted CV text as `cv.txt`.
+    Txt,
 }
 
 impl Kind {
@@ -29,6 +33,15 @@ impl Kind {
         match self {
             Kind::Pdf => "pdf",
             Kind::Docx => "docx",
+            Kind::Txt => "txt",
+        }
+    }
+
+    fn mime(self) -> &'static str {
+        match self {
+            Kind::Pdf => "application/pdf",
+            Kind::Docx => DOCX_MIME,
+            Kind::Txt => "text/plain; charset=utf-8",
         }
     }
 }
@@ -44,8 +57,12 @@ pub fn classify(filename: &str, declared: Option<&str>, bytes: &[u8]) -> Result<
         Kind::Pdf
     } else if lower.ends_with(".docx") {
         Kind::Docx
+    } else if lower.ends_with(".txt") {
+        Kind::Txt
     } else {
-        return Err(bad("Upload a PDF or a Word (.docx) file."));
+        return Err(bad(
+            "Upload a PDF, a Word (.docx) or a plain text (.txt) file.",
+        ));
     };
     let declared_ok = match (
         kind,
@@ -54,13 +71,31 @@ pub fn classify(filename: &str, declared: Option<&str>, bytes: &[u8]) -> Result<
         (_, None) | (_, Some("application/octet-stream")) => true,
         (Kind::Pdf, Some(d)) => d == "application/pdf",
         (Kind::Docx, Some(d)) => d == DOCX_MIME,
+        (Kind::Txt, Some(d)) => d == "text/plain",
     };
     if !declared_ok {
         return Err(bad("The file type does not match its name."));
     }
+    if kind == Kind::Txt {
+        let text = std::str::from_utf8(bytes)
+            .ok()
+            .filter(|t| !t.contains('\0'))
+            .ok_or_else(|| bad("That text is not plain UTF-8. Paste it again or upload a PDF."))?;
+        if text.trim().chars().count() < MIN_TEXT_CHARS {
+            return Err(AppError::bad_field(
+                "too_short",
+                "file",
+                format!(
+                    "That is too short to be a CV. Paste the whole thing, at least {MIN_TEXT_CHARS} characters."
+                ),
+            ));
+        }
+        return Ok(kind);
+    }
     let magic_ok = match kind {
         Kind::Pdf => bytes.starts_with(b"%PDF-"),
         Kind::Docx => docx_text::is_docx(bytes),
+        Kind::Txt => true, // checked above
     };
     if !magic_ok {
         return Err(bad(
@@ -134,10 +169,7 @@ pub async fn upload(
 
     let id = Uuid::new_v4();
     let key = format!("u/{}/uploads/{id}.{}", user.id, kind.as_str());
-    let mime = match kind {
-        Kind::Pdf => "application/pdf",
-        Kind::Docx => DOCX_MIME,
-    };
+    let mime = kind.mime();
     let size = bytes.len() as i32;
     state.r2.put(&key, bytes, mime).await?;
 

@@ -61,6 +61,24 @@ pub const RESEND_USER: Limit = Limit {
     burst: 5,
     per: minutes(60),
 };
+/// Verification code checks. A code dies after 5 wrong tries anyway; these
+/// cap guessing across fresh codes and across accounts from one address.
+pub const VERIFY_CODE_USER: Limit = Limit {
+    name: "verify_code_user",
+    burst: 10,
+    per: minutes(15),
+};
+pub const VERIFY_CODE_IP: Limit = Limit {
+    name: "verify_code_ip",
+    burst: 30,
+    per: minutes(15),
+};
+/// Google sign-in starts and callbacks per IP. Each start writes a row.
+pub const OAUTH_IP: Limit = Limit {
+    name: "oauth_ip",
+    burst: 30,
+    per: minutes(15),
+};
 /// AI calls per user: generous for real use, tight enough to stop a script.
 pub const AI_USER: Limit = Limit {
     name: "ai_user",
@@ -188,6 +206,9 @@ fn limit_window(name: &str) -> Option<Duration> {
         FORGOT_EMAIL,
         TOKEN_IP,
         RESEND_USER,
+        VERIFY_CODE_USER,
+        VERIFY_CODE_IP,
+        OAUTH_IP,
         PASSWORD_CHECK_USER,
         AI_USER,
         EXPORT_USER,
@@ -243,6 +264,12 @@ mod tests {
             assert!(rl.check_at(SIGNUP_IP, "ip", now).is_ok());
         }
         assert!(rl.check_at(SIGNUP_IP, "ip", now).is_err());
+        for l in [VERIFY_CODE_USER, VERIFY_CODE_IP, OAUTH_IP] {
+            for _ in 0..l.burst * 3 {
+                assert!(rl.check_at(l, "k", now).is_ok(), "{} scaled", l.name);
+            }
+            assert!(rl.check_at(l, "k", now).is_err());
+        }
         for _ in 0..AI_USER.burst {
             assert!(rl.check_at(AI_USER, "u", now).is_ok());
         }

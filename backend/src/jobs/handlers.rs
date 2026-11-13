@@ -453,6 +453,11 @@ async fn cv_parse_inner(
         "pdf" => cv_parse::Source::Pdf {
             base64: BASE64_STANDARD.encode(&bytes),
         },
+        // Pasted text: the upload already checked UTF-8 and length.
+        "txt" => {
+            let text = String::from_utf8(bytes).map_err(|_| generic.to_string())?;
+            cv_parse::Source::Text(text.trim_start_matches('\u{feff}').to_string())
+        }
         _ => {
             let text = crate::docx_text::extract(&bytes).map_err(|e| {
                 tracing::warn!(error = %e, "cv_parse: docx text extraction failed");
@@ -472,6 +477,7 @@ async fn cv_parse_inner(
             }
             other => other.to_string(),
         })?;
+    let location = cv_parse::header_location(&res.value);
     let doc = cv_parse::parse(res.value).map_err(|why| {
         tracing::warn!(%why, "cv_parse: answer rejected");
         generic.to_string()
@@ -488,13 +494,15 @@ async fn cv_parse_inner(
         update profiles set
             onboarding_step = case when onboarding_step = 'upload' then 'check' else onboarding_step end,
             full_name = coalesce(full_name, nullif($2, '')),
-            headline = coalesce(headline, nullif($3, ''))
+            headline = coalesce(headline, nullif($3, '')),
+            location = coalesce(location, nullif($4, ''))
         where user_id = $1
         "#,
     )
     .bind(user_id)
     .bind(doc.header.name.trim())
     .bind(doc.header.title.trim())
+    .bind(location.as_deref().unwrap_or(""))
     .execute(&state.db)
     .await
     .map_err(|e| tracing::warn!(error = %e, "cv_parse: profile prefill failed"));

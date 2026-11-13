@@ -4,7 +4,9 @@
 //! confirmed, required for anything that spends AI budget) as an argument;
 //! the extractor rejects with 401/403 before the handler runs.
 
+pub mod code;
 pub mod csrf;
+pub mod google;
 pub mod password;
 pub mod routes;
 pub mod session;
