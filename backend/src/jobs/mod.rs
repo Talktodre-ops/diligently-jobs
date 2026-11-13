@@ -19,9 +19,13 @@ use uuid::Uuid;
 
 use crate::error::AppError;
 
-/// Stuck-job recovery window. Anything in `running` longer than this on boot
-/// gets reset to `queued` so a previous crash doesn't strand work.
-pub const STUCK_RUNNING_AFTER: ChronoDuration = ChronoDuration::minutes(5);
+/// A running job whose heartbeat is older than this has lost its worker and is
+/// re-queued by the sweep. Several heartbeats fit in the window, so a slow
+/// database write never re-queues live work.
+pub const STUCK_RUNNING_AFTER: ChronoDuration = ChronoDuration::seconds(90);
+
+/// How often a worker stamps the job it is running.
+pub const HEARTBEAT_EVERY: std::time::Duration = std::time::Duration::from_secs(20);
 
 #[derive(Debug, Serialize, FromRow)]
 pub struct Job {
@@ -133,7 +137,8 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
         update jobs
         set status = 'running',
             attempts = attempts + 1,
-            started_at = coalesce(started_at, now())
+            started_at = coalesce(started_at, now()),
+            heartbeat_at = now()
         where id = $1
         returning
             id, user_id, kind, payload, status, result, attempts, max_attempts,
@@ -210,8 +215,20 @@ pub async fn mark_failed(pool: &PgPool, job: &Job, error: &str) -> Result<(), sq
     Ok(())
 }
 
-/// On boot: any row stuck in 'running' for > STUCK_RUNNING_AFTER must be from a
-/// previous crash. Reset to 'queued' so the worker picks them up.
+/// Stamp a running job so the sweep knows its worker is alive.
+pub async fn heartbeat(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query("update jobs set heartbeat_at = now() where id = $1 and status = 'running'")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Re-queue running jobs whose worker went away: no heartbeat for
+/// STUCK_RUNNING_AFTER (rows from before heartbeats existed fall back to
+/// started_at). Runs at boot and periodically, so work cut off by a restart
+/// resumes within about two minutes. Handlers are idempotent per step, so a
+/// re-run continues rather than duplicating.
 pub async fn recover_stuck(pool: &PgPool) -> Result<u64, sqlx::Error> {
     let res = sqlx::query(
         r#"
@@ -219,7 +236,7 @@ pub async fn recover_stuck(pool: &PgPool) -> Result<u64, sqlx::Error> {
         set status = 'queued',
             scheduled_at = now()
         where status = 'running'
-          and started_at < now() - $1::interval
+          and coalesce(heartbeat_at, started_at) < now() - $1::interval
         "#,
     )
     .bind(format!("{} seconds", STUCK_RUNNING_AFTER.num_seconds()))
