@@ -22,7 +22,7 @@ export function IssueCard({ issue, doc, onSave }: Props) {
   if (path === 'skills') return <Skills issue={issue} doc={doc} onSave={onSave} />
   return (
     <Frame title={issue.message}>
-      <p className={s.plain}>Fix this from your profile after setup.</p>
+      <p className={s.plain}>Fix this in Profile after setup.</p>
     </Frame>
   )
 }
@@ -103,8 +103,9 @@ function Dates({ issue, doc, onSave, index = 0 }: Sub) {
   const [start, setStart] = useState(role?.start ?? '')
   const [end, setEnd] = useState(role?.end ?? '')
   const fix = useFix(onSave)
+  const title = role?.company.trim() ? `When did you work at ${role.company.trim()}?` : issue.message
   return (
-    <Frame title={issue.message} saveLabel="Save dates" busy={fix.busy} error={fix.error}
+    <Frame title={title} saveLabel="Save dates" busy={fix.busy} error={fix.error}
       onSubmit={(e) => {
         e.preventDefault()
         void fix.run(() => {

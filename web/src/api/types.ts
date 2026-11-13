@@ -9,7 +9,7 @@ export type User = {
   created_at: string
 }
 
-export type OnboardingStep = 'upload' | 'check' | 'targets' | 'done'
+export type OnboardingStep = 'upload' | 'check' | 'targets' | 'first_job' | 'done'
 
 export type Profile = {
   full_name: string | null
@@ -21,6 +21,7 @@ export type Profile = {
   theme: 'system' | 'light' | 'dark'
   notifications: { follow_ups: boolean; interview_prep: boolean; product_news: boolean }
   onboarding_step: OnboardingStep
+  open_to?: string[] | null
   updated_at: string
 }
 

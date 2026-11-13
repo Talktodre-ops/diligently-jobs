@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your first job</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+textarea:focus{outline:2px solid #C2471F;outline-offset:1px}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 16px 24px 0 12px; display: flex; gap: 4px; align-items: center;">
+    <a href="Targets.dc.html" aria-label="Back" style="flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;">
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #6B4E62;"><span>First job</span><span>Last step</span></div>
+    </div>
+  </div>
+
+  <sc-if value="{{ composing }}" hint-placeholder-val="{{ true }}">
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 16px 24px 16px; display: flex; flex-direction: column; gap: 18px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.02em;">Now the good part. Which job?</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">Paste a link or the whole description. We will tailor your CV to it and tell you how well you match.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="jd" style="font-size: 14px; font-weight: 600;">Job link or description</label>
+        <textarea id="jd" rows="6" placeholder="https://... or paste the posting" style="box-sizing: border-box; border-radius: 16px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 14px 16px; font: 16px/1.5 Inter, sans-serif; color: #3B1C32; resize: none;"></textarea>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B4E62;">In about two minutes you get</div>
+        <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.4;">
+          <li style="display: flex; gap: 10px;"><span style="flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 999px; background: #E8603C;"></span>A match score, and what is missing</li>
+          <li style="display: flex; gap: 10px;"><span style="flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 999px; background: #E8603C;"></span>Rewrites of your bullets for this job, each one yours to accept</li>
+          <li style="display: flex; gap: 10px;"><span style="flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 999px; background: #E8603C;"></span>A short read on the company and a cover letter draft</li>
+        </ul>
+      </div>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ starting }}" hint-placeholder-val="{{ false }}">
+    <main role="status" style="flex: 1; padding: 40px 24px; display: flex; flex-direction: column; gap: 16px; justify-content: center;">
+      <div style="width: 56px; height: 56px; border-radius: 16px; background: #3B1C32; display: inline-flex; align-items: center; justify-content: center;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F6E7A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+      </div>
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.08;">You are set up. Tailoring has started.</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">This opens the live progress screen you already have in the app, and lands on the workspace when it is ready.</p>
+    </main>
+  </sc-if>
+
+  <footer style="padding: 12px 24px 32px; border-top: 1px solid #EADFC2; display: flex; flex-direction: column; gap: 4px;">
+    <sc-if value="{{ composing }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ start }}" style="height: 54px; border-radius: 999px; border: 0; background: #C2471F; color: #FFFFFF; font: 600 16px Inter, sans-serif; cursor: pointer;">Tailor my CV</button>
+      <a href="#home" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: #5E4456; text-decoration: none;">No job in mind yet? Go to Home</a>
+      <div style="text-align: center; font-size: 12px; color: #6B4E62;">Uses 1 of your 10 applications this month</div>
+    </sc-if>
+    <sc-if value="{{ starting }}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{ back }}" style="height: 54px; border-radius: 999px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 16px Inter, sans-serif; cursor: pointer;">Back to the composer (prototype only)</button>
+    </sc-if>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const started = !!(this.state && this.state.started);
+    return {
+      composing: !started,
+      starting: started,
+      start: () => this.setState({ started: true }),
+      back: () => this.setState({ started: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

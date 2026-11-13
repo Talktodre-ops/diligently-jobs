@@ -6,6 +6,7 @@ const onboardingPath = {
   upload: '/onboarding/upload',
   check: '/onboarding/check',
   targets: '/onboarding/targets',
+  first_job: '/onboarding/first-job',
 } as const
 
 /** Welcome, sign up, sign in: a signed-in visitor goes home instead. */

@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useResetSession } from '../../auth/session'
 import { Button } from '../../ui/Button'
 import { Notice } from '../../ui/Notice'
 import { TextField } from '../../ui/TextField'
 import { authApi } from './api'
 import { AuthShell } from './components/AuthShell'
+import { GoogleButton } from './components/GoogleButton'
 import { PasswordField } from './components/PasswordField'
 import { toFormError } from './errors'
 import s from './auth.module.css'
@@ -19,7 +20,10 @@ function destination(state: unknown): string {
 export default function SignInPage() {
   const navigate = useNavigate()
   const { state } = useLocation()
+  const [params] = useSearchParams()
   const resetSession = useResetSession()
+  // The API sends a failed Google round trip back here without saying why.
+  const googleFailed = params.get('error') === 'google'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +54,8 @@ export default function SignInPage() {
         <h1 className={s.title}>Welcome back</h1>
         <p className={s.lede}>Pick up where you left off.</p>
       </div>
+      {googleFailed && !error && <Notice tone="error">Google sign-in did not work. Try again, or use your email and password.</Notice>}
+      <GoogleButton next={destination(state)} />
       <form className={s.form} onSubmit={submit} noValidate>
         {error && <Notice tone="error">{error}</Notice>}
         <TextField

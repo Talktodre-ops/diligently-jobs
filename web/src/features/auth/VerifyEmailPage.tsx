@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Navigate, useNavigate, useSearchParams } from 'react-router'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { isApiError } from '../../api/client'
+import type { User } from '../../api/types'
 import { meKey, useMe, useResetSession } from '../../auth/session'
 import { Button, ButtonLink } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
@@ -15,7 +16,7 @@ import s from './auth.module.css'
 export default function VerifyEmailPage() {
   const [params] = useSearchParams()
   const token = params.get('token')
-  return token ? <VerifyToken token={token} /> : <Inbox />
+  return token ? <VerifyToken token={token} /> : <CodeEntry />
 }
 
 type Phase = { name: 'working' } | { name: 'ok' } | { name: 'failed'; invalid: boolean; message: string }
@@ -116,18 +117,105 @@ function Resender({ label }: { label: string }) {
   )
 }
 
-/** Signed up but not yet verified: tell them to check their inbox. */
-function Inbox() {
-  const me = useMe()
-  const navigate = useNavigate()
-  const resetSession = useResetSession()
-  const { secs, sent, error, busy, resend, setError } = useResend()
-  const [leaving, setLeaving] = useState(false)
+/** "0:42" */
+function clock(secs: number) {
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
+}
 
+/** What to say for each failure the code endpoint can give. */
+function codeError(err: unknown): string {
+  if (isApiError(err, 'invalid_code')) return 'That code is not right. Check the newest email from us and try again.'
+  if (isApiError(err, 'code_expired')) return 'That code has expired or was used too many times. Send a new code and use the newest email.'
+  return toFormError(err).message
+}
+
+const RESEND_WAIT = 60
+
+/** Signed up but not yet verified: type the 6-digit code from the email (the link in it works too). */
+function CodeEntry() {
+  const me = useMe()
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  const { state } = useLocation()
+  const resetSession = useResetSession()
+  const justSent = !!(state as { codeSent?: boolean } | null)?.codeSent
+  const { secs, start } = useCooldown(justSent ? RESEND_WAIT : 0)
+  const [code, setCode] = useState('')
+  const [checking, setChecking] = useState(false)
+  const [verified, setVerified] = useState<User | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const input = useRef<HTMLInputElement>(null)
+
+  function carryOn() {
+    // Write the verified user and leave in the same tick; the gates send them to their onboarding step.
+    qc.setQueryData(meKey, verified)
+    navigate('/', { replace: true })
+  }
+
+  if (verified) {
+    return (
+      <AuthShell footer={<Button block autoFocus onClick={carryOn}>Continue</Button>}>
+        <CodeHeading email={verified.email} />
+        <p className={s.verified} role="status">
+          <Icon name="check" size={18} strokeWidth={2.4} className={s.verifiedIcon} />
+          Verified. On to your CV.
+        </p>
+      </AuthShell>
+    )
+  }
   if (me.isPending) return <PageState.Loading />
   if (me.isError) return <PageState.Error error={me.error} onRetry={() => me.refetch()} />
   if (!me.data) return <Navigate to="/welcome" replace />
   if (me.data.email_verified) return <Navigate to="/" replace />
+
+  async function check(value: string) {
+    if (checking) return
+    setChecking(true)
+    setError(null)
+    setNote(null)
+    try {
+      setVerified(await authApi.verifyCode(value))
+    } catch (err) {
+      if (isApiError(err) && err.status === 429 && err.retryAfter) start(err.retryAfter)
+      setError(codeError(err))
+      setChecking(false)
+      // Leave the digits there but selected, so typing again replaces them.
+      requestAnimationFrame(() => input.current?.select())
+    }
+  }
+
+  function onCode(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 6)
+    setCode(digits)
+    if (error) setError(null)
+    if (digits.length === 6) void check(digits)
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (code.length < 6) return setError('Enter all 6 digits from the email.')
+    void check(code)
+  }
+
+  async function resend() {
+    setResending(true)
+    setError(null)
+    setNote(null)
+    try {
+      await authApi.resendVerification()
+      setNote('Sent. Use the code in the newest email; the old one no longer works.')
+      setCode('')
+      start(RESEND_WAIT)
+    } catch (err) {
+      if (isApiError(err) && err.status === 429 && err.retryAfter) start(err.retryAfter)
+      setError(toFormError(err).message)
+    } finally {
+      setResending(false)
+    }
+  }
 
   async function leave(to: string) {
     setLeaving(true)
@@ -145,39 +233,63 @@ function Inbox() {
     navigate(to, { replace: true })
   }
 
+  const errorId = 'code-error'
   return (
     <AuthShell>
-      <div className={`${s.mark} ${s.markBig}`} aria-hidden="true">
-        <Icon name="mail" size={44} strokeWidth={1.6} />
-        <span className={s.ping} />
+      <CodeHeading email={me.data.email} />
+      <form className={s.codeForm} onSubmit={onSubmit} noValidate>
+        <label htmlFor="code" className={s.codeLabel}>Code</label>
+        <input
+          ref={input}
+          id="code"
+          name="code"
+          className={`${s.code} ${error ? s.codeInvalid : ''} ${code.length === 6 ? s.codeFull : ''}`}
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          pattern="[0-9]*"
+          maxLength={6}
+          placeholder="000000"
+          autoFocus
+          value={code}
+          onChange={(e) => onCode(e.target.value)}
+          readOnly={checking}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+        />
+        <div aria-live="polite" className={s.codeStatus}>
+          {checking && <span role="status">Checking the code</span>}
+          {error && <span id={errorId} className={s.codeError} role="alert">{error}</span>}
+          {note && !error && <span className={s.ok} role="status">{note}</span>}
+        </div>
+      </form>
+
+      <div className={s.mailApps}>
+        <a className={s.mailApp} href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">Open Gmail</a>
+        <a className={s.mailApp} href="https://outlook.live.com/mail/" target="_blank" rel="noopener noreferrer">Open Outlook</a>
       </div>
-      <div className={s.heading}>
-        <h1 className={s.title}>Check your email</h1>
-        <p className={s.lede}>
-          We sent a link to <strong>{me.data.email}</strong>. Tap it on this device and you will land straight in your account.
-        </p>
-      </div>
+
       <div className={s.help}>
         <div>
-          Nothing yet? Check spam, or{' '}
-          {secs > 0 ? (
-            <span>send it again in {secs}s.</span>
-          ) : (
-            <button type="button" className={s.textLink} onClick={resend} disabled={busy}>send it again</button>
-          )}
-        </div>
-        <div aria-live="polite">
-          {sent && !error && <span className={s.ok}>Sent a fresh link.</span>}
-          {error && <span role="alert">{error}</span>}
+          Nothing yet?{' '}
+          <button type="button" className={s.textLink} onClick={resend} disabled={secs > 0 || resending}>Send a new code</button>
+          {secs > 0 && <span> in {clock(secs)}</span>}
         </div>
         <div>
           Wrong address?{' '}
-          <button type="button" className={s.textLink} onClick={() => leave('/signup')} disabled={leaving}>Start again with another one</button>
-        </div>
-        <div>
-          <button type="button" className={s.textLink} onClick={() => leave('/welcome')} disabled={leaving}>Sign out</button>
+          <button type="button" className={s.textLink} onClick={() => leave('/signup')} disabled={leaving}>Change it</button>
         </div>
       </div>
     </AuthShell>
+  )
+}
+
+function CodeHeading({ email }: { email: string }) {
+  return (
+    <div className={s.heading}>
+      <h1 className={s.title}>Check your email</h1>
+      <p className={s.lede}>
+        We sent a 6-digit code to <strong>{email}</strong>. Type it here and keep going. The link in the email works too.
+      </p>
+    </div>
   )
 }

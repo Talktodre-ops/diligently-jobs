@@ -1,0 +1,34 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-13T17:40:00Z" },
+  "title": "Diligently onboarding",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "The flow" },
+    "SignUp.dc.html": { "x": 0, "y": 1400, "w": 390, "h": 844, "title": "1 · Account", "is_interactive": true },
+    "VerifyCode.dc.html": { "x": 470, "y": 1400, "w": 390, "h": 844, "title": "2 · Verify", "is_interactive": true },
+    "Upload.dc.html": { "x": 940, "y": 1400, "w": 390, "h": 844, "title": "3 · Your CV", "is_interactive": true },
+    "Check.dc.html": { "x": 1410, "y": 1400, "w": 390, "h": 844, "title": "4 · Check and strengthen", "is_interactive": true },
+    "Targets.dc.html": { "x": 1880, "y": 1400, "w": 390, "h": 844, "title": "5 · What you want", "is_interactive": true },
+    "FirstJob.dc.html": { "x": 2350, "y": 1400, "w": 390, "h": 844, "title": "6 · First job", "is_interactive": true },
+    "DesktopUpload.dc.html": { "x": 0, "y": 2660, "w": 1440, "h": 900, "title": "Desktop · Your CV", "expand": "fill", "is_interactive": true },
+    "DesktopCheck.dc.html": { "x": 1520, "y": 2660, "w": 1440, "h": 900, "title": "Desktop · Check and strengthen", "expand": "fill", "is_interactive": true }
+  },
+  "order": [
+    "Main.dc.html",
+    "SignUp.dc.html",
+    "VerifyCode.dc.html",
+    "Upload.dc.html",
+    "Check.dc.html",
+    "Targets.dc.html",
+    "FirstJob.dc.html",
+    "DesktopUpload.dc.html",
+    "DesktopCheck.dc.html"
+  ],
+  "notes": {
+    "phoneRow": { "x": 0, "y": 1150, "text": "Phone, in order. Press Play on any screen and click through.", "kind": "title1", "maxW": 2740 },
+    "deskRow": { "x": 0, "y": 2410, "text": "Desktop: the form on the left, your CV taking shape on the right", "kind": "title1", "maxW": 2960 }
+  },
+  "designSystems": []
+}

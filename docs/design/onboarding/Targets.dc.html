@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What you want</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline:2px solid #C2471F;outline-offset:1px}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 16px 24px 0 12px; display: flex; gap: 4px; align-items: center;">
+    <a href="Check.dc.html" aria-label="Back" style="flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;">
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #6B4E62;"><span>What you want</span><span>About a minute left</span></div>
+    </div>
+  </div>
+
+  <main style="flex: 1; min-height: 0; overflow: auto; padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 22px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.02em;">What are you going for?</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">We picked these from your CV. Tap to change.</p>
+    </div>
+
+    <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+      <legend style="padding: 0; margin-bottom: 10px; font-size: 15px; font-weight: 600;">Roles</legend>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <sc-for list="{{ roles }}" as="c" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{ c.on }}" onClick="{{ c.toggle }}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid {{ c.border }}; background: {{ c.bg }}; color: {{ c.fg }}; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ c.label }}</button>
+        </sc-for>
+        <button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px dashed #D9CCAE; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">+ Another</button>
+      </div>
+    </fieldset>
+
+    <fieldset style="border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+      <legend style="padding: 0; margin-bottom: 10px; font-size: 15px; font-weight: 600;">Where you can work</legend>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;">
+        <sc-for list="{{ settings }}" as="c" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ c.on }}" onClick="{{ c.toggle }}" style="min-height: 44px; border-radius: 12px; border: 1.5px solid {{ c.border }}; background: {{ c.bg }}; color: {{ c.fg }}; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ c.label }}</button>
+        </sc-for>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px;">
+        <span style="flex: 1; line-height: 1.4;">Based in <strong>Lagos, Nigeria</strong>. Open to remote roles anywhere.</span>
+        <button type="button" style="height: 44px; border: 0; background: none; color: #B5401C; font: 600 14px Inter, sans-serif; cursor: pointer;">Change</button>
+      </div>
+    </fieldset>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #5E4456;">
+      <div>CVs print on A4, the standard in Nigeria. <a href="#paper" style="font-weight: 600;">Use US Letter</a></div>
+    </div>
+  </main>
+
+  <footer style="padding: 12px 24px 32px; border-top: 1px solid #EADFC2;">
+    <a href="FirstJob.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Continue</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const on = s.on || { 'Senior Backend Engineer': true, 'Backend Engineer': true, Senior: true, Remote: true, Hybrid: true, Yes: true };
+    const single = { levels: ['Mid', 'Senior', 'Staff', 'Lead'], visa: ['Yes', 'No', 'Not sure'] };
+    const chip = (label, group) => {
+      const active = !!on[label];
+      return {
+        label,
+        on: active ? 'true' : 'false',
+        bg: active ? '#3B1C32' : '#FFFFFF',
+        fg: active ? '#F6E7A6' : '#3B1C32',
+        border: active ? '#3B1C32' : '#D9CCAE',
+        toggle: () => {
+          const next = Object.assign({}, on);
+          if (group && single[group]) { single[group].forEach((k) => { next[k] = false; }); next[label] = true; }
+          else next[label] = !active;
+          this.setState({ on: next });
+        }
+      };
+    };
+    return {
+      roles: ['Senior Backend Engineer', 'Backend Engineer', 'Platform Engineer', 'Staff Engineer'].map((l) => chip(l)),
+      levels: single.levels.map((l) => chip(l, 'levels')),
+      settings: ['Remote', 'Hybrid', 'On-site'].map((l) => chip(l)),
+      visa: single.visa.map((l) => chip(l, 'visa'))
+    };
+  }
+}
+</script>
+</body>
+</html>

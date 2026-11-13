@@ -27,3 +27,24 @@ export function linkIn(mail: Mail, path: string): string {
   if (!m) throw new Error(`no ${path} link in email "${mail.subject}"`)
   return m[0]
 }
+
+/** The 6-digit verification code in an email: from the subject ("123456 is your Diligently code"), else its own line in the body. */
+export function codeIn(mail: Mail): string {
+  const m = mail.subject.match(/^(\d{6}) is your Diligently code/) ?? mail.text.match(/^\s*(\d{6})\s*$/m)
+  if (!m) throw new Error(`no 6-digit code in email "${mail.subject}"`)
+  return m[1]!
+}
+
+/** The code from the newest verification email to `to` (each send replaces the earlier code). */
+export async function latestCode(to: string, timeoutMs = 15_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const mail = await latestMail(to, '/verify-email', Math.max(250, deadline - Date.now()))
+    try {
+      return codeIn(mail)
+    } catch {
+      await new Promise((r) => setTimeout(r, 250))
+    }
+  }
+  throw new Error(`no verification code for ${to} within ${timeoutMs}ms`)
+}

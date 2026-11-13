@@ -14,7 +14,7 @@ import VerifyEmailPage from './VerifyEmailPage'
 const user = { id: 'u', email: 'ada@example.com', email_verified: false, plan: 'free', created_at: '' }
 type Reply = Response | undefined
 
-function setup(ui: React.ReactElement, reply: (url: string, init?: RequestInit) => Reply, entry = '/x') {
+function setup(ui: React.ReactElement, reply: (url: string, init?: RequestInit) => Reply, entry: string | { pathname: string; state: unknown } = '/x') {
   const calls: { url: string; method: string; body?: string }[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, method: init?.method ?? 'GET', body: init?.body as string | undefined })
@@ -30,6 +30,7 @@ function setup(ui: React.ReactElement, reply: (url: string, init?: RequestInit) 
           <Route path="/" element={<div>Home</div>} />
           <Route path="/welcome" element={<div>Welcome page</div>} />
           <Route path="/signup" element={<div>Sign up page</div>} />
+          <Route path="/signin" element={<div>Sign in page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -63,7 +64,7 @@ describe('SignUpPage', () => {
     await userEvent.type(screen.getByLabelText('Password'), 'short')
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }))
     expect(await screen.findByText('Use at least 10 characters.')).toBeInTheDocument()
-    expect(calls).toHaveLength(0)
+    expect(calls.filter((c) => c.url === '/v1/auth/signup')).toHaveLength(0)
   })
 
   it('shows an API field error on the right input', async () => {
@@ -82,6 +83,38 @@ describe('SignUpPage', () => {
     await userEvent.type(screen.getByLabelText('Password'), 'a long enough passphrase')
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }))
     await waitFor(() => expect(calls.some((c) => c.url === '/v1/auth/signup' && c.method === 'POST')).toBe(true))
+  })
+})
+
+describe('Google', () => {
+  it('stays hidden when the provider is off', async () => {
+    const calls = setup(<SignUpPage />, (url) => (url === '/v1/auth/providers' ? json({ google: false }) : undefined))
+    await waitFor(() => expect(calls.some((c) => c.url === '/v1/auth/providers')).toBe(true))
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your first tailored CV is about four minutes away.' })).toBeInTheDocument()
+  })
+
+  it('stays hidden when the providers call fails, and email sign up still works', async () => {
+    const calls = setup(<SignUpPage />, (url) => (url === '/v1/auth/providers' ? apiError(503, 'http_503', 'down') : undefined))
+    await waitFor(() => expect(calls.some((c) => c.url === '/v1/auth/providers')).toBe(true))
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeEnabled()
+  })
+
+  it('is a full-page link to the start endpoint when the provider is on', async () => {
+    setup(<SignUpPage />, (url) => (url === '/v1/auth/providers' ? json({ google: true }) : undefined))
+    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', '/v1/auth/google/start?next=%2F')
+    expect(screen.getByText('or with email')).toBeInTheDocument()
+  })
+
+  it('returns a bounced visitor to where they were after Google sign-in', async () => {
+    setup(<SignInPage />, (url) => (url === '/v1/auth/providers' ? json({ google: true }) : undefined), { pathname: '/x', state: { from: '/jobs' } })
+    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', '/v1/auth/google/start?next=%2Fjobs')
+  })
+
+  it('says so plainly when Google sign-in failed', async () => {
+    setup(<SignInPage />, () => undefined, '/x?error=google')
+    expect(screen.getByRole('alert')).toHaveTextContent('Google sign-in did not work. Try again, or use your email and password.')
   })
 })
 
@@ -123,22 +156,83 @@ describe('VerifyEmailPage', () => {
     expect(await screen.findByText('Welcome page')).toBeInTheDocument()
   })
 
-  it('shows the inbox screen and resends, then counts down', async () => {
-    const calls = setup(<VerifyEmailPage />, (url) => (url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/resend-verification' ? json({ ok: true }, 202) : undefined))
+  it('shows the code screen with mail shortcuts', async () => {
+    setup(<VerifyEmailPage />, (url) => (url === '/v1/auth/me' ? json({ user }) : undefined))
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument()
     expect(screen.getByText('ada@example.com')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'send it again' }))
-    expect(await screen.findByText('Sent a fresh link.')).toBeInTheDocument()
-    expect(screen.getByText(/send it again in \d+s/)).toBeInTheDocument()
+    const code = screen.getByLabelText('Code')
+    expect(code).toHaveAttribute('autocomplete', 'one-time-code')
+    expect(code).toHaveAttribute('inputmode', 'numeric')
+    expect(screen.getByRole('link', { name: 'Open Gmail' })).toHaveAttribute('href', 'https://mail.google.com/')
+    expect(screen.getByRole('link', { name: 'Open Outlook' })).toHaveAttribute('href', 'https://outlook.live.com/mail/')
+    // Arriving without a fresh email behind it, a new code can be sent straight away.
+    expect(screen.getByRole('button', { name: 'Send a new code' })).toBeEnabled()
+  })
+
+  it('submits by itself at six digits, keeping only digits', async () => {
+    const calls = setup(<VerifyEmailPage />, (url) =>
+      url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/verify-code' ? json({ user: { ...user, email_verified: true } }) : undefined)
+    await userEvent.type(await screen.findByLabelText('Code'), '12 34-5')
+    expect(screen.getByLabelText('Code')).toHaveValue('12345')
+    expect(calls.some((c) => c.url === '/v1/auth/verify-code')).toBe(false)
+    await userEvent.type(screen.getByLabelText('Code'), '6')
+    expect(await screen.findByRole('status')).toHaveTextContent('Verified. On to your CV.')
+    expect(JSON.parse(calls.find((c) => c.url === '/v1/auth/verify-code')!.body!)).toEqual({ code: '123456' })
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText('Home')).toBeInTheDocument()
+  })
+
+  it.each([
+    [400, 'invalid_code', 'That code is not right.'],
+    [410, 'code_expired', 'That code has expired'],
+  ])('explains a %s %s', async (status, code, text) => {
+    setup(<VerifyEmailPage />, (url) =>
+      url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/verify-code' ? apiError(status, code, 'x', 'code') : undefined)
+    await userEvent.type(await screen.findByLabelText('Code'), '000000')
+    expect(await screen.findByRole('alert')).toHaveTextContent(text)
+    expect(screen.getByLabelText('Code')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('asks for all six digits when Enter is pressed early', async () => {
+    const calls = setup(<VerifyEmailPage />, (url) => (url === '/v1/auth/me' ? json({ user }) : undefined))
+    await userEvent.type(await screen.findByLabelText('Code'), '123{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Enter all 6 digits')
+    expect(calls.some((c) => c.url === '/v1/auth/verify-code')).toBe(false)
+  })
+
+  it('waits before resending when a code was just sent, then resends and counts down', async () => {
+    const calls = setup(
+      <VerifyEmailPage />,
+      (url) => (url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/resend-verification' ? json({ ok: true }, 202) : undefined),
+      { pathname: '/verify-email', state: { codeSent: true } },
+    )
+    expect(await screen.findByRole('button', { name: 'Send a new code' })).toBeDisabled()
+    expect(screen.getByText(/in 1:00|in 0:59/)).toBeInTheDocument()
+    expect(calls.some((c) => c.url === '/v1/auth/resend-verification')).toBe(false)
+  })
+
+  it('resends a code and counts down', async () => {
+    const calls = setup(<VerifyEmailPage />, (url) => (url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/resend-verification' ? json({ ok: true }, 202) : undefined))
+    await userEvent.click(await screen.findByRole('button', { name: 'Send a new code' }))
+    expect(await screen.findByText(/Sent. Use the code in the newest email/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send a new code' })).toBeDisabled()
+    expect(screen.getByText(/in \d:\d\d/)).toBeInTheDocument()
     expect(calls.filter((c) => c.url === '/v1/auth/resend-verification')).toHaveLength(1)
   })
 
   it('respects Retry-After when resending is rate limited', async () => {
     setup(<VerifyEmailPage />, (url) =>
       url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/resend-verification' ? apiError(429, 'rate_limited', 'slow', undefined, { 'Retry-After': '45' }) : undefined)
-    await userEvent.click(await screen.findByRole('button', { name: 'send it again' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Send a new code' }))
     expect(await screen.findByText(/Too many attempts. Try again in 45 seconds./)).toBeInTheDocument()
-    expect(screen.getByText(/send it again in 45s/)).toBeInTheDocument()
+    expect(screen.getByText(/in 0:4\d/)).toBeInTheDocument()
+  })
+
+  it('signs out to change the address', async () => {
+    const calls = setup(<VerifyEmailPage />, (url) => (url === '/v1/auth/me' ? json({ user }) : url === '/v1/auth/signout' ? new Response(null, { status: 204 }) : undefined))
+    await userEvent.click(await screen.findByRole('button', { name: 'Change it' }))
+    expect(await screen.findByText('Sign up page')).toBeInTheDocument()
+    expect(calls.some((c) => c.url === '/v1/auth/signout')).toBe(true)
   })
 
   it('posts the token from the link and moves a signed-in user on', async () => {

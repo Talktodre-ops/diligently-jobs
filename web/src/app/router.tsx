@@ -38,6 +38,7 @@ export const routes = [
       { path: '/onboarding/upload', element: page(() => import('../features/onboarding/UploadPage')) },
       { path: '/onboarding/check', element: page(() => import('../features/onboarding/CheckPage')) },
       { path: '/onboarding/targets', element: page(() => import('../features/onboarding/TargetsPage')) },
+      { path: '/onboarding/first-job', element: page(() => import('../features/onboarding/FirstJobPage')) },
     ],
   },
   {

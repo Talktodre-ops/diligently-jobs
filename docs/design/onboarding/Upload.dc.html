@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bring your CV</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 24px 24px 0; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;">
+      <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+      <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+      <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+      <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #6B4E62;"><span>Your CV</span><span>About 3 minutes left</span></div>
+  </div>
+
+  <main style="flex: 1; min-height: 0; padding: 18px 24px 0; display: flex; flex-direction: column; gap: 18px; overflow: auto;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em;">{{ heading }}</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">{{ lede }}</p>
+    </div>
+
+    <sc-if value="{{ isIdle }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button type="button" onClick="{{ upload }}" style="border: 2px dashed #D9CCAE; border-radius: 20px; background: #FFFFFF; padding: 24px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; color: #3B1C32; font-family: Inter, sans-serif;">
+          <span style="width: 52px; height: 52px; border-radius: 16px; background: #F6E7A6; display: inline-flex; align-items: center; justify-content: center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
+          </span>
+          <span style="font-size: 16px; font-weight: 600;">Choose your CV</span>
+          <span style="font-size: 13px; color: #6B4E62;">PDF or Word, up to 5 MB. From your phone, Drive or iCloud.</span>
+        </button>
+
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; overflow: hidden;">
+          <button type="button" onClick="{{ toggleLinkedIn }}" aria-expanded="{{ liOpen }}" style="width: 100%; min-height: 56px; border: 0; background: none; padding: 0 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; font: 600 15px Inter, sans-serif; color: #3B1C32; text-align: left;">
+            <span style="width: 32px; height: 32px; border-radius: 8px; background: #EFE7F0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">in</span>
+            <span style="flex: 1;">No CV? Use your LinkedIn profile</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="{{ chevron }}"></path></svg>
+          </button>
+          <sc-if value="{{ liOpen }}" hint-placeholder-val="{{ false }}">
+            <ol style="margin: 0; padding: 0 16px 16px 60px; font-size: 14px; line-height: 1.6; color: #5E4456;">
+              <li>Open your profile on LinkedIn</li>
+              <li>Tap Resources, then Save to PDF</li>
+              <li>Come back and choose that file above</li>
+            </ol>
+          </sc-if>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+          <button type="button" style="height: 52px; border-radius: 999px; border: 1.5px solid #D9CCAE; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Paste the text</button>
+          <button type="button" style="height: 52px; border-radius: 999px; border: 1.5px solid #D9CCAE; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Start from scratch</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ notIdle }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="width: 44px; height: 44px; border-radius: 12px; background: {{ fileBg }}; display: inline-flex; align-items: center; justify-content: center; color: {{ fileFg }}; font-size: 12px; font-weight: 600;">{{ fileMark }}</span>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 15px; font-weight: 600;">Ada_Okafor_CV.pdf</div>
+            <div role="status" style="font-size: 13px; color: #6B4E62;">{{ status }}</div>
+          </div>
+          <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ reset }}" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #B5401C; font: 600 13px Inter, sans-serif; cursor: pointer;">Replace</button>
+          </sc-if>
+        </div>
+        <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ found }}" as="f" hint-placeholder-count="3">
+            <li style="display: flex; gap: 12px; align-items: baseline; animation: rise 260ms ease both;">
+              <span style="flex: none; width: 74px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6B4E62;">{{ f.label }}</span>
+              <span style="font-size: 15px; line-height: 1.4;">{{ f.value }}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <sc-if value="{{ isReading }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 4px; border-radius: 999px; background: #EADFC2; overflow: hidden;"><div style="height: 4px; width: {{ pct }}; background: #3B1C32; border-radius: 999px; transition: width 300ms ease;"></div></div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </main>
+
+  <footer style="padding: 14px 24px 32px;">
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <a href="Check.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Looks like me, continue</a>
+    </sc-if>
+    <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align: center; font-size: 13px; color: #6B4E62; line-height: 1.5;">Private to your account. Delete it any time.</div>
+    </sc-if>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    const s = this.state || {};
+    const phase = s.phase || 'idle';
+    const n = s.n || 0;
+    const all = [
+      { label: 'Name', value: 'Ada Okafor' },
+      { label: 'Now', value: 'Senior Backend Engineer, Larkspur Payments' },
+      { label: 'Before', value: 'Quarry Labs, Kestrel Systems' },
+      { label: 'Years', value: 'About 9 years of experience' },
+      { label: 'Skills', value: 'Go, Rust, Postgres, Kafka and 14 more' },
+      { label: 'Education', value: 'B.Sc. Computer Science, University of Lagos' }
+    ];
+    const statuses = ['Opening the file', 'Found your name', 'Reading your roles', 'Reading your roles', 'Collecting skills', 'Almost done'];
+    return {
+      isIdle: phase === 'idle',
+      notIdle: phase !== 'idle',
+      isReading: phase === 'reading',
+      isDone: phase === 'done',
+      notDone: phase !== 'done',
+      liOpen: !!s.li,
+      chevron: s.li ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+      heading: phase === 'done' ? 'That is you, right?' : 'Bring your CV',
+      lede: phase === 'done'
+        ? 'Here is what we read. You can fix anything on the next screen.'
+        : 'It becomes your master CV. Every application is tailored from it, and we never add anything that is not on it.',
+      found: all.slice(0, n),
+      pct: Math.round((n / all.length) * 100) + '%',
+      status: phase === 'done' ? 'Read in full, 30 seconds' : statuses[Math.min(n, statuses.length - 1)],
+      fileBg: phase === 'done' ? '#3B1C32' : '#FBE3D8',
+      fileFg: phase === 'done' ? '#F6E7A6' : '#B5401C',
+      fileMark: phase === 'done' ? 'OK' : 'PDF',
+      toggleLinkedIn: () => this.setState({ li: !s.li }),
+      upload: () => {
+        clearInterval(this.timer);
+        this.setState({ phase: 'reading', n: 0 });
+        this.timer = setInterval(() => {
+          const cur = (this.state && this.state.n) || 0;
+          if (cur >= all.length) { clearInterval(this.timer); this.setState({ phase: 'done' }); }
+          else this.setState({ n: cur + 1 });
+        }, 650);
+      },
+      reset: () => { clearInterval(this.timer); this.setState({ phase: 'idle', n: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

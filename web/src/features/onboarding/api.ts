@@ -28,7 +28,7 @@ export type MasterCv = { id: string; doc: ResumeDoc; issues: Issue[]; updated_at
 export type Upload = {
   id: string
   filename: string
-  kind: 'pdf' | 'docx'
+  kind: 'pdf' | 'docx' | 'txt'
   status: 'queued' | 'reading' | 'done' | 'failed'
   error: string | null
   cv_version_id: string | null
@@ -37,12 +37,14 @@ export type Upload = {
 export const masterKey = ['cv', 'master'] as const
 const uploadKey = (id: string) => ['cv', 'upload', id] as const
 
-export const stepPath: Record<Exclude<OnboardingStep, 'done'>, string> = {
+export type FlowStep = Exclude<OnboardingStep, 'done'>
+export const stepPath: Record<FlowStep, string> = {
   upload: '/onboarding/upload',
   check: '/onboarding/check',
   targets: '/onboarding/targets',
+  first_job: '/onboarding/first-job',
 }
-export const stepOrder: OnboardingStep[] = ['upload', 'check', 'targets', 'done']
+export const stepOrder: OnboardingStep[] = ['upload', 'check', 'targets', 'first_job', 'done']
 
 /** The master CV, or null when none exists yet (the API answers 422 no_master_cv). */
 export function useMaster() {
@@ -67,12 +69,24 @@ export function useSaveMaster() {
   })
 }
 
+export type ProfilePatch = Partial<Omit<Profile, 'updated_at' | 'notifications'>>
+
 export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (patch: Partial<Omit<Profile, 'updated_at' | 'notifications'>>) =>
-      (await api.patch<{ profile: Profile }>('/v1/profile', patch)).profile,
+    mutationFn: async (patch: ProfilePatch) => (await api.patch<{ profile: Profile }>('/v1/profile', patch)).profile,
     onSuccess: (profile) => qc.setQueryData(profileKey, profile),
+  })
+}
+
+/**
+ * Marks onboarding finished. The caller writes the profile into the cache and
+ * navigates in the same tick, so the onboarding frame never sees "done" while
+ * it is still mounted (it would send the user Home instead).
+ */
+export function useFinishOnboarding() {
+  return useMutation({
+    mutationFn: async () => (await api.patch<{ profile: Profile }>('/v1/profile', { onboarding_step: 'done' })).profile,
   })
 }
 
@@ -97,14 +111,20 @@ export function useUpload(id: string | null) {
 }
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+export const MIN_PASTE_CHARS = 200
 
 /** Client-side file check that mirrors the API's rules. Returns a message, or null when fine. */
 export function fileProblem(file: File): string | null {
   const ext = file.name.toLowerCase().split('.').pop()
-  if (ext !== 'pdf' && ext !== 'docx') return 'Choose a PDF or DOCX file.'
+  if (ext !== 'pdf' && ext !== 'docx') return 'Choose a PDF or Word (DOCX) file.'
   if (file.size === 0) return 'That file is empty.'
   if (file.size > MAX_UPLOAD_BYTES) return 'That file is over 5 MB.'
   return null
+}
+
+/** Pasted CV text goes up as a plain-text file, read by the same extraction as a PDF. */
+export function pastedFile(text: string) {
+  return new File([text.trim()], 'cv.txt', { type: 'text/plain' })
 }
 
 export function cvCounts(doc: ResumeDoc) {

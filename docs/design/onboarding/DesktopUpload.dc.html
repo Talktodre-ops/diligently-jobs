@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bring your CV, desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;family=Source+Serif+4:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 40px; padding: 22px clamp(20px, 3.5vw, 48px); border-bottom: 1px solid #EADFC2;">
+    <div style="font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 24px; letter-spacing: -0.02em;">diligently<span style="color: #E8603C;">.</span></div>
+    <ol style="flex: 1; min-width: 320px; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 600;"><span style="height: 4px; border-radius: 2px; background: #E8603C;"></span>Your CV</li>
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B4E62;"><span style="height: 4px; border-radius: 2px; background: #EADFC2;"></span>Check</li>
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B4E62;"><span style="height: 4px; border-radius: 2px; background: #EADFC2;"></span>What you want</li>
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B4E62;"><span style="height: 4px; border-radius: 2px; background: #EADFC2;"></span>First job</li>
+    </ol>
+    <span style="font-size: 13px; color: #6B4E62;">About 3 minutes left</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch;">
+    <section style="flex: 1 1 380px; max-width: 560px; min-width: 0; box-sizing: border-box; padding: clamp(28px, 4vw, 64px) clamp(20px, 3.5vw, 48px); display: flex; flex-direction: column; gap: 22px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 44px; line-height: 1.04; letter-spacing: -0.02em;">{{ heading }}</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #5E4456; max-width: 46ch;">It becomes your master CV. Every application is tailored from it, and we never add anything that is not on it.</p>
+      </div>
+
+      <sc-if value="{{ isIdle }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button type="button" onClick="{{ upload }}" style="border: 2px dashed #D9CCAE; border-radius: 20px; background: #FFFFFF; padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; color: #3B1C32; font-family: Inter, sans-serif;">
+            <span style="width: 56px; height: 56px; border-radius: 16px; background: #F6E7A6; display: inline-flex; align-items: center; justify-content: center;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
+            </span>
+            <span style="font-size: 16px; font-weight: 600;">Drop your CV here, or choose a file</span>
+            <span style="font-size: 13px; color: #6B4E62;">PDF or Word, up to 5 MB. A LinkedIn PDF works too.</span>
+          </button>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <button type="button" style="height: 52px; border-radius: 999px; border: 1.5px solid #D9CCAE; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Paste the text</button>
+            <button type="button" style="height: 52px; border-radius: 999px; border: 1.5px solid #D9CCAE; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Start from scratch</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ notIdle }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 20px; padding: 18px; display: flex; align-items: center; gap: 14px;">
+          <span style="width: 44px; height: 44px; border-radius: 12px; background: {{ fileBg }}; color: {{ fileFg }}; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">{{ fileMark }}</span>
+          <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 600;">Ada_Okafor_CV.pdf</div>
+            <div role="status" style="font-size: 13px; color: #6B4E62;">{{ status }}</div>
+          </div>
+          <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{ reset }}" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #B5401C; font: 600 13px Inter, sans-serif; cursor: pointer;">Replace</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+        <a href="DesktopCheck.dc.html" style="align-self: flex-start; height: 54px; padding: 0 32px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;">Looks like me, continue</a>
+      </sc-if>
+      <p style="margin: auto 0 0; font-size: 13px; color: #6B4E62;">Private to your account. Delete it any time.</p>
+    </section>
+
+    <section aria-label="Your CV as we read it" style="flex: 999 1 560px; min-width: 0; background: #EFE6CC; padding: clamp(24px, 3.5vw, 56px); display: flex; justify-content: center; align-items: flex-start;">
+      <div style="width: 100%; max-width: 760px; min-height: 700px; box-sizing: border-box; background: #FFFFFF; border-radius: 4px; box-shadow: 0 1px 2px rgba(59,28,50,0.12), 0 8px 24px rgba(59,28,50,0.1); padding: 56px 64px; font-family: 'Source Serif 4', Georgia, serif; color: #1A1A1A; display: flex; flex-direction: column; gap: 20px;">
+        <sc-if value="{{ empty }}" hint-placeholder-val="{{ true }}">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 14px; justify-content: center; align-items: center; text-align: center; font-family: Inter, sans-serif; color: #6B4E62; padding: 120px 0;">
+            <div style="font-family: Fraunces, Georgia, serif; font-size: 24px; color: #3B1C32;">Your CV appears here as we read it</div>
+            <div style="font-size: 14px; max-width: 36ch; line-height: 1.5;">Name first, then each role, then your skills. Usually under 30 seconds.</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ s1 }}" hint-placeholder-val="{{ false }}">
+          <div style="animation: rise 300ms ease both; border-bottom: 1px solid #E5E5E5; padding-bottom: 14px;">
+            <div style="font-size: 30px; font-weight: 600;">Ada Okafor</div>
+            <div style="font-size: 15px; color: #444;">Senior Backend Engineer · Lagos · ada@example.com</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ s2 }}" hint-placeholder-val="{{ false }}">
+          <div style="animation: rise 300ms ease both; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: Inter, sans-serif;">Experience</div>
+            <div style="display: flex; justify-content: space-between; font-size: 16px;"><strong>Larkspur Payments, Senior Backend Engineer</strong><span>2021 to Present</span></div>
+            <ul style="margin: 2px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.5;"><li>Led the migration of the settlement service to Rust.</li><li>Cut reconciliation time by 60% by moving batch jobs to Kafka consumers.</li></ul>
+          </div>
+        </sc-if>
+        <sc-if value="{{ s3 }}" hint-placeholder-val="{{ false }}">
+          <div style="animation: rise 300ms ease both; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; font-size: 16px;"><strong>Quarry Labs, Backend Engineer</strong><span>2018 to 2021</span></div>
+            <ul style="margin: 2px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.5;"><li>Built the billing API used by merchant integrations.</li></ul>
+            <div style="display: flex; justify-content: space-between; font-size: 16px; margin-top: 8px;"><strong>Kestrel Systems, Software Engineer</strong><span style="font-family: Inter, sans-serif; font-size: 13px; font-weight: 600; color: #B5401C;">Dates missing</span></div>
+            <ul style="margin: 2px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.5;"><li>Mentored junior engineers on the payments team.</li></ul>
+          </div>
+        </sc-if>
+        <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+          <div style="animation: rise 300ms ease both; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: Inter, sans-serif;">Skills</div>
+            <div style="font-size: 15px; line-height: 1.5;">Go, Rust, SQL, Postgres, Kafka, Kubernetes, Terraform</div>
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: Inter, sans-serif; margin-top: 10px;">Education</div>
+            <div style="font-size: 15px;">University of Lagos, B.Sc. Computer Science</div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    const s = this.state || {};
+    const phase = s.phase || 'idle';
+    const n = s.n || 0;
+    const statuses = ['Opening the file', 'Found your name', 'Reading your roles', 'Collecting skills', 'Read in full, 30 seconds'];
+    return {
+      heading: phase === 'done' ? 'That is you, right?' : 'Bring your CV',
+      isIdle: phase === 'idle',
+      notIdle: phase !== 'idle',
+      isDone: phase === 'done',
+      empty: n === 0,
+      s1: n >= 1, s2: n >= 2, s3: n >= 3, s4: n >= 4,
+      status: statuses[Math.min(n, 4)],
+      fileBg: phase === 'done' ? '#3B1C32' : '#FBE3D8',
+      fileFg: phase === 'done' ? '#F6E7A6' : '#B5401C',
+      fileMark: phase === 'done' ? 'OK' : 'PDF',
+      upload: () => {
+        clearInterval(this.timer);
+        this.setState({ phase: 'reading', n: 0 });
+        this.timer = setInterval(() => {
+          const cur = (this.state && this.state.n) || 0;
+          if (cur >= 4) { clearInterval(this.timer); this.setState({ phase: 'done' }); }
+          else this.setState({ n: cur + 1 });
+        }, 800);
+      },
+      reset: () => { clearInterval(this.timer); this.setState({ phase: 'idle', n: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

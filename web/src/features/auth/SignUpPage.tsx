@@ -6,7 +6,9 @@ import { Notice } from '../../ui/Notice'
 import { TextField } from '../../ui/TextField'
 import { authApi, passwordProblem } from './api'
 import { AuthShell } from './components/AuthShell'
+import { GoogleButton } from './components/GoogleButton'
 import { PasswordField } from './components/PasswordField'
+import { SignUpIntro } from './components/SignUpIntro'
 import { toFormError } from './errors'
 import s from './auth.module.css'
 
@@ -33,7 +35,8 @@ export default function SignUpPage() {
     try {
       const user = await authApi.signUp({ email: email.trim(), password })
       await resetSession(user)
-      navigate('/verify-email', { replace: true, state })
+      // Tells the code screen an email just went out, so "Send a new code" starts on a cooldown.
+      navigate('/verify-email', { replace: true, state: { ...(state as object | null), codeSent: true } })
     } catch (err) {
       const f = toFormError(err)
       setErrors(f.field === 'email' || f.field === 'password' ? { [f.field]: f.message } : { form: f.message })
@@ -43,18 +46,16 @@ export default function SignUpPage() {
   }
 
   return (
-    <AuthShell back="/welcome" backState={state}>
-      <div className={s.heading}>
-        <h1 className={s.title}>Create your account</h1>
-        <p className={s.lede}>Takes a minute. Your CV comes next.</p>
-      </div>
-      <form className={s.form} onSubmit={submit} noValidate>
+    <AuthShell intro={<SignUpIntro />}>
+      <GoogleButton next="/" />
+      <form className={s.form} onSubmit={submit} noValidate aria-label="Create your account">
         {errors.form && <Notice tone="error">{errors.form}</Notice>}
         <TextField
           label="Email"
           type="email"
           autoComplete="email"
           inputMode="email"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={errors.email}
@@ -69,9 +70,10 @@ export default function SignUpPage() {
           error={errors.password}
         />
         <Button type="submit" busy={busy} block>Create account</Button>
+        <p className={s.fine}>Free for 10 applications a month. Your CV stays private to your account.</p>
       </form>
       <p className={s.foot}>
-        Already have an account? <Link to="/signin" state={state}>Sign in</Link>
+        Have an account? <Link to="/signin" state={state}>Sign in</Link>
       </p>
     </AuthShell>
   )

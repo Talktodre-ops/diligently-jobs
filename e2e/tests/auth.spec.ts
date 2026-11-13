@@ -1,6 +1,6 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
 import { createReadyAccount, freshEmail, PASSWORD } from '../support/account'
-import { latestMail, linkIn } from '../support/outbox'
+import { latestCode, latestMail, linkIn } from '../support/outbox'
 import { retryWhileRateLimited } from '../support/waitForSignup'
 
 const shot = (page: Page, info: TestInfo, name: string) =>
@@ -23,7 +23,11 @@ test('public screens render and validate on the client', async ({ page }, info) 
   await shot(page, info, 'welcome')
 
   await page.getByRole('link', { name: 'Create an account' }).click()
-  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your first tailored CV is about four minutes away.' })).toBeVisible()
+  // Google shows only when the API has it configured; the dev stack runs without it.
+  const providers = await (await page.request.get('/v1/auth/providers')).json()
+  if (providers.google) await expect(page.getByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', /\/v1\/auth\/google\/start\?next=/)
+  else await expect(page.getByRole('link', { name: 'Continue with Google' })).toHaveCount(0)
   await shot(page, info, 'signup')
 
   await page.getByLabel('Email').fill('someone@example.com')
@@ -37,6 +41,7 @@ test('public screens render and validate on the client', async ({ page }, info) 
 
   await page.getByRole('link', { name: 'Sign in' }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+  if (!providers.google) await expect(page.getByRole('link', { name: 'Continue with Google' })).toHaveCount(0)
   await shot(page, info, 'signin')
   await signIn(page, 'nobody@example.com', 'definitely not right')
   await expect(page.getByRole('alert')).toContainText('do not match')
@@ -51,6 +56,24 @@ test('public screens render and validate on the client', async ({ page }, info) 
   await expect(page.getByRole('heading', { name: 'Link sent' })).toBeVisible()
   await expect(page.getByRole('status')).toContainText('If an account exists')
   await shot(page, info, 'forgot-sent')
+
+  // A failed Google round trip comes back to sign in with ?error=google and nothing more.
+  await page.goto('/signin?error=google')
+  await expect(page.getByRole('alert')).toContainText('Google sign-in did not work')
+  await shot(page, info, 'signin-google-error')
+})
+
+test('with Google configured, both forms offer it as a full-page link', async ({ page }, info) => {
+  // The dev stack has no Google keys, so the providers answer is mocked; the round trip itself needs a human check.
+  await page.route('**/v1/auth/providers', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"google":true}' }))
+  await page.goto('/signup')
+  const google = page.getByRole('link', { name: 'Continue with Google' })
+  await expect(google).toHaveAttribute('href', '/v1/auth/google/start?next=%2F')
+  await expect(page.getByText('or with email')).toBeVisible()
+  await shot(page, info, 'signup-google')
+  await page.goto('/signin')
+  await expect(page.getByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', '/v1/auth/google/start?next=%2F')
+  await shot(page, info, 'signin-google')
 })
 
 test('expired and incomplete email links explain themselves', async ({ page }, info) => {
@@ -74,11 +97,7 @@ test('expired and incomplete email links explain themselves', async ({ page }, i
   await shot(page, info, 'confirm-expired')
 })
 
-test('sign up, resend, verify from the email, sign out and back in', async ({ page, baseURL }, info) => {
-  test.skip(!makesAccounts(info), 'creates an account')
-  const email = freshEmail('signup')
-
-  test.setTimeout(120_000)
+async function signUpThroughForm(page: Page, email: string) {
   await page.goto('/signup')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
@@ -88,38 +107,56 @@ test('sign up, resend, verify from the email, sign out and back in', async ({ pa
     await expect(page.getByText(/Too many attempts/).or(page.getByRole('heading', { name: 'Check your email' }))).toBeVisible()
     if (await page.getByText(/Too many attempts/).isVisible()) throw new Error('429 rate_limited')
   })
-
   await expect(page).toHaveURL(/\/verify-email$/)
+}
+
+test('sign up, a wrong code, a new code, then verify by code', async ({ page }, info) => {
+  test.skip(!makesAccounts(info), 'creates an account')
+  test.setTimeout(150_000)
+  const email = freshEmail('signup')
+  await signUpThroughForm(page, email)
+
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
-  await shot(page, info, 'verify-email')
+  const code = page.getByLabel('Code')
+  await expect(code).toHaveAttribute('autocomplete', 'one-time-code')
+  await expect(code).toHaveAttribute('inputmode', 'numeric')
+  await expect(page.getByRole('link', { name: 'Open Gmail' })).toHaveAttribute('href', 'https://mail.google.com/')
+  await expect(page.getByRole('link', { name: 'Open Outlook' })).toHaveAttribute('href', 'https://outlook.live.com/mail/')
+  // A code just went out, so asking for another waits.
+  await expect(page.getByRole('button', { name: 'Send a new code' })).toBeDisabled()
+  await expect(page.getByText(/in \d:\d\d/)).toBeVisible()
+  await shot(page, info, 'verify-code')
 
-  // Wrong password on a real account, then the right one. An unverified account is held at verify-email.
-  await page.getByRole('button', { name: 'Sign out' }).click()
-  await expect(page).toHaveURL(/\/welcome$/)
-  await page.getByRole('link', { name: 'I have an account' }).click()
+  // Six digits submit on their own. The real code is never 000000 more than once in a million.
+  const real = await latestCode(email)
+  const wrong = real === '000000' ? '111111' : '000000'
+  await code.fill(wrong)
+  await expect(page.getByRole('alert')).toContainText('That code is not right')
+  await shot(page, info, 'verify-code-wrong')
+
+  // Signing back in has no fresh email behind it, so a new code can be sent at once.
+  await page.getByRole('button', { name: 'Change it' }).click()
+  await expect(page).toHaveURL(/\/signup$/)
+  await page.getByRole('link', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
   await signIn(page, email, 'the wrong passphrase')
   await expect(page.getByRole('alert')).toContainText('do not match')
   await signIn(page, email, PASSWORD)
   await expect(page).toHaveURL(/\/verify-email$/)
+  await page.getByRole('button', { name: 'Send a new code' }).click()
+  await expect(page.getByText('Sent. Use the code in the newest email')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Send a new code' })).toBeDisabled()
 
-  await page.getByRole('button', { name: 'send it again' }).click()
-  await expect(page.getByText('Sent a fresh link.')).toBeVisible()
-  await expect(page.getByText(/send it again in \d+s/)).toBeVisible()
-  await shot(page, info, 'verify-email-resent')
-
-  // Open the newest link from the outbox, as a person would from their inbox.
-  const link = linkIn(await latestMail(email, '/verify-email'), '/verify-email')
-  expect(link.startsWith(baseURL!)).toBe(true)
-  await page.goto(link)
+  // The new code replaces the old one.
+  await expect.poll(() => latestCode(email), { timeout: 15_000 }).not.toBe(real)
+  const fresh = await latestCode(email)
+  await page.getByLabel('Code').pressSequentially(fresh)
+  await expect(page.getByRole('status').filter({ hasText: 'Verified. On to your CV.' })).toBeVisible()
+  await shot(page, info, 'verify-code-ok')
+  await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page).toHaveURL(/\/onboarding\/upload$/)
-  await expect(page.getByRole('heading', { name: 'Start with your CV' })).toBeVisible()
-
-  // The link only works once. Signed in, the page offers a fresh one.
-  await page.goto(link)
-  await expect(page.getByRole('heading', { name: 'That link has expired' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Send me a new link/ })).toBeVisible()
-  await shot(page, info, 'verify-used')
+  await expect(page.getByRole('heading', { name: 'Bring your CV' })).toBeVisible()
 
   // The address is taken now.
   await page.context().clearCookies()
@@ -128,6 +165,37 @@ test('sign up, resend, verify from the email, sign out and back in', async ({ pa
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByText('already exists')).toBeVisible()
+})
+
+test('the link in the email still verifies, once', async ({ page, baseURL }, info) => {
+  test.skip(info.project.name !== 'mobile', 'one run, creates an account')
+  test.setTimeout(120_000)
+  const email = freshEmail('link')
+  await signUpThroughForm(page, email)
+
+  const link = linkIn(await latestMail(email, '/verify-email'), '/verify-email')
+  expect(link.startsWith(baseURL!)).toBe(true)
+  await page.goto(link)
+  await expect(page).toHaveURL(/\/onboarding\/upload$/)
+  await expect(page.getByRole('heading', { name: 'Bring your CV' })).toBeVisible()
+
+  // The link only works once. Signed in, the page offers a fresh one.
+  await page.goto(link)
+  await expect(page.getByRole('heading', { name: 'That link has expired' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Send me a new link/ })).toBeVisible()
+  await shot(page, info, 'verify-used')
+})
+
+test('an expired code says to send a new one, from a mocked 410', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'one run, creates an account')
+  test.setTimeout(120_000)
+  const email = freshEmail('expired')
+  await signUpThroughForm(page, email)
+  await page.route('**/v1/auth/verify-code', (route) =>
+    route.fulfill({ status: 410, contentType: 'application/json', body: JSON.stringify({ error: { code: 'code_expired', message: 'x' } }) }))
+  await page.getByLabel('Code').fill('123456')
+  await expect(page.getByRole('alert')).toContainText('has expired')
+  await shot(page, info, 'verify-code-expired')
 })
 
 test('forgot password, reset from the email, then sign in with it', async ({ page, baseURL }, info) => {

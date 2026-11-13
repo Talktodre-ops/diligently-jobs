@@ -17,20 +17,22 @@ type Props = {
   wide?: boolean
   /** Shown above the heading, in the content column (onboarding progress). */
   top?: ReactNode
+  /** Replaces the brand art and also shows on a phone, as a band above the form (sign up). */
+  intro?: ReactNode
 }
 
 /**
  * Frame shared by every auth and onboarding screen. On a phone it is a single
  * column; from 900px the aubergine side panel appears and the form sits beside it.
  */
-export function AuthShell({ children, back, backState, footer, aside, wide, top }: Props) {
+export function AuthShell({ children, back, backState, footer, aside, wide, top, intro }: Props) {
   return (
     <div className={s.page}>
-      <aside className={s.brand}>
+      <aside className={`${s.brand} ${intro ? s.band : ''}`}>
         <div className={s.wordmark}>
           diligently<span className={s.dot}>.</span>
         </div>
-        {aside ?? (
+        {intro ?? aside ?? (
           <>
             <BrandArt />
             <p className={s.tagline} aria-hidden="true">Paste a job. Get a tailored CV, a match score and a cover letter.</p>
@@ -38,7 +40,7 @@ export function AuthShell({ children, back, backState, footer, aside, wide, top 
         )}
       </aside>
       <div className={s.pane}>
-        <header className={s.head}>
+        <header className={`${s.head} ${intro && !back && !top ? s.headEmpty : ''}`}>
           {back && (
             <Link to={back} state={backState} className={s.back} aria-label="Back">
               <Icon name="back" size={22} strokeWidth={2} />

@@ -31,4 +31,18 @@
 }
 @media (max-width: 759px) {
   .brand { display: none; }
+  /* Sign up keeps its promise on a phone: an aubergine band above the form. */
+  .brand.band {
+    display: flex; flex-direction: column; gap: 18px; padding: 28px 24px 26px;
+    background: var(--aubergine); color: var(--butter);
+  }
+  .band .wordmark { font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
+  .band .dot { color: var(--persimmon); }
+  .page:has(.band) { grid-template-rows: auto 1fr; }
+  .page:has(.band) .pane { min-height: 0; }
+  .headEmpty { display: none; }
+  .page:has(.band) .main { padding-top: 24px; }
+}
+@media (min-width: 760px) {
+  .band { justify-content: flex-start; gap: 48px; }
 }

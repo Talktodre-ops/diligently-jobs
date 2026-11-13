@@ -1,0 +1,30 @@
+.form { display: flex; flex-direction: column; gap: 18px; }
+.heading { display: flex; flex-direction: column; gap: 8px; }
+.title { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.02em; margin: 0; }
+.lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); max-width: 46ch; }
+.jd textarea { min-height: 160px; resize: vertical; }
+.promise {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.kicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.4; }
+.list li { display: flex; gap: 10px; }
+.list li::before {
+  content: ''; flex: none; width: 8px; height: 8px; margin-top: 7px; border-radius: 999px; background: var(--persimmon);
+}
+.skip {
+  min-height: var(--tap); border: 0; background: none; padding: 0 8px; align-self: center;
+  color: var(--ink-3); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.skip:hover:not(:disabled) { color: var(--ink); text-decoration: underline; }
+.skip:disabled { opacity: 0.55; cursor: progress; }
+.usage { margin: 0; text-align: center; font-size: 12px; color: var(--ink-2); }
+.inlineButton { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; }
+
+@media (min-width: 1024px) {
+  .title { font-size: 44px; line-height: 1.04; }
+  .lede { font-size: 16px; line-height: 1.55; }
+  .skip { align-self: flex-start; padding: 0; }
+  .usage { text-align: left; }
+}

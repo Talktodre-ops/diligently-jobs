@@ -21,3 +21,26 @@
 .help { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
 .ok { color: var(--ink); font-weight: 600; }
 .stack { display: flex; flex-direction: column; gap: 10px; }
+.fine { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); text-align: center; }
+.codeForm { display: flex; flex-direction: column; gap: 8px; }
+.codeLabel { font-size: 14px; font-weight: 600; }
+.code {
+  height: 64px; width: 100%; border-radius: 16px; border: 1.5px solid var(--line-strong); background: var(--surface);
+  padding: 0 0 0 0.5em; font-size: 30px; font-weight: 600; letter-spacing: 0.5em; color: var(--ink); text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.code::placeholder { color: var(--line-strong); }
+.code:focus { outline: none; border-color: var(--persimmon); box-shadow: 0 0 0 3px var(--persimmon-tint); }
+.codeFull { border-color: var(--ink); }
+.codeInvalid { border-color: var(--danger); }
+.codeStatus { min-height: 20px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.codeError { color: var(--danger); font-weight: 500; }
+.verified { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.verifiedIcon { color: var(--persimmon-deep); flex: none; }
+.mailApps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mailApp {
+  min-height: 48px; border-radius: var(--radius-pill); border: 1.5px solid var(--line-strong); background: var(--surface);
+  color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+}
+.mailApp:hover { border-color: var(--ink); color: var(--ink); }
+.textLink:disabled { color: var(--ink-2); text-decoration: none; cursor: default; }

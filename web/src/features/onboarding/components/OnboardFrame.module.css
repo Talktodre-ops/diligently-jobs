@@ -1,16 +1,66 @@
-.progress { display: flex; flex-direction: column; gap: 6px; }
-.bars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-.bar { height: 4px; border-radius: 2px; background: var(--line); }
-.past { background: var(--ink); }
-.now { background: var(--persimmon); }
-.count { font-size: 13px; color: var(--ink-2); }
+.page { min-height: 100dvh; display: flex; flex-direction: column; background: var(--paper); color: var(--ink); }
 
-.list { list-style: none; margin: auto 0; padding: 0; display: flex; flex-direction: column; gap: 22px; }
-.item { display: flex; align-items: center; gap: 16px; font-family: var(--font-display); font-size: 26px; color: var(--on-dark-2); opacity: 0.6; }
-.itemNow { opacity: 1; color: var(--butter); }
-.itemPast { opacity: 0.85; }
-.num {
-  width: 40px; height: 40px; border-radius: 999px; border: 1.5px solid currentColor; display: inline-flex;
-  align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 15px; font-weight: 600; flex: none;
+/* Phone: back arrow beside the four bars, current step and time underneath. */
+.head {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'back steps' 'back meta';
+  column-gap: 4px; row-gap: 8px; align-items: center; padding: 16px 24px 0 12px;
 }
-.itemNow .num { background: var(--persimmon); border-color: var(--persimmon); color: var(--aubergine); }
+.back {
+  grid-area: back; width: var(--tap); height: var(--tap); display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink); border-radius: var(--radius-pill);
+}
+.back:hover { background: var(--paper-deep); color: var(--ink); }
+@media (max-width: 639px) { .head:not(:has(.back)) { padding-left: 24px; } }
+.brand { display: none; }
+.dot { color: var(--persimmon); }
+.steps {
+  grid-area: steps; list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;
+}
+.step { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--ink-2); }
+.bar { display: block; height: 4px; border-radius: 2px; background: var(--line); }
+.past .bar { background: var(--ink); }
+.now .bar { background: var(--persimmon); }
+.now { color: var(--ink); font-weight: 600; }
+.stepName {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+.meta { grid-area: meta; display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--ink-2); }
+
+.body { flex: 1; display: flex; flex-direction: column; }
+.formPane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.main { flex: 1; padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 20px; }
+.footer {
+  position: sticky; bottom: 0; z-index: 1; background: var(--paper); border-top: 1px solid var(--line);
+  padding: 12px 24px 28px; display: flex; flex-direction: column; gap: 6px;
+}
+.cvPane { display: none; }
+
+/* A phone in landscape or a small tablet: keep one column but stop it stretching. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .head, .main, .footer { padding-left: max(24px, calc((100% - 600px) / 2)); padding-right: max(24px, calc((100% - 600px) / 2)); }
+}
+
+@media (min-width: 1024px) {
+  .head {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 16px 40px;
+    padding: 22px clamp(20px, 3.5vw, 48px); border-bottom: 1px solid var(--line);
+  }
+  .back { display: none; }
+  .brand { display: block; font-family: var(--font-display); font-weight: 600; font-size: 24px; letter-spacing: -0.02em; }
+  .steps { flex: 1; min-width: 320px; gap: 8px; }
+  .stepName { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; white-space: normal; }
+  .nowName { display: none; }
+
+  .body { flex-direction: row; align-items: stretch; }
+  .formPane { flex: 1 1 440px; max-width: 580px; padding: clamp(28px, 4vw, 56px) clamp(20px, 3.5vw, 48px); gap: 22px; }
+  .main { flex: none; padding: 0; gap: 22px; }
+  .footer {
+    position: static; border-top: 0; padding: 0; background: none; align-items: flex-start;
+  }
+  .footer > :is(a, button):not([data-quiet]) { width: auto; min-width: 260px; }
+  .cvPane {
+    display: flex; flex: 999 1 560px; min-width: 0; justify-content: center; align-items: flex-start;
+    background: var(--paper-deep); padding: clamp(24px, 3.5vw, 56px);
+  }
+}

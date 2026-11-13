@@ -1,35 +1,66 @@
 .heading { display: flex; flex-direction: column; gap: 8px; }
 .title { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; margin: 0; }
-.lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
-.stack { display: flex; flex-direction: column; gap: 12px; }
+.lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); max-width: 46ch; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
 .drop {
-  border: 2px dashed var(--line-strong); border-radius: 20px; background: var(--surface); padding: 28px 20px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; color: var(--ink);
+  border: 2px dashed var(--line-strong); border-radius: 20px; background: var(--surface); padding: 24px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; color: var(--ink); text-align: center;
 }
-.drop:hover:not(:disabled), .dragging { border-color: var(--persimmon); background: var(--persimmon-tint); }
-.drop:disabled { opacity: 0.6; cursor: progress; }
+.drop:hover, .dragging { border-color: var(--persimmon); background: var(--persimmon-tint); color: var(--aubergine); }
 .dropIcon {
-  width: 56px; height: 56px; border-radius: 16px; background: var(--butter); color: var(--aubergine);
+  width: 52px; height: 52px; border-radius: 16px; background: var(--butter); color: var(--aubergine);
   display: inline-flex; align-items: center; justify-content: center;
 }
 .dropTitle { font-size: 16px; font-weight: 600; }
 .dropNote { font-size: 13px; color: var(--ink-2); }
+.dragging .dropNote, .drop:hover .dropNote { color: var(--aubergine-2); }
 .problem { margin: 0; font-size: 13px; color: var(--danger); font-weight: 500; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+
+.disclosure { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.discToggle {
+  width: 100%; min-height: 56px; border: 0; background: none; padding: 0 16px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; font-size: 15px; font-weight: 600; color: var(--ink); text-align: left;
+}
+.liMark {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--lilac-tint); display: inline-flex; align-items: center;
+  justify-content: center; font-size: 12px; font-weight: 700; flex: none;
+}
+.discLabel { flex: 1; }
+.chev { transition: transform 150ms; transform: rotate(90deg); flex: none; }
+.chevOpen { transition: transform 150ms; transform: rotate(-90deg); flex: none; }
+.liSteps { margin: 0; padding: 0 16px 16px 60px; font-size: 14px; line-height: 1.6; color: var(--ink-3); }
+
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.alt { border-radius: var(--radius-pill); padding: 0 12px; white-space: normal; text-align: center; line-height: 1.2; }
+.pasteBox textarea { min-height: 220px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .cardRow { display: flex; align-items: center; gap: 12px; }
 .cardText { flex: 1; min-width: 0; }
 .kind {
-  width: 44px; height: 44px; border-radius: 12px; background: var(--persimmon-tint); color: #8A2F10; display: inline-flex;
-  align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: none;
+  width: 44px; height: 44px; border-radius: 12px; background: var(--persimmon-tint); color: var(--persimmon-deep); display: inline-flex;
+  align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex: none;
 }
 .tick { width: 44px; height: 44px; border-radius: 12px; background: var(--aubergine); color: var(--butter); display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .fileName { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .fileNote { font-size: 13px; color: var(--ink-2); }
-.track { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
-.fill { height: 6px; background: var(--ink); border-radius: 999px; transition: width 600ms ease; }
-.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.counts div { background: var(--paper); border-radius: 12px; padding: 12px; text-align: center; display: flex; flex-direction: column; }
-.num { font-family: var(--font-display); font-size: 26px; font-weight: 600; }
-.unit { font-size: 12px; color: var(--ink-2); }
+.replace { color: var(--persimmon-text); padding: 0 8px; }
+.track { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.fill { height: 4px; background: var(--ink); border-radius: 999px; transition: width 900ms ease; }
+.found { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.found li { display: flex; gap: 12px; align-items: baseline; }
+.factLabel { flex: none; width: 82px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.factValue { font-size: 15px; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+.rise { animation: rise 260ms ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rise { animation: none; } .fill { transition: none; } }
 .flag { font-size: 13px; color: var(--persimmon-text); font-weight: 600; }
 .privacy { margin: 0; text-align: center; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+
+@media (min-width: 1024px) {
+  .title { font-size: 44px; line-height: 1.04; }
+  .lede { font-size: 16px; line-height: 1.55; }
+  .drop { padding: 36px 20px; }
+  .dropIcon { width: 56px; height: 56px; }
+  .privacy { text-align: left; }
+}

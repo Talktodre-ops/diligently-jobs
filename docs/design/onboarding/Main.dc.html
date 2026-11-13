@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Onboarding flow</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; padding: 56px 64px; display: flex; flex-direction: column; gap: 36px;">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 48px;">
+    <div style="display: flex; flex-direction: column; gap: 12px; max-width: 820px;">
+      <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #B5401C;">Onboarding, proposed</div>
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 52px; line-height: 1.02; letter-spacing: -0.02em;">Built around one moment: your own CV, tailored to a real job.</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.55; color: #5E4456;">A new person should see their CV rewritten for a job they want, with a match score, in about four minutes. Every step below either gets them there or makes that first result better.</p>
+    </div>
+    <div style="flex: none; background: #3B1C32; color: #F6E7A6; border-radius: 20px; padding: 20px 24px; width: 300px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #E9DCC0;">The number we watch</div>
+      <div style="font-family: Fraunces, Georgia, serif; font-size: 22px; line-height: 1.2;">Share of sign-ups who reach a tailored CV in their first session</div>
+    </div>
+  </header>
+
+  <section style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px;">
+    <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+      <article style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-height: 360px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="width: 34px; height: 34px; border-radius: 999px; background: #3B1C32; color: #F6E7A6; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">{{ s.n }}</span>
+          <span style="font-size: 12px; color: #6B4E62;">{{ s.time }}</span>
+        </div>
+        <h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 22px; line-height: 1.15;">{{ s.name }}</h2>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #3B1C32;">{{ s.ask }}</p>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #5E4456; flex: 1;">{{ s.why }}</p>
+        <span style="align-self: flex-start; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: {{ s.tagBg }}; color: #3B1C32;">{{ s.tag }}</span>
+      </article>
+    </sc-for>
+  </section>
+
+  <section style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;">
+    <div style="border-top: 2px solid #3B1C32; padding-top: 14px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-weight: 600; font-size: 15px;">Momentum over completeness</div>
+      <div style="font-size: 14px; line-height: 1.5; color: #5E4456;">Ask only what the first tailoring uses. Everything else is inferred from the CV or waits for Profile.</div>
+    </div>
+    <div style="border-top: 2px solid #3B1C32; padding-top: 14px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-weight: 600; font-size: 15px;">Show the work as it happens</div>
+      <div style="font-size: 14px; line-height: 1.5; color: #5E4456;">The CV appears line by line while it is read. Seeing their own roles come back is what earns trust in the rest.</div>
+    </div>
+    <div style="border-top: 2px solid #3B1C32; padding-top: 14px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-weight: 600; font-size: 15px;">Collect facts now, never invent them later</div>
+      <div style="font-size: 14px; line-height: 1.5; color: #5E4456;">We never add numbers a person did not give. Step 4 is the one moment to ask for them, so tailored CVs come out stronger.</div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const req = '#F6E7A6', opt = '#EFE7F0', inf = '#FBE3D8';
+    return {
+      steps: [
+        { n: 1, name: 'Account', time: '20 sec', ask: 'Continue with Google, or email and a password.', why: 'Google arrives already verified, so most people skip step 2 entirely.', tag: 'Required', tagBg: req },
+        { n: 2, name: 'Verify', time: '30 sec', ask: 'A 6-digit code typed right here. The email link still works too.', why: 'Keeps bots off the AI spend without sending people to their inbox and hoping they come back.', tag: 'Email sign-ups only', tagBg: inf },
+        { n: 3, name: 'Your CV', time: '40 sec', ask: 'Upload a PDF or DOCX, use a LinkedIn export, paste the text, or start blank.', why: 'What we read appears as we read it: name, then each role, then skills.', tag: 'Required', tagBg: req },
+        { n: 4, name: 'Check and strengthen', time: '1 min', ask: 'Fix what is broken first. Then, optionally, add numbers to bullets that have none.', why: 'Tailoring can only use facts it was given. This is where we get the good ones.', tag: 'Fixes required, rest optional', tagBg: opt },
+        { n: 5, name: 'What you want', time: '20 sec', ask: 'Roles (suggested from the CV), how you want to work, and where.', why: 'Shapes how we tailor. Paper size is inferred from your country. We ask nothing the product would not use.', tag: 'Two answers required', tagBg: opt },
+        { n: 6, name: 'First job', time: '30 sec', ask: 'Paste a job link or description and tailoring starts on the spot.', why: 'Onboarding ends inside the product, on a real result, not on an empty Home.', tag: 'Skippable', tagBg: inf }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
