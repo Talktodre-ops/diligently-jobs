@@ -1,0 +1,13 @@
+import { useCallback, useEffect, useState } from 'react'
+
+/** A seconds countdown that ticks once a second after start(n). */
+export function useCooldown() {
+  const [secs, setSecs] = useState(0)
+  useEffect(() => {
+    if (secs <= 0) return
+    const t = setTimeout(() => setSecs((v) => v - 1), 1000)
+    return () => clearTimeout(t)
+  }, [secs])
+  const start = useCallback((n: number) => setSecs(Math.max(0, Math.ceil(n))), [])
+  return { secs, start }
+}

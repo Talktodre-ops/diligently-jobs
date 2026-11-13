@@ -1,0 +1,10 @@
+.card {
+  background: color-mix(in srgb, var(--persimmon) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--persimmon) 35%, var(--surface));
+  border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; color: var(--ink);
+}
+.title { font-size: 15px; font-weight: 600; margin: 0; }
+.body { display: flex; flex-direction: column; gap: 12px; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.save { align-self: flex-start; }
+.plain { margin: 0; font-size: 14px; }
+@media (max-width: 380px) { .pair { grid-template-columns: minmax(0, 1fr); } }

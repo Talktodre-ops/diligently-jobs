@@ -1,0 +1,23 @@
+.heading { display: flex; flex-direction: column; gap: 6px; }
+.title { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; margin: 0; }
+.lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.lede strong { color: var(--ink); }
+.form { display: flex; flex-direction: column; gap: 20px; }
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.textLink {
+  border: 0; background: transparent; padding: 0; min-height: var(--tap); display: inline-flex; align-items: center;
+  color: var(--persimmon-text); font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: underline;
+}
+.textLink:hover { color: var(--ink); }
+.small { font-size: 13px; }
+.foot { margin: 0; text-align: center; font-size: 14px; color: var(--ink-2); }
+.foot a { font-weight: 600; }
+.mark {
+  width: 72px; height: 72px; border-radius: 20px; background: var(--butter); color: var(--aubergine);
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.markBig { width: 88px; height: 88px; border-radius: 24px; }
+.ping { position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; border-radius: 999px; background: var(--persimmon); border: 3px solid var(--paper); }
+.help { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.ok { color: var(--ink); font-weight: 600; }
+.stack { display: flex; flex-direction: column; gap: 10px; }

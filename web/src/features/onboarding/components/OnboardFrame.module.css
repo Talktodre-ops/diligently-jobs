@@ -1,0 +1,16 @@
+.progress { display: flex; flex-direction: column; gap: 6px; }
+.bars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.bar { height: 4px; border-radius: 2px; background: var(--line); }
+.past { background: var(--ink); }
+.now { background: var(--persimmon); }
+.count { font-size: 13px; color: var(--ink-2); }
+
+.list { list-style: none; margin: auto 0; padding: 0; display: flex; flex-direction: column; gap: 22px; }
+.item { display: flex; align-items: center; gap: 16px; font-family: var(--font-display); font-size: 26px; color: var(--on-dark-2); opacity: 0.6; }
+.itemNow { opacity: 1; color: var(--butter); }
+.itemPast { opacity: 0.85; }
+.num {
+  width: 40px; height: 40px; border-radius: 999px; border: 1.5px solid currentColor; display: inline-flex;
+  align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 15px; font-weight: 600; flex: none;
+}
+.itemNow .num { background: var(--persimmon); border-color: var(--persimmon); color: var(--aubergine); }

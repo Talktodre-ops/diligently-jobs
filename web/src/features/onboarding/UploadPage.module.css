@@ -1,0 +1,35 @@
+.heading { display: flex; flex-direction: column; gap: 8px; }
+.title { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; margin: 0; }
+.lede { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.drop {
+  border: 2px dashed var(--line-strong); border-radius: 20px; background: var(--surface); padding: 28px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; color: var(--ink);
+}
+.drop:hover:not(:disabled), .dragging { border-color: var(--persimmon); background: var(--persimmon-tint); }
+.drop:disabled { opacity: 0.6; cursor: progress; }
+.dropIcon {
+  width: 56px; height: 56px; border-radius: 16px; background: var(--butter); color: var(--aubergine);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dropTitle { font-size: 16px; font-weight: 600; }
+.dropNote { font-size: 13px; color: var(--ink-2); }
+.problem { margin: 0; font-size: 13px; color: var(--danger); font-weight: 500; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.cardRow { display: flex; align-items: center; gap: 12px; }
+.cardText { flex: 1; min-width: 0; }
+.kind {
+  width: 44px; height: 44px; border-radius: 12px; background: var(--persimmon-tint); color: #8A2F10; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: none;
+}
+.tick { width: 44px; height: 44px; border-radius: 12px; background: var(--aubergine); color: var(--butter); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.fileName { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.fileNote { font-size: 13px; color: var(--ink-2); }
+.track { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.fill { height: 6px; background: var(--ink); border-radius: 999px; transition: width 600ms ease; }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.counts div { background: var(--paper); border-radius: 12px; padding: 12px; text-align: center; display: flex; flex-direction: column; }
+.num { font-family: var(--font-display); font-size: 26px; font-weight: 600; }
+.unit { font-size: 12px; color: var(--ink-2); }
+.flag { font-size: 13px; color: var(--persimmon-text); font-weight: 600; }
+.privacy { margin: 0; text-align: center; font-size: 13px; color: var(--ink-2); line-height: 1.5; }

@@ -1,9 +1,77 @@
-// Placeholder until this screen is built from the design canvas.
+import { useState, type FormEvent } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
+import { useResetSession } from '../../auth/session'
+import { Button } from '../../ui/Button'
+import { Notice } from '../../ui/Notice'
+import { TextField } from '../../ui/TextField'
+import { authApi } from './api'
+import { AuthShell } from './components/AuthShell'
+import { PasswordField } from './components/PasswordField'
+import { toFormError } from './errors'
+import s from './auth.module.css'
+
+/** Where to go after signing in: the page the gates bounced the visitor from, else home. */
+function destination(state: unknown): string {
+  const from = (state as { from?: unknown } | null)?.from
+  return typeof from === 'string' && from.startsWith('/') && !from.startsWith('//') ? from : '/'
+}
+
 export default function SignInPage() {
+  const navigate = useNavigate()
+  const { state } = useLocation()
+  const resetSession = useResetSession()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!email.trim() || !password) {
+      setError('Enter your email and password.')
+      return
+    }
+    setError(null)
+    setBusy(true)
+    try {
+      const user = await authApi.signIn({ email: email.trim(), password })
+      await resetSession(user)
+      navigate(destination(state), { replace: true })
+    } catch (err) {
+      setError(toFormError(err).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div style={{ padding: 20 }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 400 }}>Sign in</h1>
-      <p>Not built yet.</p>
-    </div>
+    <AuthShell back="/welcome" backState={state}>
+      <div className={s.heading}>
+        <h1 className={s.title}>Welcome back</h1>
+        <p className={s.lede}>Pick up where you left off.</p>
+      </div>
+      <form className={s.form} onSubmit={submit} noValidate>
+        {error && <Notice tone="error">{error}</Notice>}
+        <TextField
+          label="Email"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <PasswordField
+          label="Password"
+          autoComplete="current-password"
+          value={password}
+          onChange={setPassword}
+          labelEnd={<Link to="/forgot-password" className={`${s.textLink} ${s.small}`}>Forgot password?</Link>}
+        />
+        <Button type="submit" busy={busy} block>Sign in</Button>
+      </form>
+      <p className={s.foot}>
+        New here? <Link to="/signup" state={state}>Create an account</Link>
+      </p>
+    </AuthShell>
   )
 }

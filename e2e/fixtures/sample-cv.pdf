@@ -1,0 +1,56 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Length 1671 >>
+stream
+BT /F2 20 Tf 56 790 Td (Mara Quill) Tj ET
+BT /F1 10.5 Tf 56 762 Td (Senior Backend Engineer) Tj ET
+BT /F1 10.5 Tf 56 745 Td (mara.quill@example.com | +44 20 7946 0000 | linkedin.com/in/maraquill | London) Tj ET
+BT /F2 12 Tf 56 711 Td (SUMMARY) Tj ET
+BT /F1 10.5 Tf 56 694 Td (Backend engineer with seven years building payment and ledger systems in Go and Rust.) Tj ET
+BT /F2 12 Tf 56 660 Td (EXPERIENCE) Tj ET
+BT /F2 11 Tf 56 643 Td (Senior Backend Engineer, Larkspur Payments, London \(2021 - Present\)) Tj ET
+BT /F1 10.5 Tf 56 626 Td (- Cut ledger reconciliation time by 60% by moving batch jobs to Kafka consumers in Go) Tj ET
+BT /F1 10.5 Tf 56 609 Td (- Designed the Postgres partitioning scheme for 400M payment rows) Tj ET
+BT /F1 10.5 Tf 56 592 Td (- Led a four person on-call rotation and wrote the incident runbooks) Tj ET
+BT /F2 11 Tf 56 575 Td (Backend Engineer, Quarry Labs, Leeds \(2018 - 2021\)) Tj ET
+BT /F1 10.5 Tf 56 558 Td (- Built the billing API in Rust used by 30 merchant integrations) Tj ET
+BT /F1 10.5 Tf 56 541 Td (- Ran Terraform for three AWS accounts) Tj ET
+BT /F2 11 Tf 56 524 Td (Software Engineer, Kestrel Systems, Leeds) Tj ET
+BT /F1 10.5 Tf 56 507 Td (- Shipped internal REST APIs for the logistics team) Tj ET
+BT /F1 10.5 Tf 56 490 Td (- Moved nightly reports from cron scripts to a queue based worker) Tj ET
+BT /F2 12 Tf 56 456 Td (EDUCATION) Tj ET
+BT /F1 10.5 Tf 56 439 Td (University of Leeds, B.Sc. Computer Science, 2014 - 2018) Tj ET
+BT /F2 12 Tf 56 405 Td (SKILLS) Tj ET
+BT /F1 10.5 Tf 56 388 Td (Languages: Go, Rust, SQL, Python) Tj ET
+BT /F1 10.5 Tf 56 371 Td (Infrastructure: Postgres, Kafka, Kubernetes, Terraform, AWS) Tj ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000000348 00000 n 
+0000000450 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2172
+%%EOF
