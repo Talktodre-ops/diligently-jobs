@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
 import { Icon, type IconName } from '../ui/Icon'
+import { ThemeSync } from './ThemeSync'
 import { UsageCard } from './UsageCard'
 import s from './AppShell.module.css'
 
@@ -18,6 +19,7 @@ const sections: { to: string; label: string; icon: IconName; end?: boolean }[] =
 export function AppShell({ tabs }: { tabs: boolean }) {
   return (
     <div className={[s.shell, tabs && s.withTabs].filter(Boolean).join(' ')}>
+      <ThemeSync />
       <nav className={s.sidebar} aria-label="Main">
         <NavLink to="/" className={s.brand}>diligently<span>.</span></NavLink>
         {sections.map((x) => (

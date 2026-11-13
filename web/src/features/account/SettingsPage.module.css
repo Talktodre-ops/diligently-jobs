@@ -1,0 +1,50 @@
+.main { display: flex; flex-direction: column; gap: 22px; padding: 8px 20px 40px; width: 100%; max-width: 720px; margin: 0 auto; }
+.section { display: flex; flex-direction: column; gap: 10px; }
+.h { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.rowBetween { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 15px; }
+.plan { font-family: var(--font-display); font-size: 22px; font-weight: 600; text-transform: capitalize; }
+.muted { color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
+.err { color: var(--danger); font-size: 14px; margin: 0; }
+.body { margin: 0; font-size: 15px; color: var(--ink-2); }
+.label { font-size: 14px; font-weight: 600; }
+.track { height: 8px; border-radius: 99px; background: var(--paper-deep); overflow: hidden; }
+.fill { height: 100%; background: var(--persimmon); border-radius: 99px; }
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: var(--radius-pill); background: var(--paper-deep); }
+.segBtn { flex: 1; min-height: 40px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-2); font-weight: 600; font-size: 14px; cursor: pointer; }
+.segBtn[aria-checked='true'] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(59, 28, 50, 0.15); }
+.toggleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--tap); }
+.toggleRow + .toggleRow { border-top: 1px solid var(--line); padding-top: 12px; }
+.toggleText { display: flex; flex-direction: column; min-width: 0; }
+.toggleLabel { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.switch { position: relative; flex: none; width: 52px; height: 32px; border-radius: 99px; border: 0; background: var(--line-strong); cursor: pointer; transition: background-color 120ms; }
+.switch[aria-checked='true'] { background: var(--aubergine); }
+/* In dark mode the surface is aubergine too, so the on state needs its own colour. */
+:global(:root[data-theme='dark']) .switch[aria-checked='true'] { background: var(--persimmon-deep); }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .switch[aria-checked='true'] { background: var(--persimmon-deep); }
+}
+.knob { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; transition: transform 120ms; }
+.switch[aria-checked='true'] .knob { transform: translateX(20px); }
+.linkRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--tap); width: 100%; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font-size: 15px; font-weight: 600; }
+.linkRow + .linkRow { border-top: 1px solid var(--line); padding-top: 12px; }
+.linkRow:disabled { opacity: 0.6; cursor: wait; }
+.sessions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.session { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.session + .session { border-top: 1px solid var(--line); padding-top: 12px; }
+.sessionText { min-width: 0; }
+.badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--butter); color: var(--aubergine); }
+.deleteBtn { color: var(--danger); }
+.deleteBtn:hover:not(:disabled) { color: var(--danger); }
+/* The light-mode red is too dark on the aubergine ground. */
+:global(:root[data-theme='dark']) .deleteBtn, :global(:root[data-theme='dark']) .deleteBtn:hover:not(:disabled) { color: #F4A3AB; }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .deleteBtn, :global(:root:not([data-theme='light'])) .deleteBtn:hover:not(:disabled) { color: #F4A3AB; }
+}
+.dialogForm { display: flex; flex-direction: column; gap: 14px; }
+.dialogActions { display: flex; flex-direction: column; gap: 8px; }
+.danger { background: var(--danger); }
+.danger:hover:not(:disabled) { background: #7E1722; }
+@media (min-width: 1024px) {
+  .main { padding-top: 16px; }
+}

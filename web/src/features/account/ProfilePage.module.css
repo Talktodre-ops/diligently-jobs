@@ -1,0 +1,42 @@
+.page { padding: 0 20px 32px; width: 100%; max-width: 1100px; margin: 0 auto; }
+.head { display: flex; align-items: center; justify-content: space-between; padding: 20px 0 12px; }
+.head h1 { font-family: var(--font-display); font-weight: 400; font-size: 32px; letter-spacing: -0.02em; }
+.gear { width: var(--tap); height: var(--tap); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); color: var(--ink); }
+.gear:hover { background: var(--paper-deep); color: var(--ink); }
+.grid { display: flex; flex-direction: column; gap: 16px; }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.cardHead { display: flex; align-items: center; justify-content: space-between; }
+.cardTitle { font-size: 17px; font-weight: 600; }
+.identity { display: flex; align-items: center; gap: 14px; }
+.avatar { width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--butter); color: var(--aubergine); display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; }
+.idText { flex: 1; min-width: 0; }
+.name { font-family: var(--font-display); font-size: 22px; font-weight: 600; overflow-wrap: anywhere; }
+.muted { color: var(--ink-2); font-size: 14px; margin: 0; }
+.small { color: var(--ink-2); font-size: 13px; margin: 6px 0 0; }
+.cvText { min-width: 0; }
+.cvActions { display: flex; gap: 8px; }
+.cvStatus { font-size: 13px; color: var(--ink-2); min-height: 0; }
+.cvStatus:empty { display: none; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.actions { display: flex; gap: 8px; }
+.fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fieldset legend { font-size: 14px; font-weight: 600; padding: 0; margin-bottom: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 6px 12px; border-radius: var(--radius-pill); background: var(--lilac-tint); color: var(--ink); font-size: 14px; font-weight: 500; }
+.chipLabel { position: relative; display: inline-flex; min-height: var(--tap); }
+.chipLabel input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.chipLabel span { display: inline-flex; align-items: center; padding: 0 16px; border-radius: var(--radius-pill); border: 1.5px solid var(--line-strong); background: var(--surface); font-size: 14px; font-weight: 600; }
+.chipLabel input:checked + span { background: var(--aubergine); border-color: var(--aubergine); color: var(--butter); }
+.chipLabel input:focus-visible + span { outline: 2px solid var(--persimmon); outline-offset: 2px; }
+.acc + .acc { border-top: 1px solid var(--line); }
+.accBtn { width: 100%; min-height: var(--tap); display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 4px 0; cursor: pointer; text-align: left; }
+.accLabel { flex: 1; font-weight: 600; font-size: 15px; }
+.rot { transition: transform 120ms; }
+.rotOpen { transform: rotate(90deg); transition: transform 120ms; }
+.accList { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--ink-2); }
+@media (min-width: 1024px) {
+  .page { padding: 0 40px 48px; }
+  .head { padding-top: 32px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; align-items: start; }
+}
