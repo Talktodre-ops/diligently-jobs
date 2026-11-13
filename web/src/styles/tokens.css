@@ -23,6 +23,7 @@
   --on-dark-2: #E9DCC0;
   --lilac-tint: #EFE7F0;
   --doc-ink: #1A1A1A;
+  --doc-paper: #FFFFFF; /* the printed page: white in both themes */
   --danger: #9F1D2B;
 
   --font-display: 'Fraunces', Georgia, serif;

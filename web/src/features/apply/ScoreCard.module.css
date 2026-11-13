@@ -1,0 +1,16 @@
+/* Always Aubergine with Butter text, in both themes. */
+.card { background: var(--aubergine); color: var(--butter); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.status { font-size: 13px; font-weight: 500; color: var(--on-dark-2); }
+.numbers { display: flex; align-items: flex-end; gap: 14px; }
+.col { display: flex; flex-direction: column; gap: 2px; }
+.small { font-size: 12px; color: var(--on-dark-2); }
+.before { font-family: var(--font-display); font-size: 34px; line-height: 1; color: var(--on-dark-2); }
+.arrow { color: var(--persimmon); margin-bottom: 6px; flex: none; }
+.now { font-family: var(--font-display); font-size: 64px; font-weight: 600; line-height: 0.9; }
+.band { margin: 0 0 4px auto; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--persimmon); color: var(--aubergine); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.track { height: 6px; border-radius: var(--radius-pill); background: var(--aubergine-2); overflow: hidden; }
+.fill { height: 6px; border-radius: var(--radius-pill); background: var(--butter); transition: width 300ms; }
+.unscored { margin: 0; font-size: 15px; }
+.compact .before { font-size: 30px; }
+.compact .now { font-size: 56px; }
+@media (prefers-reduced-motion: reduce) { .fill { transition: none; } }

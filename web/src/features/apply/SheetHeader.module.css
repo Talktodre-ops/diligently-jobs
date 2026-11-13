@@ -1,0 +1,8 @@
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 4px 20px; min-height: 64px; }
+.title { font-size: 16px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.close {
+  width: var(--tap); height: var(--tap); flex: none; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-pill); color: var(--ink);
+}
+.close:hover { background: var(--paper-deep); color: var(--ink); }
+@media (min-width: 1024px) { .bar { padding: 24px 32px 4px 40px; } }

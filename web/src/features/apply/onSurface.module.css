@@ -1,0 +1,8 @@
+/* A dark Button on a surface card: in dark mode the surface is Aubergine too,
+   so the button turns Butter to stay visible. Butter cards keep the default. */
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .solid { background: var(--butter); color: var(--aubergine); }
+  :global(:root:not([data-theme='light'])) .solid:hover:not(:disabled) { background: var(--butter-soft); color: var(--aubergine); }
+}
+:global(:root[data-theme='dark']) .solid { background: var(--butter); color: var(--aubergine); }
+:global(:root[data-theme='dark']) .solid:hover:not(:disabled) { background: var(--butter-soft); color: var(--aubergine); }

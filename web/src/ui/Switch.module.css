@@ -1,0 +1,10 @@
+.track {
+  width: 52px; height: 32px; flex: none; border: 0; border-radius: var(--radius-pill); padding: 0; position: relative; cursor: pointer;
+  background: var(--line-strong); transition: background-color 150ms;
+}
+.track[aria-checked='true'] { background: var(--ink); }
+.knob { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: var(--radius-pill); background: var(--surface); transition: left 150ms; }
+.track[aria-checked='true'] .knob { left: 24px; }
+/* The track needs a 44px target; the visual stays 32px tall. */
+.track::before { content: ''; position: absolute; inset: -6px -2px; }
+@media (prefers-reduced-motion: reduce) { .track, .knob { transition: none; } }
