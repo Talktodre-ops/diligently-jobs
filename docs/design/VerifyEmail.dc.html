@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check your email</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="padding: 12px 12px 0;">
+    <a href="SignUp.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+  </header>
+
+  <main style="flex: 1; padding: 24px 24px 32px; display: flex; flex-direction: column; gap: 22px;">
+    <div aria-hidden="true" style="width: 88px; height: 88px; border-radius: 24px; background: #F6E7A6; display: flex; align-items: center; justify-content: center; position: relative;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+      <span style="position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; border-radius: 999px; background: #E8603C; border: 3px solid #FCF8EC;"></span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em;">Check your email</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5E4456;">We sent a link to <strong style="color: #3B1C32;">ada@example.com</strong>. Tap it on this phone and you will land straight in your account.</p>
+    </div>
+
+    <a href="#" style="height: 54px; border-radius: 999px; background: #3B1C32; color: #F6E7A6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Open email app</a>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: #6B4E62; line-height: 1.5;">
+      <div>Nothing yet? Check spam, or
+        <sc-if value="{{ canResend }}" hint-placeholder-val="{{ false }}">
+          <button type="button" onClick="{{ resend }}" style="border: 0; background: transparent; padding: 0; color: #B5401C; font: 600 14px Inter, sans-serif; cursor: pointer; text-decoration: underline;">send it again</button>.
+        </sc-if>
+        <sc-if value="{{ waiting }}" hint-placeholder-val="{{ true }}">
+          <span>send it again in {{ secs }}s.</span>
+        </sc-if>
+      </div>
+      <sc-if value="{{ resent }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="color: #3B1C32; font-weight: 600;">Sent a fresh link.</div>
+      </sc-if>
+      <div>Wrong address? <a href="SignUp.dc.html" style="font-weight: 600;">Change it</a></div>
+    </div>
+
+    <div style="margin-top: auto; padding: 14px 16px; border-radius: 14px; border: 1px dashed #D9CCAE; font-size: 13px; color: #6B4E62; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <span>Prototype only: pretend you tapped the link.</span>
+      <a href="OnboardUpload.dc.html" style="font-weight: 600; white-space: nowrap;">Continue</a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentDidMount() {
+    this.setState({ secs: 30 });
+    this.timer = setInterval(() => {
+      const s = (this.state && this.state.secs) || 0;
+      if (s > 0) this.setState({ secs: s - 1 });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    const s = this.state || {};
+    const secs = s.secs == null ? 30 : s.secs;
+    return {
+      secs: secs,
+      waiting: secs > 0,
+      canResend: secs <= 0,
+      resent: !!s.resent,
+      resend: () => this.setState({ secs: 30, resent: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

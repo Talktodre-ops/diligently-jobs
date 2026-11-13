@@ -1,0 +1,17 @@
+# Point the dev API at the hosted database and bucket configured in
+# backend/.env (Neon and R2) instead of the local db and s3 services.
+# Your real data: use deliberately.
+#
+#   docker compose -f compose.yaml -f compose.neon.yaml up -d api
+#
+# Switch back with plain `docker compose up -d api`.
+
+services:
+  api:
+    environment: !override
+      BIND_ADDR: 0.0.0.0:8787
+      TECTONIC_BIN: tectonic
+      APP_BASE_URL: http://localhost:${WEB_PORT:-5190}
+      ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-5190}
+      COOKIE_SECURE: "false"
+      RUST_LOG: diligently_api=debug,tower_http=info,sqlx=warn

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Documents</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="padding: 20px 20px 12px;">
+    <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 30px; letter-spacing: -0.015em;">Documents</h1>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 0 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+    <a href="Profile.dc.html" style="text-decoration: none; color: #F6E7A6; background: #3B1C32; border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px;">
+      <div aria-hidden="true" style="width: 48px; height: 60px; border-radius: 6px; background: #FFFFFF; padding: 8px 7px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; flex: none;">
+        <span style="height: 4px; width: 60%; background: #3B1C32; border-radius: 1px; align-self: center;"></span>
+        <span style="height: 2px; background: #D5CFD2;"></span><span style="height: 2px; background: #D5CFD2;"></span><span style="height: 2px; width: 70%; background: #D5CFD2;"></span><span style="height: 2px; background: #D5CFD2;"></span>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #E8603C;">Master CV</div>
+        <div style="font-size: 16px; font-weight: 600;">Ada Okafor</div>
+        <div style="font-size: 13px; color: #E9DCC0;">Updated 2 days ago · the source for every tailored CV</div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+    </a>
+
+    <div role="tablist" aria-label="Filter documents" style="display: flex; gap: 8px;">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-selected="{{ f.on }}" onClick="{{ f.pick }}" style="height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid {{ f.border }}; background: {{ f.bg }}; color: {{ f.fg }}; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ f.label }}</button>
+      </sc-for>
+    </div>
+
+    <ul style="list-style: none; margin: 0; padding: 0; background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px;">
+      <sc-for list="{{ docs }}" as="d" hint-placeholder-count="4">
+        <li style="display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 14px; border-bottom: 1px solid {{ d.line }};">
+          <span style="width: 40px; height: 40px; border-radius: 10px; background: {{ d.iconBg }}; display: inline-flex; align-items: center; justify-content: center; flex: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+          </span>
+          <a href="{{ d.href }}" style="flex: 1; min-width: 0; text-decoration: none; color: #3B1C32;">
+            <span style="display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ d.title }}</span>
+            <span style="display: block; font-size: 13px; color: #6B4E62;">{{ d.meta }}</span>
+          </a>
+          <button type="button" aria-label="Share {{ d.title }}" style="width: 44px; height: 44px; border: 0; background: transparent; color: #3B1C32; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"></path><path d="M16 6l-4-4-4 4M12 2v13"></path></svg>
+          </button>
+        </li>
+      </sc-for>
+    </ul>
+  </main>
+
+  <dc-import name="TabBar" active="documents" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const f = (this.state && this.state.f) || 'All';
+    const all = [
+      { kind: 'CV', title: 'CV · Halcyon Health', meta: 'Senior Backend Engineer · match 86 · PDF, DOCX', href: 'CvPreview.dc.html' },
+      { kind: 'Letter', title: 'Letter · Halcyon Health', meta: 'Direct tone · 248 words', href: 'CoverLetter.dc.html' },
+      { kind: 'CV', title: 'CV · Northfold', meta: 'Staff Engineer, Payments · match 81 · PDF', href: 'CvPreview.dc.html' },
+      { kind: 'CV', title: 'CV · Quarry Labs', meta: 'Backend Engineer, Data · match 74 · PDF', href: 'CvPreview.dc.html' },
+      { kind: 'Letter', title: 'Letter · Quarry Labs', meta: 'Warm tone · 231 words', href: 'CoverLetter.dc.html' },
+      { kind: 'CV', title: 'CV · Fernbank', meta: 'Rust Engineer · match 79 · PDF', href: 'CvPreview.dc.html' }
+    ];
+    const map = { All: null, CVs: 'CV', Letters: 'Letter' };
+    const shown = all.filter((d) => !map[f] || d.kind === map[f]);
+    return {
+      filters: ['All', 'CVs', 'Letters'].map((l) => ({ label: l, on: f === l, pick: () => this.setState({ f: l }), bg: f === l ? '#3B1C32' : '#FFFFFF', fg: f === l ? '#F6E7A6' : '#3B1C32', border: f === l ? '#3B1C32' : '#EADFC2' })),
+      docs: shown.map((d, i) => Object.assign({}, d, { line: i === shown.length - 1 ? 'transparent' : '#EADFC2', iconBg: d.kind === 'CV' ? '#F6E7A6' : '#EFE7F0' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

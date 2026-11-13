@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check what we found</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline: 2px solid #E8603C; outline-offset: 1px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 12px 12px 0 12px; display: flex; align-items: center; gap: 8px;">
+    <a href="OnboardUpload.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding-right: 12px;">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;">
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+      </div>
+      <div style="font-size: 13px; color: #6B4E62;">Step 2 of 3</div>
+    </div>
+  </div>
+
+  <main style="flex: 1; overflow-y: auto; padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 4px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: -0.02em;">Check what we found</h1>
+      <p style="margin: 0; font-size: 15px; color: #5E4456;">Tap a section to look closer. Fix anything we got wrong.</p>
+    </div>
+
+    <sc-if value="{{ needsFix }}" hint-placeholder-val="{{ true }}">
+      <section aria-label="Needs your input" style="background: #FBE3D8; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 15px; font-weight: 600;">We could not read the dates for Kestrel</div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;"><label for="k-start" style="font-size: 12px; font-weight: 600;">Started</label><input id="k-start" type="text" placeholder="Jan 2016" style="height: 48px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 10px; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;"><label for="k-end" style="font-size: 12px; font-weight: 600;">Ended</label><input id="k-end" type="text" placeholder="Jun 2018" style="height: 48px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 10px; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;"></div>
+        </div>
+        <button type="button" onClick="{{ fix }}" style="align-self: flex-start; height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 14px Inter, sans-serif; cursor: pointer;">Save dates</button>
+      </section>
+    </sc-if>
+    <sc-if value="{{ fixed }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #F6E7A6; font-size: 14px; font-weight: 600;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+        Dates saved. Everything checks out.
+      </div>
+    </sc-if>
+
+    <section style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; overflow: hidden;">
+      <button type="button" onClick="{{ tContact }}" aria-expanded="{{ oContact }}" style="width: 100%; min-height: 56px; border: 0; background: transparent; padding: 0 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; font-family: Inter, sans-serif; color: #3B1C32; text-align: left;">
+        <span style="flex: 1; font-size: 15px; font-weight: 600;">Contact</span><span style="font-size: 13px; color: #6B4E62;">4 items</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{ rContact }}; transition: transform 150ms;"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ oContact }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px;">
+          <div><strong>Ada Okafor</strong> · Senior Backend Engineer</div>
+          <div style="color: #6B4E62;">ada@example.com · linkedin.com/in/ada · github.com/ada</div>
+        </div>
+      </sc-if>
+    </section>
+
+    <section style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; overflow: hidden;">
+      <button type="button" onClick="{{ tExp }}" aria-expanded="{{ oExp }}" style="width: 100%; min-height: 56px; border: 0; background: transparent; padding: 0 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; font-family: Inter, sans-serif; color: #3B1C32; text-align: left;">
+        <span style="flex: 1; font-size: 15px; font-weight: 600;">Experience</span><span style="font-size: 13px; color: #6B4E62;">3 roles</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{ rExp }}; transition: transform 150ms;"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ oExp }}" hint-placeholder-val="{{ true }}">
+        <div style="padding: 0 16px 8px; display: flex; flex-direction: column;">
+          <div style="padding: 10px 0; border-top: 1px solid #EADFC2;"><div style="font-size: 14px; font-weight: 600;">Northfold · Senior Backend Engineer</div><div style="font-size: 13px; color: #6B4E62;">2021 to present · 6 bullets</div></div>
+          <div style="padding: 10px 0; border-top: 1px solid #EADFC2;"><div style="font-size: 14px; font-weight: 600;">Quarry Labs · Backend Engineer</div><div style="font-size: 13px; color: #6B4E62;">2018 to 2021 · 5 bullets</div></div>
+          <div style="padding: 10px 0; border-top: 1px solid #EADFC2;"><div style="font-size: 14px; font-weight: 600;">Kestrel · Software Engineer</div><div style="font-size: 13px; color: {{ kColor }};">{{ kDates }} · 3 bullets</div></div>
+        </div>
+      </sc-if>
+    </section>
+
+    <section style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; overflow: hidden;">
+      <button type="button" onClick="{{ tEdu }}" aria-expanded="{{ oEdu }}" style="width: 100%; min-height: 56px; border: 0; background: transparent; padding: 0 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; font-family: Inter, sans-serif; color: #3B1C32; text-align: left;">
+        <span style="flex: 1; font-size: 15px; font-weight: 600;">Education</span><span style="font-size: 13px; color: #6B4E62;">1 degree</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{ rEdu }}; transition: transform 150ms;"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ oEdu }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 0 16px 16px; font-size: 14px;"><strong>University of Lagos</strong><div style="color: #6B4E62;">B.Sc. Computer Science · 2014 to 2018</div></div>
+      </sc-if>
+    </section>
+
+    <section style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; overflow: hidden;">
+      <button type="button" onClick="{{ tSkills }}" aria-expanded="{{ oSkills }}" style="width: 100%; min-height: 56px; border: 0; background: transparent; padding: 0 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; font-family: Inter, sans-serif; color: #3B1C32; text-align: left;">
+        <span style="flex: 1; font-size: 15px; font-weight: 600;">Skills</span><span style="font-size: 13px; color: #6B4E62;">18 skills</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{ rSkills }}; transition: transform 150ms;"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ oSkills }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 0 16px 16px; display: flex; flex-wrap: wrap; gap: 6px;">
+          <sc-for list="{{ skills }}" as="sk" hint-placeholder-count="8">
+            <span style="padding: 6px 10px; border-radius: 999px; background: #FCF8EC; border: 1px solid #EADFC2; font-size: 13px;">{{ sk }}</span>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
+  </main>
+
+  <footer style="padding: 12px 24px 32px; border-top: 1px solid #EADFC2;">
+    <a href="OnboardTargets.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Looks right</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const open = s.open || { exp: true };
+    const t = (k) => () => this.setState({ open: Object.assign({}, open, { [k]: !open[k] }) });
+    const r = (k) => open[k] ? 'rotate(180deg)' : 'rotate(0deg)';
+    return {
+      needsFix: !s.fixed, fixed: !!s.fixed,
+      fix: () => this.setState({ fixed: true }),
+      kDates: s.fixed ? '2016 to 2018' : 'Dates missing',
+      kColor: s.fixed ? '#6B4E62' : '#B5401C',
+      oContact: !!open.contact, oExp: !!open.exp, oEdu: !!open.edu, oSkills: !!open.skills,
+      tContact: t('contact'), tExp: t('exp'), tEdu: t('edu'), tSkills: t('skills'),
+      rContact: r('contact'), rExp: r('exp'), rEdu: r('edu'), rSkills: r('skills'),
+      skills: ['Go', 'Rust', 'Python', 'SQL', 'Postgres', 'Kafka', 'Redis', 'Kubernetes', 'Terraform', 'gRPC', 'Observability', 'Incident response']
+    };
+  }
+}
+</script>
+</body>
+</html>

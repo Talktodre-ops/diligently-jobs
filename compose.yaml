@@ -1,20 +1,58 @@
-# Local development stack. Each app runs in its own container with its source
-# bind-mounted, so saving a file rebuilds and restarts that app in place.
+# Local development stack for the whole repository. Every app runs in its own
+# container with its source bind-mounted, so saving a file reloads that app in
+# place: the API rebuilds through cargo-watch, the web app hot-reloads through
+# Vite. Nothing here needs a rebuild for a code change.
 #
-#   docker compose up -d          start in the background
-#   docker compose logs -f api    follow the API (first build takes a few minutes)
-#   docker compose down           stop
+#   docker compose up -d                  start db, s3, api, web
+#   docker compose logs -f api web        follow them (the API's first build takes minutes)
+#   docker compose run --rm e2e           browser tests in Microsoft Edge
+#   docker compose down                   stop (data stays in named volumes)
 #
-# Rebuild an image (docker compose build api) only after changing its
-# Dockerfile. Ports bind to 127.0.0.1 only; change them with API_PORT and
-# WEB_PORT in your shell or in a root .env file.
+# Rebuild an image only after changing its Dockerfile:
+#   docker compose build api              (or e2e)
 #
-# The web app joins as a `web` service next to `api` and is served on WEB_PORT,
-# which is why APP_BASE_URL and ALLOWED_ORIGINS already point there.
+# By default the API uses the local Postgres and S3 below, never Neon or R2.
+# To point it at the hosted database and bucket from backend/.env instead:
+#   docker compose -f compose.yaml -f compose.neon.yaml up -d api
+#
+# Ports bind to 127.0.0.1 only and avoid the other projects on this machine.
+# Override with DB_PORT, S3_PORT, API_PORT, WEB_PORT in your shell or a root
+# .env file. Dependencies: Cargo crates and build output live in named
+# volumes; web/node_modules is on the host (shared with your editor), installed
+# by the web container on start.
 
 name: diligently
 
+x-host-user: &host-user "${UID:-1000}:${GID:-1000}"
+
 services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: diligently
+      POSTGRES_PASSWORD: diligently
+      POSTGRES_DB: diligently
+    ports:
+      - "127.0.0.1:${DB_PORT:-5439}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "diligently", "-d", "diligently"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  s3:
+    # S3-compatible stand-in for R2. MinIO's images are no longer published.
+    image: chrislusf/seaweedfs:latest
+    command: ["server", "-dir=/data", "-s3", "-master.volumeSizeLimitMB=64"]
+    ports:
+      - "127.0.0.1:${S3_PORT:-8339}:8333"
+    volumes:
+      - s3-data:/data
+    restart: unless-stopped
+
   api:
     build:
       context: backend
@@ -24,16 +62,39 @@ services:
         GID: ${GID:-1000}
     image: diligently-api:dev
     init: true
+    depends_on:
+      db:
+        condition: service_healthy
+      s3:
+        condition: service_started
     env_file:
       - path: backend/.env
         required: true
-    environment:
+    environment: &api-env
       BIND_ADDR: 0.0.0.0:8787
       TECTONIC_BIN: tectonic
+      DATABASE_URL: postgres://diligently:diligently@db:5432/diligently
+      R2_ENDPOINT: http://s3:8333
+      # Download links must open in your browser, which reaches the bucket here.
+      R2_PUBLIC_ENDPOINT: http://localhost:${S3_PORT:-8339}
+      R2_REGION: us-east-1
+      R2_BUCKET: diligently-dev
+      R2_ACCESS_KEY_ID: dev
+      R2_SECRET_ACCESS_KEY: dev
       APP_BASE_URL: http://localhost:${WEB_PORT:-5190}
       ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-5190}
       COOKIE_SECURE: "false"
+      # Emails land in backend/.outbox as JSON so browser tests can open links.
+      MAIL_OUTBOX_DIR: /app/.outbox
       RUST_LOG: diligently_api=debug,tower_http=info,sqlx=warn
+    # Create the bucket (idempotent), then hand PID 1 to cargo-watch.
+    command:
+      - sh
+      - -c
+      - >-
+        curl -fsS -o /dev/null -X PUT "$${R2_ENDPOINT}/$${R2_BUCKET}" 2>/dev/null || true;
+        exec cargo watch -q -w src -w migrations -w templates -w build.rs -w Cargo.toml -w Cargo.lock
+        -x 'run --bin diligently-api'
     ports:
       - "127.0.0.1:${API_PORT:-8790}:8787"
     volumes:
@@ -50,7 +111,53 @@ services:
       start_period: 10m
     restart: unless-stopped
 
+  web:
+    image: node:24-bookworm-slim
+    user: *host-user
+    init: true
+    working_dir: /web
+    depends_on:
+      - api
+    environment:
+      API_PROXY_TARGET: http://api:8787
+      WEB_PORT: ${WEB_PORT:-5190}
+    command: ["sh", "-c", "npm install --no-audit --no-fund --loglevel=error && exec npx vite"]
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5190}:${WEB_PORT:-5190}"
+    volumes:
+      - ./web:/web:z
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:'+process.env.WEB_PORT).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 2m
+    restart: unless-stopped
+
+  e2e:
+    # Browser tests in Microsoft Edge. On demand only: docker compose run --rm e2e
+    profiles: [e2e]
+    build:
+      context: e2e
+    image: diligently-e2e:dev
+    user: *host-user
+    init: true
+    # Host networking so the browser reaches http://localhost:<WEB_PORT> and
+    # the S3 download links exactly as your own browser does.
+    network_mode: host
+    environment:
+      WEB_PORT: ${WEB_PORT:-5190}
+      OUTBOX_DIR: /outbox
+      PW_SLOWMO: ${PW_SLOWMO:-}
+    command: ["npx", "playwright", "test"]
+    volumes:
+      - ./e2e:/e2e:z
+      - ./backend/.outbox:/outbox:ro,z
+    ipc: host
+
 volumes:
+  db-data:
+  s3-data:
   api-target:
   cargo-registry:
   cargo-git:

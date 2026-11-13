@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gaps to address</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+textarea:focus{outline: 2px solid #E8603C; outline-offset: 1px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 8px; padding: 12px 12px 4px;">
+    <a href="Workspace.dc.html" aria-label="Back to application" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; min-width: 0;">
+      <div style="font-size: 13px; color: #6B4E62;">Halcyon Health</div>
+      <div style="font-size: 16px; font-weight: 600;">Gaps</div>
+    </div>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 12px 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 28px; line-height: 1.1; letter-spacing: -0.015em;">{{ heading }}</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">The job asks for these and your CV does not show them. We only add what you tell us is true.</p>
+    </div>
+
+    <sc-for list="{{ gaps }}" as="g" hint-placeholder-count="2">
+      <section aria-label="{{ g.name }}" style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="flex: 1;">
+            <div style="font-size: 16px; font-weight: 600;">{{ g.name }}</div>
+            <div style="font-size: 13px; color: #6B4E62; margin-top: 2px;">{{ g.weight }}</div>
+          </div>
+          <span style="padding: 4px 10px; border-radius: 999px; background: {{ g.tagBg }}; color: {{ g.tagFg }}; font-size: 12px; font-weight: 600; white-space: nowrap;">{{ g.tag }}</span>
+        </div>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5E4456;">{{ g.quote }}</p>
+
+        <sc-if value="{{ g.open }}" hint-placeholder-val="{{ true }}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+            <button type="button" onClick="{{ g.have }}" style="min-height: 48px; border-radius: 12px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 14px Inter, sans-serif; cursor: pointer;">I have this</button>
+            <button type="button" onClick="{{ g.skip }}" style="min-height: 48px; border-radius: 12px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">I don't</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ g.writing }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label for="{{ g.id }}" style="font-size: 13px; font-weight: 600;">Where did you use it?</label>
+            <textarea id="{{ g.id }}" rows="3" placeholder="{{ g.hint }}" style="resize: none; box-sizing: border-box; width: 100%; border: 1.5px solid #D9CCAE; border-radius: 12px; background: #FFFDF6; padding: 10px 12px; font: 16px/1.5 Inter, sans-serif; color: #3B1C32;"></textarea>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button type="button" onClick="{{ g.reset }}" style="height: 44px; padding: 0 14px; border: 0; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Cancel</button>
+              <button type="button" onClick="{{ g.add }}" style="height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #C2471F; color: #FFFFFF; font: 600 14px Inter, sans-serif; cursor: pointer;">Write a bullet</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ g.added }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: #F6E7A6;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;">Added to this CV</div>
+            <div style="font-size: 15px; line-height: 1.5;">{{ g.bullet }}</div>
+            <button type="button" onClick="{{ g.reset }}" style="align-self: flex-start; height: 36px; padding: 0; border: 0; background: transparent; color: #3B1C32; font: 600 13px Inter, sans-serif; text-decoration: underline; cursor: pointer;">Undo</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ g.skipped }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: #FCF8EC; border: 1px solid #EADFC2;">
+            <div style="font-size: 14px; line-height: 1.5;">Left out of your CV. Your cover letter will mention you are keen to learn it.</div>
+            <button type="button" onClick="{{ g.reset }}" style="align-self: flex-start; height: 36px; padding: 0; border: 0; background: transparent; color: #3B1C32; font: 600 13px Inter, sans-serif; text-decoration: underline; cursor: pointer;">Undo</button>
+          </div>
+        </sc-if>
+      </section>
+    </sc-for>
+  </main>
+
+  <footer style="padding: 12px 20px 32px; border-top: 1px solid #EADFC2;">
+    <a href="Workspace.dc.html" style="height: 54px; border-radius: 999px; background: {{ doneBg }}; color: {{ doneFg }}; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">{{ doneLabel }}</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const st = s.st || {};
+    const defs = [
+      { id: 'gql', name: 'GraphQL', weight: 'Nice to have', tag: 'Small effect', quote: 'Listed under "a plus". Missing it costs little.',
+        hint: 'e.g. Built the GraphQL gateway for the Quarry Labs dashboard', bullet: 'Built a GraphQL gateway over three services for the Quarry Labs dashboard.' },
+      { id: 'hipaa', name: 'Healthcare data (HIPAA)', weight: 'Required', tag: 'Big effect', quote: 'Named twice in the description. Recruiters will look for it.',
+        hint: 'e.g. Handled patient records at Kestrel under HIPAA rules', bullet: 'Handled patient billing records under HIPAA rules, including access audits.' }
+    ];
+    const set = (id, v) => () => this.setState({ st: Object.assign({}, st, { [id]: v }) });
+    const gaps = defs.map((d) => {
+      const v = st[d.id] || 'open';
+      const big = d.tag === 'Big effect';
+      return Object.assign({}, d, {
+        open: v === 'open', writing: v === 'writing', added: v === 'added', skipped: v === 'skipped',
+        have: set(d.id, 'writing'), skip: set(d.id, 'skipped'), add: set(d.id, 'added'), reset: set(d.id, 'open'),
+        tagBg: big ? '#FBE3D8' : '#EADFC2', tagFg: big ? '#9A3412' : '#3B1C32'
+      });
+    });
+    const resolved = gaps.filter((g) => g.added || g.skipped).length;
+    const all = resolved === gaps.length;
+    return {
+      gaps: gaps,
+      heading: all ? 'All gaps handled' : (gaps.length - resolved) + ' gaps to look at',
+      doneLabel: all ? 'Done' : 'Decide later',
+      doneBg: all ? '#C2471F' : 'transparent',
+      doneFg: all ? '#FFFFFF' : '#3B1C32'
+    };
+  }
+}
+</script>
+</body>
+</html>

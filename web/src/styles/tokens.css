@@ -1,0 +1,72 @@
+/* Design tokens from the Diligently canvas (Foundations board). Butter and
+   Aubergine set the mood; Persimmon is the one accent. Persimmon deep carries
+   white button text (5.0:1); plain Persimmon is for fills only (3.4:1). */
+:root {
+  --butter: #F6E7A6;
+  --butter-soft: #FBF1C7;
+  --aubergine: #3B1C32;
+  --aubergine-2: #5A3550;
+  --persimmon: #E8603C;
+  --persimmon-deep: #C2471F;
+  --persimmon-text: #B5401C;
+  --persimmon-tint: #FBE3D8;
+
+  --paper: #FCF8EC;
+  --paper-deep: #EFE6CC;
+  --surface: #FFFFFF;
+  --line: #EADFC2;
+  --line-strong: #D9CCAE;
+  --ink: #3B1C32;
+  --ink-2: #6B4E62;
+  --ink-3: #5E4456;
+  --on-dark: #F6E7A6;
+  --on-dark-2: #E9DCC0;
+  --lilac-tint: #EFE7F0;
+  --doc-ink: #1A1A1A;
+  --danger: #9F1D2B;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-doc: 'Source Serif 4', Georgia, serif;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  --tap: 44px;
+  --button-h: 52px;
+  --shadow-sheet: 0 -6px 24px rgba(59, 28, 50, 0.14);
+  --shadow-page: 0 1px 2px rgba(59, 28, 50, 0.12), 0 8px 24px rgba(59, 28, 50, 0.1);
+
+  --tabbar-h: 84px;
+  --sidebar-w: 248px;
+}
+
+/* Dark mode uses Aubergine as the ground. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #2B1424;
+    --paper-deep: #241020;
+    --surface: #3B1C32;
+    --line: #5A3550;
+    --line-strong: #6B4E62;
+    --ink: #F6E7A6;
+    --ink-2: #E9DCC0;
+    --ink-3: #D8C6CF;
+    --persimmon-text: #F39A7C;
+    --lilac-tint: #4A2740;
+  }
+}
+:root[data-theme='dark'] {
+  --paper: #2B1424;
+  --paper-deep: #241020;
+  --surface: #3B1C32;
+  --line: #5A3550;
+  --line-strong: #6B4E62;
+  --ink: #F6E7A6;
+  --ink-2: #E9DCC0;
+  --ink-3: #D8C6CF;
+  --persimmon-text: #F39A7C;
+  --lilac-tint: #4A2740;
+}

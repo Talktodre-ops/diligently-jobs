@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 8px; padding: 12px 12px 4px;">
+    <a href="Profile.dc.html" aria-label="Back to profile" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 17px; font-weight: 600;">Settings</h1>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 8px 20px 32px; display: flex; flex-direction: column; gap: 22px;">
+
+    <section style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Plan and usage</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 16px; font-weight: 600;">[PLAN NAME]</span><a href="#" style="font-size: 14px; font-weight: 600;">Change plan</a></div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px;"><span>Applications this month</span><span style="font-weight: 600;">12 of [LIMIT]</span></div>
+        <div style="height: 8px; border-radius: 999px; background: #EADFC2; overflow: hidden;"><div style="width: 40%; height: 8px; background: #3B1C32; border-radius: 999px;"></div></div>
+        <div style="font-size: 13px; color: #6B4E62;">Resets on 1 December.</div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Documents</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size: 15px;">Paper size</div>
+        <div role="radiogroup" aria-label="Paper size" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #EADFC2;">
+          <sc-for list="{{ papers }}" as="p" hint-placeholder-count="2">
+            <button type="button" role="radio" aria-checked="{{ p.on }}" onClick="{{ p.pick }}" style="height: 40px; border: 0; border-radius: 9px; background: {{ p.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ p.label }}</button>
+          </sc-for>
+        </div>
+        <div style="font-size: 15px;">Appearance</div>
+        <div role="radiogroup" aria-label="Appearance" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: #EADFC2;">
+          <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+            <button type="button" role="radio" aria-checked="{{ t.on }}" onClick="{{ t.pick }}" style="height: 40px; border: 0; border-radius: 9px; background: {{ t.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Notifications</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 0 16px;">
+        <sc-for list="{{ toggles }}" as="tg" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 60px; border-bottom: 1px solid {{ tg.line }};">
+            <span style="flex: 1;"><span style="display: block; font-size: 15px;">{{ tg.label }}</span><span style="display: block; font-size: 13px; color: #6B4E62;">{{ tg.note }}</span></span>
+            <button type="button" role="switch" aria-checked="{{ tg.on }}" aria-label="{{ tg.label }}" onClick="{{ tg.flip }}" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: {{ tg.track }}; position: relative; cursor: pointer; padding: 0; flex: none;"><span style="position: absolute; top: 4px; left: {{ tg.knob }}; width: 24px; height: 24px; border-radius: 999px; background: #FFFFFF; transition: left 150ms;"></span></button>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Account</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 0 16px;">
+        <a href="#" style="display: flex; justify-content: space-between; align-items: center; min-height: 56px; border-bottom: 1px solid #EADFC2; text-decoration: none; color: #3B1C32; font-size: 15px;"><span>Email</span><span style="color: #6B4E62; font-size: 14px;">ada@example.com</span></a>
+        <a href="#" style="display: flex; justify-content: space-between; align-items: center; min-height: 56px; border-bottom: 1px solid #EADFC2; text-decoration: none; color: #3B1C32; font-size: 15px;"><span>Password</span><span style="color: #6B4E62; font-size: 14px;">Change</span></a>
+        <a href="#" style="display: flex; justify-content: space-between; align-items: center; min-height: 56px; text-decoration: none; color: #3B1C32; font-size: 15px;"><span>Download my data</span><span style="color: #6B4E62; font-size: 14px;">ZIP</span></a>
+      </div>
+      <a href="Welcome.dc.html" style="min-height: 52px; border-radius: 14px; border: 1.5px solid #3B1C32; color: #3B1C32; font-size: 15px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center; margin-top: 6px;">Sign out</a>
+      <button type="button" onClick="{{ askDelete }}" style="min-height: 48px; border: 0; background: transparent; color: #9F1D2B; font: 600 15px Inter, sans-serif; cursor: pointer;">Delete account</button>
+    </section>
+  </main>
+
+  <sc-if value="{{ confirming }}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; background: rgba(30,14,25,0.5); display: flex; align-items: flex-end;">
+      <div role="alertdialog" aria-label="Delete your account" style="width: 100%; background: #FCF8EC; border-radius: 24px 24px 0 0; padding: 24px 20px 32px; display: flex; flex-direction: column; gap: 14px;">
+        <h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 26px;">Delete your account?</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">This removes your master CV, every tailored CV and letter, and your job history. It cannot be undone. Download your data first if you want a copy.</p>
+        <button type="button" onClick="{{ cancelDelete }}" style="height: 54px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 16px Inter, sans-serif; cursor: pointer;">Keep my account</button>
+        <a href="Welcome.dc.html" style="height: 54px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid #9F1D2B; color: #9F1D2B; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Delete everything</a>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const paper = s.paper || 'A4';
+    const theme = s.theme || 'System';
+    const tg = s.tg || { follow: true, prep: true, news: false };
+    const defs = [
+      { id: 'follow', label: 'Follow-up reminders', note: 'A nudge with a draft ready' },
+      { id: 'prep', label: 'Interview prep', note: 'Talking points the day before' },
+      { id: 'news', label: 'Product news', note: 'A few emails a year' }
+    ];
+    return {
+      papers: ['A4', 'US Letter'].map((l) => ({ label: l, on: paper === l, pick: () => this.setState({ paper: l }), bg: paper === l ? '#FFFFFF' : 'transparent' })),
+      themes: ['System', 'Light', 'Dark'].map((l) => ({ label: l, on: theme === l, pick: () => this.setState({ theme: l }), bg: theme === l ? '#FFFFFF' : 'transparent' })),
+      toggles: defs.map((d, i) => Object.assign({}, d, {
+        on: !!tg[d.id],
+        flip: () => this.setState({ tg: Object.assign({}, tg, { [d.id]: !tg[d.id] }) }),
+        track: tg[d.id] ? '#3B1C32' : '#D9CCAE', knob: tg[d.id] ? '24px' : '4px',
+        line: i === defs.length - 1 ? 'transparent' : '#EADFC2'
+      })),
+      confirming: !!s.confirm,
+      askDelete: () => this.setState({ confirm: true }),
+      cancelDelete: () => this.setState({ confirm: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

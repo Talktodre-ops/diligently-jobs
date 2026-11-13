@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tab bar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<nav aria-label="Main" style="width: 390px; height: 84px; box-sizing: border-box; padding: 8px 8px 24px; border-top: 1px solid #EADFC2; background: #FCF8EC; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-family: Inter, system-ui, sans-serif; color: #3B1C32;">
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <a href="Home.dc.html" aria-current="page" style="text-decoration: none; color: #3B1C32; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#F6E7A6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+  </sc-if>
+  <sc-if value="{{ notHome }}" hint-placeholder-val="{{ false }}">
+    <a href="Home.dc.html" style="text-decoration: none; color: #6B4E62; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+  </sc-if>
+
+  <sc-if value="{{ isJobs }}" hint-placeholder-val="{{ false }}">
+    <a href="Jobs.dc.html" aria-current="page" style="text-decoration: none; color: #3B1C32; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#F6E7A6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Jobs</a>
+  </sc-if>
+  <sc-if value="{{ notJobs }}" hint-placeholder-val="{{ true }}">
+    <a href="Jobs.dc.html" style="text-decoration: none; color: #6B4E62; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Jobs</a>
+  </sc-if>
+
+  <sc-if value="{{ isDocs }}" hint-placeholder-val="{{ false }}">
+    <a href="Documents.dc.html" aria-current="page" style="text-decoration: none; color: #3B1C32; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#F6E7A6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>Documents</a>
+  </sc-if>
+  <sc-if value="{{ notDocs }}" hint-placeholder-val="{{ true }}">
+    <a href="Documents.dc.html" style="text-decoration: none; color: #6B4E62; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>Documents</a>
+  </sc-if>
+
+  <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+    <a href="Profile.dc.html" aria-current="page" style="text-decoration: none; color: #3B1C32; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#F6E7A6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>Profile</a>
+  </sc-if>
+  <sc-if value="{{ notProfile }}" hint-placeholder-val="{{ true }}">
+    <a href="Profile.dc.html" style="text-decoration: none; color: #6B4E62; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>Profile</a>
+  </sc-if>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","jobs","documents","profile"],"default":"home"},"$preview":{"width":390,"height":84}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const a = this.props.active ?? 'home';
+    return {
+      isHome: a === 'home', notHome: a !== 'home',
+      isJobs: a === 'jobs', notJobs: a !== 'jobs',
+      isDocs: a === 'documents', notDocs: a !== 'documents',
+      isProfile: a === 'profile', notProfile: a !== 'profile'
+    };
+  }
+}
+</script>
+</body>
+</html>
