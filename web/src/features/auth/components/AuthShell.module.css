@@ -26,8 +26,11 @@
   .wordmark { font-family: var(--font-display); font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
   .dot { color: var(--persimmon); }
   .tagline { margin: 0; font-family: var(--font-display); font-size: 28px; line-height: 1.2; color: var(--on-dark); max-width: 22ch; }
-  .main { padding-top: 48px; }
-  .head { padding-top: 24px; }
+  /* The form sits in the middle of the pane. The header (back arrow) floats over
+     the top so it does not push the form below centre. */
+  .pane { position: relative; }
+  .head { position: absolute; inset: 0 0 auto 0; padding-top: 24px; z-index: 1; }
+  .main { justify-content: center; padding-block: 88px; }
 }
 @media (max-width: 759px) {
   .brand { display: none; }
