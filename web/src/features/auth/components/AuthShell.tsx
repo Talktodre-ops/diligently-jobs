@@ -1,3 +1,4 @@
+import { LogoMark } from '../../../ui/LogoMark'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Icon } from '../../../ui/Icon'
@@ -30,7 +31,7 @@ export function AuthShell({ children, back, backState, footer, aside, wide, top,
     <div className={s.page}>
       <aside className={`${s.brand} ${intro ? s.band : ''}`}>
         <div className={s.wordmark}>
-          diligently<span className={s.dot}>.</span>
+          <LogoMark />diligently<span className={s.dot}>.</span>
         </div>
         {intro ?? aside ?? (
           <>

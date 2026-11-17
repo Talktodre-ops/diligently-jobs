@@ -1,0 +1,9 @@
+/* Tile height is 1.3 times the Fraunces ascender (0.74em), centred on the
+   ascender-to-baseline band, with a gap of 0.3 tile: the lockup in docs/brand. */
+.mark {
+  display: inline-block; flex: none;
+  width: 0.97em; height: 0.97em; vertical-align: -0.115em; margin-right: 0.29em;
+}
+.tile { fill: var(--logo-tile, var(--aubergine)); }
+.letter { fill: var(--logo-letter, var(--butter)); }
+.stop { fill: var(--persimmon); }

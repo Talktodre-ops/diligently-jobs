@@ -1,3 +1,4 @@
+import { LogoMark } from '../../../ui/LogoMark'
 import type { ReactNode } from 'react'
 import { Link, Navigate } from 'react-router'
 import { useMe, useProfile } from '../../../auth/session'
@@ -55,7 +56,7 @@ export function OnboardFrame({ step, back, footer, aside, asideLabel = 'Your CV'
             <Icon name="back" size={22} strokeWidth={2} />
           </Link>
         )}
-        <div className={s.brand} aria-hidden="true">diligently<span className={s.dot}>.</span></div>
+        <div className={s.brand} aria-hidden="true"><LogoMark />diligently<span className={s.dot}>.</span></div>
         <ol className={s.steps} aria-label="Setup steps">
           {steps.map((st, i) => (
             <li key={st} className={`${s.step} ${i < n ? s.past : i === n ? s.now : ''}`} aria-current={i === n ? 'step' : undefined}>

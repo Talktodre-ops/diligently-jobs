@@ -1,3 +1,4 @@
+import { LogoMark } from '../../ui/LogoMark'
 import { Link } from 'react-router'
 import { useProfile } from '../../auth/session'
 import { ButtonLink } from '../../ui/Button'
@@ -47,7 +48,7 @@ export default function HomePage() {
     <div className={s.page}>
       {!desktop && (
         <header className={s.header}>
-          <span className={s.brand}>diligently<span>.</span></span>
+          <span className={s.brand}><LogoMark />diligently<span>.</span></span>
           <Link to="/profile" className={s.avatar} aria-label="Your profile">
             {initials(profile.data?.full_name ?? first_name)}
           </Link>

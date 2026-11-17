@@ -25,3 +25,6 @@
   .lede { font-size: 19px; }
   .actions { grid-column: 1; grid-row: 3; flex-direction: row; max-width: 560px; align-self: start; margin-top: 32px; }
 }
+
+/* On the aubergine page the mark flips to a butter tile. */
+.page { --logo-tile: var(--butter); --logo-letter: var(--aubergine); }

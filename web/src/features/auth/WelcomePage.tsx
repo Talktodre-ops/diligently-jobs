@@ -1,3 +1,4 @@
+import { LogoMark } from '../../ui/LogoMark'
 import { useLocation } from 'react-router'
 import { ButtonLink } from '../../ui/Button'
 import { BrandArt } from './components/BrandArt'
@@ -8,7 +9,7 @@ export default function WelcomePage() {
   return (
     <div className={s.page}>
       <div className={s.wordmark}>
-        diligently<span className={s.dot}>.</span>
+        <LogoMark />diligently<span className={s.dot}>.</span>
       </div>
       <div className={s.art}>
         <BrandArt />

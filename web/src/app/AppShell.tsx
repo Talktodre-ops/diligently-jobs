@@ -1,3 +1,4 @@
+import { LogoMark } from '../ui/LogoMark'
 import { NavLink, Outlet } from 'react-router'
 import { Icon, type IconName } from '../ui/Icon'
 import { ThemeSync } from './ThemeSync'
@@ -21,7 +22,7 @@ export function AppShell({ tabs }: { tabs: boolean }) {
     <div className={[s.shell, tabs && s.withTabs].filter(Boolean).join(' ')}>
       <ThemeSync />
       <nav className={s.sidebar} aria-label="Main">
-        <NavLink to="/" className={s.brand}>diligently<span>.</span></NavLink>
+        <NavLink to="/" className={s.brand}><LogoMark />diligently<span>.</span></NavLink>
         {sections.map((x) => (
           <NavLink key={x.to} to={x.to} end={x.end} className={({ isActive }) => [s.navlink, isActive && s.active].filter(Boolean).join(' ')}>
             {({ isActive }) => (<><Icon name={x.icon} filled={isActive ? 'var(--butter)' : undefined} />{x.label}</>)}

@@ -60,6 +60,8 @@
     --ink-3: #D8C6CF;
     --persimmon-text: #F39A7C;
     --lilac-tint: #4A2740;
+    --logo-tile: var(--butter);
+    --logo-letter: var(--aubergine);
   }
 }
 :root[data-theme='dark'] {
@@ -73,4 +75,6 @@
   --ink-3: #D8C6CF;
   --persimmon-text: #F39A7C;
   --lilac-tint: #4A2740;
+  --logo-tile: var(--butter);
+  --logo-letter: var(--aubergine);
 }
