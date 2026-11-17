@@ -1,4 +1,5 @@
-//! Settings: download my data, and delete my account.
+//! Settings: download my data, delete my account, set a password, and
+//! disconnect Google.
 
 use axum::extract::State;
 use axum::http::{header, HeaderValue, StatusCode};
@@ -8,7 +9,7 @@ use serde_json::{json, Map, Value};
 use std::time::Duration;
 use uuid::Uuid;
 
-use crate::auth::{password, session, CurrentUser};
+use crate::auth::{code, password, session, CurrentUser};
 use crate::error::AppError;
 use crate::extract::Json;
 use crate::rate_limit;
@@ -101,16 +102,97 @@ pub async fn export(
     Ok(resp)
 }
 
+/// Whether the user has a password and a connected Google account.
+async fn sign_in_methods(state: &AppState, uid: Uuid) -> Result<(bool, bool), AppError> {
+    Ok(sqlx::query_as(
+        "select password_hash is not null, google_sub is not null from users where id = $1",
+    )
+    .bind(uid)
+    .fetch_one(&state.db)
+    .await?)
+}
+
+fn has_password_conflict() -> AppError {
+    AppError::conflict(
+        "has_password",
+        "You already have a password. Change it instead.",
+    )
+}
+
+/// POST /v1/account/set-password-link: for an account without a password,
+/// email the "Set a password" link to the existing reset page.
+pub async fn set_password_link(
+    State(state): State<AppState>,
+    user: CurrentUser,
+) -> Result<Response, AppError> {
+    state
+        .limiter
+        .check(rate_limit::RESEND_USER, &user.id.to_string())?;
+    let (has_password, _) = sign_in_methods(&state, user.id).await?;
+    if has_password {
+        return Err(has_password_conflict());
+    }
+    crate::auth::routes::send_reset_link(&state, user.id, &user.email, false).await?;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+/// POST /v1/account/google/disconnect. Needs a password, or the account
+/// would have no way to sign in.
+pub async fn disconnect_google(
+    State(state): State<AppState>,
+    user: CurrentUser,
+) -> Result<Response, AppError> {
+    let (has_password, connected) = sign_in_methods(&state, user.id).await?;
+    if !has_password {
+        return Err(AppError::conflict(
+            "password_required",
+            "Set a password first, so you can still sign in without Google.",
+        ));
+    }
+    if connected {
+        sqlx::query("update users set google_sub = null where id = $1")
+            .bind(user.id)
+            .execute(&state.db)
+            .await?;
+        crate::notify::google_disconnected(&state, user.id).await;
+    }
+    let u = crate::auth::routes::load_user(&state.db, user.id).await?;
+    Ok(Json(crate::auth::routes::UserEnvelope { user: u.into() }).into_response())
+}
+
+/// POST /v1/account/delete-code: email a 6-digit code that deletes an
+/// account without a password. Replaces any earlier delete code.
+pub async fn delete_code(
+    State(state): State<AppState>,
+    user: CurrentUser,
+) -> Result<Response, AppError> {
+    state
+        .limiter
+        .check(rate_limit::RESEND_USER, &user.id.to_string())?;
+    let (has_password, _) = sign_in_methods(&state, user.id).await?;
+    if has_password {
+        return Err(has_password_conflict());
+    }
+    let c = code::issue(&state.db, user.id, code::Purpose::Delete).await?;
+    let msg = crate::mail::delete_code(&user.email, &c, format!("delcode-{}", Uuid::new_v4()));
+    crate::mail::send_best_effort(state.mailer.as_ref(), msg).await;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+/// `{ password }` for an account with a password; `{ code }` (from
+/// `delete-code`) for one without.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DeleteRequest {
-    pub password: String,
+    pub password: Option<String>,
+    pub code: Option<String>,
 }
 
-/// DELETE /v1/account: needs the password. Removes every row the user owns
-/// (one delete, cascading through every table) and then their stored files.
-/// Storage failures are logged with the prefix for manual cleanup; the
-/// account itself is already gone at that point.
+/// DELETE /v1/account: needs the password, or the emailed code when the
+/// account has no password. Removes every row the user owns (one delete,
+/// cascading through every table) and then their stored files, and sends a
+/// last email saying so. Storage failures are logged with the prefix for
+/// manual cleanup; the account itself is already gone at that point.
 pub async fn delete(
     State(state): State<AppState>,
     user: CurrentUser,
@@ -123,19 +205,48 @@ pub async fn delete(
         .bind(user.id)
         .fetch_one(&state.db)
         .await?;
-    let ok = match phc {
-        Some(phc) if req.password.chars().count() <= password::MAX_LEN => {
-            password::verify(&req.password, &phc).await?
+    match phc {
+        Some(phc) => {
+            let given = req.password.unwrap_or_default();
+            let ok = given.chars().count() <= password::MAX_LEN
+                && password::verify(&given, &phc).await?;
+            if !ok {
+                return Err(AppError::validation(
+                    "password",
+                    "That password is not right.",
+                ));
+            }
         }
-        _ => false,
-    };
-    if !ok {
-        return Err(AppError::validation(
-            "password",
-            "That password is not right.",
-        ));
+        None => {
+            state
+                .limiter
+                .check(rate_limit::VERIFY_CODE_USER, &user.id.to_string())?;
+            let wrong = || {
+                AppError::bad_field(
+                    "invalid_code",
+                    "code",
+                    "That code is not right. Check the email and try again.",
+                )
+            };
+            let given = req.code.ok_or_else(wrong)?;
+            match code::check(&state.db, user.id, code::Purpose::Delete, given.trim()).await? {
+                code::Check::Matched => {}
+                code::Check::Wrong => return Err(wrong()),
+                code::Check::Gone => {
+                    return Err(AppError::coded(
+                        StatusCode::GONE,
+                        "code_expired",
+                        "This code has expired. Ask for a new one.",
+                    ))
+                }
+            }
+        }
     }
+    let recipient = crate::notify::recipient(&state.db, user.id).await?;
     delete_user(&state, user.id).await?;
+    if let Some(r) = recipient {
+        crate::notify::account_deleted(&state, &r).await;
+    }
     let mut resp = StatusCode::NO_CONTENT.into_response();
     resp.headers_mut()
         .append(header::SET_COOKIE, session::clear_cookie(&state.config.web));

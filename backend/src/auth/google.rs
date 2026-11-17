@@ -9,8 +9,14 @@
 //! cookie binds the flow to the browser that started it, which stops a
 //! forged callback link from signing someone into another person's account.
 //!
-//! Every callback failure redirects to `/signin?error=google`; the reason is
-//! logged, never shown.
+//! With `link=1` a signed-in user connects Google to their own account: the
+//! stored flow remembers who started it, and the callback sets that user's
+//! Google subject instead of signing in, then lands on
+//! `/settings?google=connected`, `in_use` (the subject belongs to another
+//! account) or `error`.
+//!
+//! Every other callback failure redirects to `/signin?error=google`; the
+//! reason is logged, never shown.
 
 use axum::extract::rejection::QueryRejection;
 use axum::extract::State;
@@ -95,17 +101,48 @@ fn redirect(location: &str, cookies: Vec<HeaderValue>) -> Result<Response, AppEr
 #[derive(Deserialize)]
 pub struct StartQuery {
     pub next: Option<String>,
+    /// `1` connects Google to the signed-in account instead of signing in.
+    pub link: Option<String>,
 }
 
-/// GET /v1/auth/google/start?next=/path
+/// Where a connect-Google flow lands, with its outcome in the query.
+const LINK_LANDING: &str = "/settings";
+
+/// GET /v1/auth/google/start?next=/path, or `?link=1` from Settings to
+/// connect Google to the signed-in account.
 pub async fn start(
     State(state): State<AppState>,
     meta: ClientMeta,
+    headers: HeaderMap,
     Query(q): Query<StartQuery>,
 ) -> Result<Response, AppError> {
     let g = state.config.google.as_ref().ok_or_else(disabled)?;
     state.limiter.check(rl::OAUTH_IP, meta.ip_key())?;
-    let next = safe_next(q.next.as_deref());
+    let link_user = if q.link.as_deref() == Some("1") {
+        let signed_in = match session::token_from_headers(&headers) {
+            Some(raw) => session::lookup(&state.db, &raw).await?,
+            None => None,
+        };
+        match signed_in {
+            Some(s) => Some(s.user_id),
+            None => {
+                return redirect(
+                    &format!(
+                        "{}{LINK_LANDING}?google=error",
+                        state.config.web.app_base_url
+                    ),
+                    vec![],
+                )
+            }
+        }
+    } else {
+        None
+    };
+    let next = if link_user.is_some() {
+        LINK_LANDING.to_string()
+    } else {
+        safe_next(q.next.as_deref())
+    };
     let raw_state = token::generate();
     // 43 base64url characters: inside the 43 to 128 unreserved characters
     // RFC 7636 allows for a verifier.
@@ -117,14 +154,15 @@ pub async fn start(
         .await?;
     sqlx::query(
         r#"
-        insert into oauth_states (state_hash, provider, pkce_verifier, next_path, expires_at)
-        values ($1, 'google', $2, $3, $4)
+        insert into oauth_states (state_hash, provider, pkce_verifier, next_path, expires_at, link_user_id)
+        values ($1, 'google', $2, $3, $4, $5)
         "#,
     )
     .bind(token::hash(&raw_state))
     .bind(&verifier)
     .bind(&next)
     .bind(Utc::now() + STATE_TTL)
+    .bind(link_user)
     .execute(&state.db)
     .await?;
 
@@ -169,9 +207,39 @@ pub async fn callback(
     let web = &state.config.web;
     let clear = state_cookie(web, "", 0);
     let query = q.ok().map(|axum::extract::Query(q)| q);
-    match finish(&state, g, &meta, &headers, query).await {
-        Ok((session_raw, next)) => redirect(
-            &format!("{}{next}", web.app_base_url),
+    let flow = match claim(&state, &meta, &headers, query).await {
+        Ok(f) => f,
+        Err(Refused { link_user, why }) => {
+            tracing::warn!(reason = %format!("{why:#}"), "google callback refused");
+            let to = if link_user.is_some() {
+                format!("{}{LINK_LANDING}?google=error", web.app_base_url)
+            } else {
+                format!("{}/signin?error=google", web.app_base_url)
+            };
+            return redirect(&to, vec![clear]);
+        }
+    };
+    if let Some(user_id) = flow.link_user {
+        let outcome = match identify(&state, g, &flow).await {
+            Ok(who) => link(&state, user_id, &who).await,
+            Err(e) => Err(e),
+        };
+        let result = match outcome {
+            Ok(Linked::Connected) => "connected",
+            Ok(Linked::InUse) => "in_use",
+            Err(why) => {
+                tracing::warn!(reason = %format!("{why:#}"), "google connect refused");
+                "error"
+            }
+        };
+        return redirect(
+            &format!("{}{LINK_LANDING}?google={result}", web.app_base_url),
+            vec![clear],
+        );
+    }
+    match sign_in(&state, g, &meta, &flow).await {
+        Ok(session_raw) => redirect(
+            &format!("{}{}", web.app_base_url, flow.next),
             vec![clear, session::set_cookie(web, &session_raw)],
         ),
         Err(why) => {
@@ -196,53 +264,98 @@ struct UserInfo {
     email_verified: Option<Value>,
 }
 
-/// Everything after the browser comes back. Returns the new session token and
-/// the path to land on.
-async fn finish(
+/// A callback whose state checked out: the flow it belongs to.
+struct Flow {
+    code: String,
+    verifier: String,
+    next: String,
+    /// Set when a signed-in user is connecting Google to their account.
+    link_user: Option<Uuid>,
+}
+
+/// A verified Google identity.
+struct Identity {
+    sub: String,
+    email: String,
+}
+
+/// Why a callback was refused, and whether it belonged to a connect flow
+/// (known only once the stored flow was claimed).
+struct Refused {
+    link_user: Option<Uuid>,
+    why: anyhow::Error,
+}
+
+impl Refused {
+    fn early(why: impl Into<anyhow::Error>) -> Self {
+        Self {
+            link_user: None,
+            why: why.into(),
+        }
+    }
+}
+
+/// Check the returned state against this browser's cookie and claim the
+/// stored flow exactly once. The flow is claimed before a provider error is
+/// looked at, so a refusal at Google still lands on the right page.
+async fn claim(
     state: &AppState,
-    g: &GoogleConfig,
     meta: &ClientMeta,
     headers: &HeaderMap,
     query: Option<CallbackQuery>,
-) -> anyhow::Result<(String, String)> {
-    use anyhow::{anyhow, bail, Context};
+) -> Result<Flow, Refused> {
+    use anyhow::anyhow;
 
     state
         .limiter
         .check(rl::OAUTH_IP, meta.ip_key())
-        .map_err(|_| anyhow!("rate limited"))?;
-    let q = query.ok_or_else(|| anyhow!("unreadable query"))?;
-    if let Some(e) = q.error {
-        let e: String = e.chars().filter(char::is_ascii_graphic).take(64).collect();
-        bail!("provider returned error {e}");
-    }
-    let code = q
-        .code
-        .filter(|c| !c.is_empty() && c.len() <= 2048)
-        .ok_or_else(|| anyhow!("missing code"))?;
+        .map_err(|_| Refused::early(anyhow!("rate limited")))?;
+    let q = query.ok_or_else(|| Refused::early(anyhow!("unreadable query")))?;
     let returned_state = q.state.unwrap_or_default();
     let cookie_state = session::cookie_from_headers(headers, STATE_COOKIE).unwrap_or_default();
     if !token::looks_valid(&returned_state)
         || !token::ct_eq(returned_state.as_bytes(), cookie_state.as_bytes())
     {
-        bail!("state does not match this browser");
+        return Err(Refused::early(anyhow!("state does not match this browser")));
     }
 
     // Single use: whoever deletes the row owns the flow. Expired rows are
     // deleted too, then refused.
-    let (verifier, next, expires_at): (String, String, DateTime<Utc>) = sqlx::query_as(
-        r#"
-        delete from oauth_states where state_hash = $1 and provider = 'google'
-        returning pkce_verifier, next_path, expires_at
-        "#,
-    )
-    .bind(token::hash(&returned_state))
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| anyhow!("unknown or already used state"))?;
+    let (verifier, next, expires_at, link_user): (String, String, DateTime<Utc>, Option<Uuid>) =
+        sqlx::query_as(
+            r#"
+            delete from oauth_states where state_hash = $1 and provider = 'google'
+            returning pkce_verifier, next_path, expires_at, link_user_id
+            "#,
+        )
+        .bind(token::hash(&returned_state))
+        .fetch_optional(&state.db)
+        .await
+        .map_err(Refused::early)?
+        .ok_or_else(|| Refused::early(anyhow!("unknown or already used state")))?;
+    let refuse = |why: anyhow::Error| Refused { link_user, why };
     if expires_at <= Utc::now() {
-        bail!("state expired");
+        return Err(refuse(anyhow!("state expired")));
     }
+    if let Some(e) = q.error {
+        let e: String = e.chars().filter(char::is_ascii_graphic).take(64).collect();
+        return Err(refuse(anyhow!("provider returned error {e}")));
+    }
+    let code = q
+        .code
+        .filter(|c| !c.is_empty() && c.len() <= 2048)
+        .ok_or_else(|| refuse(anyhow!("missing code")))?;
+    Ok(Flow {
+        code,
+        verifier,
+        next,
+        link_user,
+    })
+}
+
+/// Exchange the code (with the PKCE verifier) and read a verified identity.
+async fn identify(state: &AppState, g: &GoogleConfig, flow: &Flow) -> anyhow::Result<Identity> {
+    use anyhow::{anyhow, bail, Context};
 
     let http = reqwest::Client::builder()
         .timeout(HTTP_TIMEOUT)
@@ -253,11 +366,11 @@ async fn finish(
         .post(&g.token_url)
         .form(&[
             ("grant_type", "authorization_code"),
-            ("code", code.as_str()),
+            ("code", flow.code.as_str()),
             ("redirect_uri", redirect_uri(&state.config.web).as_str()),
             ("client_id", g.client_id.as_str()),
             ("client_secret", g.client_secret.as_str()),
-            ("code_verifier", verifier.as_str()),
+            ("code_verifier", flow.verifier.as_str()),
         ])
         .send()
         .await
@@ -286,8 +399,23 @@ async fn finish(
     }
     let email = validate::email("email", info.email.as_deref().unwrap_or(""))
         .map_err(|_| anyhow!("unusable email"))?;
+    Ok(Identity {
+        sub: sub.to_string(),
+        email,
+    })
+}
 
-    let user_id = resolve_user(&state.db, sub, &email).await?;
+/// Sign in (or up) with the identity and return the new session token.
+async fn sign_in(
+    state: &AppState,
+    g: &GoogleConfig,
+    meta: &ClientMeta,
+    flow: &Flow,
+) -> anyhow::Result<String> {
+    use anyhow::anyhow;
+
+    let who = identify(state, g, flow).await?;
+    let user_id = resolve_user(&state.db, &who.sub, &who.email).await?;
     sqlx::query("update users set last_sign_in_at = now() where id = $1")
         .bind(user_id)
         .execute(&state.db)
@@ -300,7 +428,41 @@ async fn finish(
     )
     .await
     .map_err(|e| anyhow!("create session: {e}"))?;
-    Ok((raw, next))
+    Ok(raw)
+}
+
+enum Linked {
+    Connected,
+    /// That Google account already belongs to another user.
+    InUse,
+}
+
+/// Connect the identity to the signed-in user who started the flow. The
+/// Google address may differ from the account's; the subject is what counts.
+async fn link(state: &AppState, user_id: Uuid, who: &Identity) -> anyhow::Result<Linked> {
+    let owner: Option<Uuid> = sqlx::query_scalar("select id from users where google_sub = $1")
+        .bind(&who.sub)
+        .fetch_optional(&state.db)
+        .await?;
+    match owner {
+        Some(id) if id == user_id => return Ok(Linked::Connected),
+        Some(_) => return Ok(Linked::InUse),
+        None => {}
+    }
+    let res = sqlx::query("update users set google_sub = $2 where id = $1")
+        .bind(user_id)
+        .bind(&who.sub)
+        .execute(&state.db)
+        .await;
+    match res {
+        Ok(r) if r.rows_affected() == 1 => {}
+        Ok(_) => anyhow::bail!("the account that started the flow is gone"),
+        // Another account took this subject in the meantime.
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => return Ok(Linked::InUse),
+        Err(e) => return Err(e.into()),
+    }
+    crate::notify::google_connected(state, user_id, &who.email).await;
+    Ok(Linked::Connected)
 }
 
 /// Find or create the account for a verified Google identity.

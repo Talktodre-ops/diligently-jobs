@@ -207,3 +207,198 @@ async fn deleting_the_account_removes_every_row_and_file_and_nothing_else() {
         .await;
     assert_eq!(r.status, StatusCode::CREATED);
 }
+
+/// Make the signed-in user look like a Google-only account.
+async fn google_only(app: &TestApp, c: &common::Client<'_>) -> Uuid {
+    let id = uid(c).await;
+    sqlx::query("update users set password_hash = null, password_changed_at = null, google_sub = 'g-1' where id = $1")
+        .bind(id)
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    id
+}
+
+#[tokio::test]
+async fn set_password_link_is_for_accounts_without_one() {
+    let app = TestApp::spawn().await;
+    let c = common::verified_user(&app, "ada@example.com").await;
+    let has = c.post("/v1/account/set-password-link", json!({})).await;
+    assert_eq!(has.status, StatusCode::CONFLICT);
+    assert_eq!(has.body["error"]["code"], "has_password");
+
+    google_only(&app, &c).await;
+    let me = c.get("/v1/auth/me").await.body;
+    assert_eq!(me["user"]["has_password"], false);
+    assert_eq!(me["user"]["google_connected"], true);
+    assert_eq!(me["user"]["password_changed_at"], Value::Null);
+
+    let res = c.post("/v1/account/set-password-link", json!({})).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.body);
+    let mail = app.mail.last_to("ada@example.com").unwrap();
+    assert_eq!(mail.subject, "Set a password for Diligently");
+    let i = mail.text.find("/reset-password?token=").unwrap() + 22;
+    let token = mail.text[i..i + 43].to_string();
+
+    // The existing reset page sets it.
+    let reset = app
+        .client()
+        .post(
+            "/v1/auth/reset-password",
+            json!({ "token": token, "password": "a fresh new passphrase" }),
+        )
+        .await;
+    assert_eq!(reset.status, StatusCode::OK, "{}", reset.body);
+    assert_eq!(reset.body["user"]["has_password"], true);
+    assert!(reset.body["user"]["password_changed_at"].is_string());
+    let notice = app.mail.last_to("ada@example.com").unwrap();
+    assert_eq!(
+        notice.subject,
+        "A password was set for your Diligently account"
+    );
+}
+
+#[tokio::test]
+async fn disconnecting_google_needs_a_password() {
+    let app = TestApp::spawn().await;
+    let c = common::verified_user(&app, "ada@example.com").await;
+    let id = google_only(&app, &c).await;
+    let res = c.post("/v1/account/google/disconnect", json!({})).await;
+    assert_eq!(res.status, StatusCode::CONFLICT);
+    assert_eq!(res.body["error"]["code"], "password_required");
+    assert!(res.body["error"]["message"].is_string());
+
+    sqlx::query("update users set password_hash = 'x' where id = $1")
+        .bind(id)
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    let before = app.mail.sent().len();
+    let res = c.post("/v1/account/google/disconnect", json!({})).await;
+    assert_eq!(res.status, StatusCode::OK, "{}", res.body);
+    assert_eq!(res.body["user"]["google_connected"], false);
+    assert_eq!(res.body["user"]["has_password"], true);
+    let mails: Vec<_> = app.mail.sent().into_iter().skip(before).collect();
+    assert_eq!(mails.len(), 1);
+    assert_eq!(
+        mails[0].subject,
+        "Google was disconnected from your Diligently account"
+    );
+    // Already disconnected: same answer, no second email.
+    let again = c.post("/v1/account/google/disconnect", json!({})).await;
+    assert_eq!(again.status, StatusCode::OK);
+    assert_eq!(app.mail.sent().len(), before + 1);
+}
+
+fn code_in(mail: &diligently_api::mail::Email) -> String {
+    mail.subject[..6].to_string()
+}
+
+#[tokio::test]
+async fn an_account_without_a_password_deletes_with_an_emailed_code() {
+    let app = TestApp::spawn().await;
+    let c = common::verified_user(&app, "ada@example.com").await;
+    let has = c.post("/v1/account/delete-code", json!({})).await;
+    assert_eq!(has.status, StatusCode::CONFLICT);
+    assert_eq!(has.body["error"]["code"], "has_password");
+
+    let id = google_only(&app, &c).await;
+    // A sign-up code outstanding must not be touched by the delete code.
+    diligently_api::auth::code::issue(
+        &app.state.db,
+        id,
+        diligently_api::auth::code::Purpose::Verify,
+    )
+    .await
+    .unwrap();
+
+    let res = c.post("/v1/account/delete-code", json!({})).await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.body);
+    let mail = app.mail.last_to("ada@example.com").unwrap();
+    assert!(mail
+        .subject
+        .ends_with("is your code to delete your Diligently account"));
+    let good = code_in(&mail);
+    assert!(mail.text.contains(&format!("\n{good}\n")));
+    let codes: i64 =
+        sqlx::query_scalar("select count(*) from verification_codes where user_id = $1")
+            .bind(id)
+            .fetch_one(&app.state.db)
+            .await
+            .unwrap();
+    assert_eq!(codes, 2, "sign-up and delete codes live side by side");
+
+    let wrong = if good == "000000" { "111111" } else { "000000" };
+    let res = c
+        .send(
+            Method::DELETE,
+            "/v1/account",
+            Some(json!({ "code": wrong })),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST);
+    assert_eq!(res.body["error"]["code"], "invalid_code");
+    assert_eq!(res.body["error"]["field"], "code");
+    let res = c
+        .send(
+            Method::DELETE,
+            "/v1/account",
+            Some(json!({ "password": "a long enough passphrase" })),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::BAD_REQUEST, "no password to check");
+
+    let res = c
+        .send(Method::DELETE, "/v1/account", Some(json!({ "code": good })))
+        .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT, "{}", res.body);
+    let users: i64 = sqlx::query_scalar("select count(*) from users")
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    assert_eq!(users, 0);
+    let bye = app.mail.last_to("ada@example.com").unwrap();
+    assert_eq!(bye.subject, "Your Diligently account is deleted");
+    assert!(bye.text.contains("(UTC)"));
+    assert!(!bye.text.contains("Write to"), "no SUPPORT_EMAIL, no line");
+}
+
+#[tokio::test]
+async fn delete_codes_expire() {
+    let app = TestApp::spawn().await;
+    let c = common::verified_user(&app, "ada@example.com").await;
+    google_only(&app, &c).await;
+    c.post("/v1/account/delete-code", json!({})).await;
+    let good = code_in(&app.mail.last_to("ada@example.com").unwrap());
+    sqlx::query("update verification_codes set expires_at = now() - interval '1 minute' where purpose = 'delete'")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    let res = c
+        .send(Method::DELETE, "/v1/account", Some(json!({ "code": good })))
+        .await;
+    assert_eq!(res.status, StatusCode::GONE);
+    assert_eq!(res.body["error"]["code"], "code_expired");
+}
+
+#[tokio::test]
+async fn the_deleted_email_names_support_when_configured() {
+    let app = TestApp::spawn_with(|c| c.support_email = Some("help@example.com".into())).await;
+    let c = common::verified_user(&app, "ada@example.com").await;
+    c.patch(
+        "/v1/profile",
+        json!({ "reminders": { "time_zone": "Africa/Lagos" } }),
+    )
+    .await;
+    let res = c
+        .send(
+            Method::DELETE,
+            "/v1/account",
+            Some(json!({ "password": "a long enough passphrase" })),
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::NO_CONTENT);
+    let bye = app.mail.last_to("ada@example.com").unwrap();
+    assert!(bye.text.contains("Write to help@example.com"));
+    assert!(bye.text.contains("(Lagos time)"), "{}", bye.text);
+}

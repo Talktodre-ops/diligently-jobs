@@ -537,3 +537,134 @@ async fn an_unsafe_next_lands_on_the_home_path() {
     .await;
     assert_eq!(location(&res), format!("{APP_ORIGIN}/"));
 }
+
+/// Start a connect flow as the signed-in client `c`.
+async fn start_link(app: &TestApp, c: &common::Client<'_>) -> Started {
+    let cookie = format!("dl_session={}", c.session_token().unwrap());
+    let res = app
+        .request(
+            Method::GET,
+            "/v1/auth/google/start?next=/settings&link=1",
+            None,
+            &[("cookie", cookie.as_str())],
+        )
+        .await;
+    assert_eq!(res.status, StatusCode::FOUND, "{}", res.body);
+    let url = reqwest::Url::parse(&location(&res)).unwrap();
+    let params: HashMap<String, String> = url.query_pairs().into_owned().collect();
+    let (cookie, _) = cookie_value(&res, "dl_oauth").expect("state cookie");
+    Started {
+        state: params["state"].clone(),
+        challenge: params["code_challenge"].clone(),
+        cookie,
+    }
+}
+
+#[tokio::test]
+async fn a_signed_in_user_connects_google_from_settings() {
+    let (app, google) = spawn_google().await;
+    let c = verified_user(&app, "ada@example.com").await;
+    let id = c.get("/v1/auth/me").await.body["user"]["id"].clone();
+    // A different Google address is fine; the subject is what links.
+    google.person(
+        "code-ada",
+        google_person("g-ada", "ada.personal@example.com"),
+    );
+    let s = start_link(&app, &c).await;
+    let res = callback(
+        &app,
+        &format!("?code=code-ada&state={}", s.state),
+        Some(&s.cookie),
+    )
+    .await;
+    assert_eq!(
+        location(&res),
+        format!("{APP_ORIGIN}/settings?google=connected")
+    );
+    assert!(
+        cookie_value(&res, "dl_session").is_none(),
+        "no new session: the user stays signed in as before"
+    );
+    let me = c.get("/v1/auth/me").await;
+    assert_eq!(me.body["user"]["id"], id);
+    assert_eq!(me.body["user"]["google_connected"], true);
+    assert_eq!(me.body["user"]["email"], "ada@example.com");
+    let mail = app.mail.last_to("ada@example.com").unwrap();
+    assert_eq!(
+        mail.subject,
+        "Google was connected to your Diligently account"
+    );
+    assert!(mail.text.contains("ada.personal@example.com"));
+
+    // Google sign-in now finds this account.
+    google.person("code-2", google_person("g-ada", "ada.personal@example.com"));
+    let again = sign_in(&app, "code-2", "/").await;
+    let me2 = client_from(&app, &again).get("/v1/auth/me").await;
+    assert_eq!(me2.body["user"]["id"], id);
+}
+
+#[tokio::test]
+async fn connecting_a_google_account_that_belongs_to_someone_else_is_refused() {
+    let (app, google) = spawn_google().await;
+    google.person("code-bo", google_person("g-bo", "bo@example.com"));
+    sign_in(&app, "code-bo", "/").await; // Bo's account owns g-bo.
+    let c = verified_user(&app, "ada@example.com").await;
+    google.person("code-x", google_person("g-bo", "bo@example.com"));
+    let s = start_link(&app, &c).await;
+    let res = callback(
+        &app,
+        &format!("?code=code-x&state={}", s.state),
+        Some(&s.cookie),
+    )
+    .await;
+    assert_eq!(
+        location(&res),
+        format!("{APP_ORIGIN}/settings?google=in_use")
+    );
+    assert_eq!(
+        c.get("/v1/auth/me").await.body["user"]["google_connected"],
+        false
+    );
+}
+
+#[tokio::test]
+async fn connect_failures_land_on_settings() {
+    let (app, google) = spawn_google().await;
+    let c = verified_user(&app, "ada@example.com").await;
+    // Refused at Google.
+    let s = start_link(&app, &c).await;
+    let res = callback(
+        &app,
+        &format!("?error=access_denied&state={}", s.state),
+        Some(&s.cookie),
+    )
+    .await;
+    assert_eq!(
+        location(&res),
+        format!("{APP_ORIGIN}/settings?google=error")
+    );
+    // Google does not know the code.
+    let s = start_link(&app, &c).await;
+    let res = callback(
+        &app,
+        &format!("?code=nope&state={}", s.state),
+        Some(&s.cookie),
+    )
+    .await;
+    assert_eq!(
+        location(&res),
+        format!("{APP_ORIGIN}/settings?google=error")
+    );
+    // Not signed in at all.
+    let res = app.get("/v1/auth/google/start?link=1").await;
+    assert_eq!(res.status, StatusCode::FOUND);
+    assert_eq!(
+        location(&res),
+        format!("{APP_ORIGIN}/settings?google=error")
+    );
+    google.person("unused", google_person("g-1", "x@example.com"));
+    assert_eq!(
+        c.get("/v1/auth/me").await.body["user"]["google_connected"],
+        false
+    );
+}

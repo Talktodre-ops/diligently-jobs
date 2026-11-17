@@ -291,7 +291,23 @@ Card `type` is `follow_up`, `retry`, `review` (with `pending`) or `prepare`.
 | Method and path | Body | Response |
 |---|---|---|
 | `GET /v1/account/export` | | JSON file download of everything the user owns, with hour-long file links |
-| `DELETE /v1/account` | `{ password }` | `204`; deletes every row and file, clears the cookie |
+| `DELETE /v1/account` | `{ password }`, or `{ code }` when the account has no password | `204`; deletes every row and file, clears the cookie, emails "account deleted". Wrong password `422 invalid_input` (`field: "password"`); wrong code `400 invalid_code` (`field: "code"`); expired or used up `410 code_expired` |
+| `POST /v1/account/delete-code` | none | `204`; emails a 6-digit delete code (30 minutes, 5 tries, separate from the sign-up code). `409 has_password` when the account has a password |
+| `POST /v1/account/set-password-link` | none | `204`; emails the "Set a password" link to `/reset-password?token=`, which the reset endpoint completes. `409 has_password` |
+| `POST /v1/account/google/disconnect` | none | `{ user }` with `google_connected: false`; emails a notice. `409 password_required` when the account has no password |
+
+**Connect Google from Settings.** Send the browser to
+`/v1/auth/google/start?next=/settings&link=1` while signed in. The callback
+links that Google account to the signed-in user (its address may differ) and
+lands on `/settings?google=connected`, `/settings?google=in_use` (the Google
+account belongs to another user) or `/settings?google=error`; no new session
+is made. Starting it signed out lands on `/settings?google=error`.
+
+**Security emails** (always sent, no unsubscribe): sign-up code, delete code,
+reset or set password, confirm new address, password changed or set, email
+changed (to the old address), Google connected, Google disconnected, new
+sign-in, account deleted. Times are in the user's `time_zone`, for example
+`Mon 17 Nov, 09:14 (Lagos time)`, or UTC when unknown.
 
 ## Email preferences (Unsubscribe page, no sign-in)
 

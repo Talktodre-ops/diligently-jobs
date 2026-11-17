@@ -197,7 +197,16 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/reminders/{id}/done", post(tracking::reminder_done))
         .route("/v1/home", get(home::home))
         .route("/v1/account/export", get(account::export))
-        .route("/v1/account", delete(account::delete));
+        .route("/v1/account", delete(account::delete))
+        .route(
+            "/v1/account/set-password-link",
+            post(account::set_password_link),
+        )
+        .route(
+            "/v1/account/google/disconnect",
+            post(account::disconnect_google),
+        )
+        .route("/v1/account/delete-code", post(account::delete_code));
 
     let cors = cors_layer(&state.config.web);
     Router::new()
