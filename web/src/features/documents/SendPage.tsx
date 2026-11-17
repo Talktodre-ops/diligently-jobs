@@ -5,6 +5,7 @@ import { Icon } from '../../ui/Icon'
 import { Notice } from '../../ui/Notice'
 import { PageState } from '../../ui/PageState'
 import { TopBar } from '../../ui/TopBar'
+import { useProfile } from '../../auth/session'
 import { Dialog } from '../../ui/Dialog'
 import { companyName, useBrief } from '../apply/api'
 import { Switch } from '../../ui/Switch'
@@ -21,6 +22,7 @@ const FORMATS: { value: Format; label: string; note: string }[] = [
   { value: 'pdf', label: 'PDF', note: 'Recommended. Keeps the layout exactly.' },
   { value: 'docx', label: 'DOCX', note: 'For portals that ask for Word.' },
 ]
+/** Used when the profile has not loaded; the API's own default. */
 const DEFAULT_REMINDER_DAYS = 7
 
 function pick(links: FileLinks | undefined, format: Format, letter: boolean): ShareFile[] {
@@ -40,6 +42,7 @@ export default function SendPage() {
   const letter = useLetter(id)
   const fresh = useFreshFiles()
   const markApplied = useMarkApplied(id)
+  const reminderDays = useProfile().data?.reminders.follow_up_days ?? DEFAULT_REMINDER_DAYS
   const [format, setFormat] = useState<Format>('pdf')
   const [withLetter, setWithLetter] = useState(true)
   const [phase, setPhase] = useState<'choose' | 'confirm' | 'done'>('choose')
@@ -85,7 +88,7 @@ export default function SendPage() {
         role={brief.data.application.role}
         score={shownScore(brief.data.score)}
         reminder={applied?.reminder ?? null}
-        initialDays={DEFAULT_REMINDER_DAYS}
+        initialDays={reminderDays}
       />
     )
   }
@@ -110,7 +113,7 @@ export default function SendPage() {
   }
 
   const confirm = () =>
-    markApplied.mutate(DEFAULT_REMINDER_DAYS, {
+    markApplied.mutate(reminderDays, {
       onSuccess: (r) => { setApplied(r); setPhase('done') },
     })
 

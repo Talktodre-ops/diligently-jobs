@@ -2,6 +2,7 @@
 .emptyWrap { padding: 0 var(--page-pad) 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; width: 100%; }
 
 .toneBar { padding: 4px 20px 12px; }
+.firstDraft { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .tones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .toneLabel { font-size: 13px; font-weight: 600; margin-right: 4px; }
 .tone {

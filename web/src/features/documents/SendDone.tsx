@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { FOLLOW_UP_DAYS } from '../../api/types'
 import { Icon } from '../../ui/Icon'
 import { useMoveReminder, type Reminder } from './api'
 import { shortDate } from './format'
 import s from './Send.module.css'
 
-const CHOICES = [5, 7, 10] as const
-
 type Props = { company: string; role: string | null; score: number | null; reminder: Reminder | null; initialDays: number }
 
-/** "Applied." with the follow-up reminder, which the person can move to 5 or 10 days. */
+/** "Applied." with the follow-up reminder, which the person can move to another of the Settings choices. */
 export function SendDone({ company, role, score, reminder: first, initialDays }: Props) {
   const move = useMoveReminder()
   const [reminder, setReminder] = useState(first)
@@ -36,7 +35,7 @@ export function SendDone({ company, role, score, reminder: first, initialDays }:
           <div className={s.remind}>
             <div className={s.remindLabel} id="remind-label">Remind me to follow up in</div>
             <div className={s.remindChoices} role="group" aria-labelledby="remind-label">
-              {CHOICES.map((d) => (
+              {FOLLOW_UP_DAYS.map((d) => (
                 <button key={d} type="button" className={s.remindChip} aria-pressed={days === d} onClick={() => pick(d)} disabled={move.isPending && days !== d}>
                   {d} days
                 </button>

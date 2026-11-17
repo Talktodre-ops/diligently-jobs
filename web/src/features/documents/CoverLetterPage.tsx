@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { companyName, useBrief } from '../apply/api'
+import { useProfile } from '../../auth/session'
 import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
@@ -27,6 +28,8 @@ export default function CoverLetterPage() {
   const edit = useEditLetter(id)
   const desktop = useMediaQuery(DESKTOP)
   const [editing, setEditing] = useState<number | null>(null)
+  const preferred = useProfile().data?.writing.letter_tone
+  const [firstTone, setFirstTone] = useState<Tone | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -44,6 +47,8 @@ export default function CoverLetterPage() {
   if (letter.isError) return (<>{top}<PageState.Error error={letter.error} onRetry={() => letter.refetch()} /></>)
 
   const busy = regenerate.isPending || edit.isPending
+  // The first draft starts in the tone chosen in Settings unless one is picked here.
+  const startTone: Tone = firstTone ?? preferred ?? 'direct'
   const writingTone = regenerate.isPending ? regenerate.variables : null
 
   if (!l) {
@@ -54,7 +59,19 @@ export default function CoverLetterPage() {
           <PageState.Empty
             title="No letter yet"
             body={`We can draft one for ${company} from the CV decisions you made, in a tone you choose.`}
-            action={<Button busy={regenerate.isPending} onClick={() => regenerate.mutate('direct')}>Write a letter</Button>}
+            action={(
+              <div className={s.firstDraft}>
+                <div className={s.tones} role="group" aria-label="Tone">
+                  <span className={s.toneLabel} aria-hidden="true">Tone</span>
+                  {TONES.map((t) => (
+                    <button key={t} type="button" className={s.tone} aria-pressed={startTone === t} disabled={regenerate.isPending} onClick={() => setFirstTone(t)}>
+                      {capitalise(t)}
+                    </button>
+                  ))}
+                </div>
+                <Button busy={regenerate.isPending} onClick={() => regenerate.mutate(startTone)}>Write a letter</Button>
+              </div>
+            )}
           />
           {regenerate.isError && <Notice tone="error">{regenerate.error.message}</Notice>}
         </div>

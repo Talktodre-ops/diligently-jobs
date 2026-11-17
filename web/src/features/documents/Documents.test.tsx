@@ -70,6 +70,12 @@ const files = (opts: { upToDate?: boolean; letter?: boolean } = {}) => ({
 type Call = { url: string; method: string; body: unknown }
 type Handler = (url: string, method: string, body: unknown) => unknown
 
+const settingsProfile = (over: object) => ({
+  full_name: 'Ada Okafor', headline: null, location: 'Lagos', target_roles: [], work_settings: [], paper_size: 'a4', theme: 'system',
+  notifications: { follow_ups: true, weekly_summary: true, running_low: true, product_news: false },
+  reminders: { follow_up_days: 7, send_hour: 9, time_zone: 'Africa/Lagos', skip_weekends: true },
+  writing: { spelling: null, letter_tone: 'direct' }, onboarding_step: 'done', updated_at: '', ...over,
+})
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status })
 const notFound = () => json({ error: { code: 'not_found', message: 'Not found' } }, 404)
 
@@ -203,6 +209,24 @@ describe('CoverLetterPage', () => {
     expect(await screen.findByText('No letter yet')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Write a letter' })).toBeInTheDocument()
   })
+
+  it('starts the first letter in the tone chosen in Settings', async () => {
+    const calls = setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) =>
+      u === '/v1/profile' ? { profile: settingsProfile({ writing: { spelling: null, letter_tone: 'formal' } }) } : base(u, m, b))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Formal' })).toHaveAttribute('aria-pressed', 'true'))
+    expect(screen.getByRole('button', { name: 'Direct' })).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(screen.getByRole('button', { name: 'Write a letter' }))
+    await waitFor(() => expect(calls.find((c) => c.url.endsWith('/regenerate'))?.body).toEqual({ tone: 'formal' }))
+  })
+
+  it('lets the first letter start in another tone', async () => {
+    const calls = setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) =>
+      u === '/v1/profile' ? { profile: settingsProfile({ writing: { spelling: null, letter_tone: 'formal' } }) } : base(u, m, b))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Formal' })).toHaveAttribute('aria-pressed', 'true'))
+    await userEvent.click(screen.getByRole('button', { name: 'Warm' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Write a letter' }))
+    await waitFor(() => expect(calls.find((c) => c.url.endsWith('/regenerate'))?.body).toEqual({ tone: 'warm' }))
+  })
 })
 
 describe('CvPreviewPage', () => {
@@ -278,6 +302,26 @@ describe('SendPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '10 days' }))
     expect(await screen.findByText('We will nudge you on Mon 23 Nov with a draft ready.')).toBeInTheDocument()
     expect(calls.find((c) => c.url.endsWith('/snooze'))?.body).toEqual({ days: 10 })
+  })
+
+  it('preselects the follow-up days from Settings and offers 14', async () => {
+    const calls = setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => {
+      if (u === '/v1/profile') return { profile: settingsProfile({ reminders: { follow_up_days: 14, send_hour: 9, time_zone: 'Africa/Lagos', skip_weekends: true } }) }
+      if (u.endsWith('/cover-letters')) return letter()
+      if (u.endsWith('/files')) return files()
+      if (u.endsWith('/applied')) return { application_id: APP, stage: 'applied', reminder: { id: 'rem', application_id: APP, due_at: '2026-12-01T09:00:00Z', status: 'scheduled', sent_at: null } }
+      return base(u, m, b)
+    })
+    await screen.findByRole('list', { name: 'Files' })
+    await waitFor(() => expect(calls.some((c) => c.url === '/v1/profile')).toBe(true))
+    await userEvent.click(screen.getByRole('button', { name: 'Download files' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Did you send it?' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Yes, mark as applied' }))
+    expect(await screen.findByRole('heading', { name: 'Applied.' })).toBeInTheDocument()
+    expect(calls.find((c) => c.url.endsWith('/applied'))?.body).toEqual({ reminder_days: 14 })
+    const group = screen.getByRole('group', { name: 'Remind me to follow up in' })
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['5 days', '7 days', '10 days', '14 days'])
+    expect(within(group).getByRole('button', { name: '14 days' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('sends the CV alone when there is no letter', async () => {
