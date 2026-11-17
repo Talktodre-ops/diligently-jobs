@@ -110,6 +110,7 @@ pub async fn start(
         .bind(job.id)
         .execute(&state.db)
         .await?;
+    crate::digest::after_application_started(&state, user.id, &user.plan).await;
     Ok((
         StatusCode::ACCEPTED,
         Json(json!({ "application_id": app_id, "job_id": job.id, "progress": job.progress })),

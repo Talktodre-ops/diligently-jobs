@@ -252,6 +252,7 @@ pub async fn signup(
     })?;
 
     send_verification(&state, user.id, &user.email).await?;
+    crate::devices::remember(&state, user.id, meta.user_agent.as_deref()).await;
     let raw = session::create(
         &state.db,
         user.id,
@@ -315,6 +316,14 @@ pub async fn signin(
         .bind(user_id)
         .execute(&state.db)
         .await?;
+    crate::devices::signed_in(
+        &state,
+        user_id,
+        meta.user_agent.as_deref(),
+        meta.ip.as_deref(),
+        crate::devices::Method::Password,
+    )
+    .await;
     let raw = session::create(
         &state.db,
         user_id,
@@ -563,6 +572,9 @@ pub async fn reset_password(
         first_password,
     )
     .await;
+    // Following the emailed link proves the inbox, so this device joins the
+    // list without an alert.
+    crate::devices::remember(&state, claimed.user_id, meta.user_agent.as_deref()).await;
     let raw = session::create(
         &state.db,
         claimed.user_id,

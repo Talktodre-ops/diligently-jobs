@@ -415,11 +415,24 @@ async fn sign_in(
     use anyhow::anyhow;
 
     let who = identify(state, g, flow).await?;
-    let user_id = resolve_user(&state.db, &who.sub, &who.email).await?;
+    let (user_id, fresh) = resolve_user(&state.db, &who.sub, &who.email).await?;
     sqlx::query("update users set last_sign_in_at = now() where id = $1")
         .bind(user_id)
         .execute(&state.db)
         .await?;
+    let ua = meta.user_agent.as_deref();
+    if fresh {
+        crate::devices::remember(state, user_id, ua).await;
+    } else {
+        crate::devices::signed_in(
+            state,
+            user_id,
+            ua,
+            meta.ip.as_deref(),
+            crate::devices::Method::Google,
+        )
+        .await;
+    }
     let raw = session::create(
         &state.db,
         user_id,
@@ -465,14 +478,16 @@ async fn link(state: &AppState, user_id: Uuid, who: &Identity) -> anyhow::Result
     Ok(Linked::Connected)
 }
 
-/// Find or create the account for a verified Google identity.
+/// Find or create the account for a verified Google identity. The flag is
+/// true for an account that is new to its owner (created now, or handed over
+/// from an unverified registration), which signs in without a device alert.
 ///
 /// An existing account whose email was never verified may have been
 /// registered by someone who does not own the address. Google has just proven
 /// who does, so that account is handed over: the password is cleared, every
 /// session ends, and outstanding email links (a pending email change could
 /// otherwise move the account away) and codes are spent.
-async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Result<Uuid> {
+async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Result<(Uuid, bool)> {
     let mut tx = db.begin().await?;
     if let Some(id) = sqlx::query_scalar::<_, Uuid>("select id from users where google_sub = $1")
         .bind(sub)
@@ -480,7 +495,7 @@ async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Resu
         .await?
     {
         tx.commit().await?;
-        return Ok(id);
+        return Ok((id, false));
     }
 
     let existing: Option<(Uuid, Option<DateTime<Utc>>, Option<String>)> = sqlx::query_as(
@@ -490,7 +505,7 @@ async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Resu
     .fetch_optional(&mut *tx)
     .await?;
 
-    let id = match existing {
+    let found = match existing {
         Some((_, _, Some(_))) => {
             anyhow::bail!("this email is linked to a different Google account")
         }
@@ -500,7 +515,7 @@ async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Resu
                 .bind(sub)
                 .execute(&mut *tx)
                 .await?;
-            id
+            (id, false)
         }
         Some((id, None, None)) => {
             sqlx::query(
@@ -527,10 +542,15 @@ async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Resu
                 .bind(id)
                 .execute(&mut *tx)
                 .await?;
-            id
+            // The devices seen were the previous registrant's.
+            sqlx::query("delete from known_devices where user_id = $1")
+                .bind(id)
+                .execute(&mut *tx)
+                .await?;
+            (id, true)
         }
         None => {
-            sqlx::query_scalar(
+            let id = sqlx::query_scalar(
                 r#"
                 insert into users (email, password_hash, email_verified_at, google_sub)
                 values ($1, null, now(), $2)
@@ -540,11 +560,12 @@ async fn resolve_user(db: &sqlx::PgPool, sub: &str, email: &str) -> anyhow::Resu
             .bind(email)
             .bind(sub)
             .fetch_one(&mut *tx)
-            .await?
+            .await?;
+            (id, true)
         }
     };
     tx.commit().await?;
-    Ok(id)
+    Ok(found)
 }
 
 #[cfg(test)]

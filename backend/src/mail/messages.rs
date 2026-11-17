@@ -385,7 +385,15 @@ pub fn weekly_summary(to: &str, w: Weekly<'_>, unsubscribe: Unsubscribe, key: St
     )
     .eyebrow(format!("Week of {}", w.week_of))
     .block(Block::Stats(vec![
-        (w.due.to_string(), "follow-ups due".into()),
+        (
+            w.due.to_string(),
+            if w.due == 1 {
+                "follow-up due"
+            } else {
+                "follow-ups due"
+            }
+            .into(),
+        ),
         (w.ready.to_string(), "ready to send".into()),
         (w.sent_last_week.to_string(), "sent last week".into()),
     ]))

@@ -16,6 +16,9 @@ const IDLE_POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// How often due follow-up reminders are checked.
 const REMINDER_SWEEP_EVERY: Duration = Duration::from_secs(60);
 
+/// How often the Monday summary looks for users whose send hour has come.
+const WEEKLY_SWEEP_EVERY: Duration = Duration::from_secs(5 * 60);
+
 /// How often running jobs that lost their worker are put back in the queue.
 const STUCK_SWEEP_EVERY: Duration = Duration::from_secs(30);
 
@@ -33,6 +36,7 @@ async fn run(state: AppState) -> anyhow::Result<()> {
 
     let mut last_sweep = std::time::Instant::now() - REMINDER_SWEEP_EVERY;
     let mut last_stuck_sweep = std::time::Instant::now() - STUCK_SWEEP_EVERY;
+    let mut last_weekly_sweep = std::time::Instant::now() - WEEKLY_SWEEP_EVERY;
     loop {
         if last_stuck_sweep.elapsed() >= STUCK_SWEEP_EVERY {
             last_stuck_sweep = std::time::Instant::now();
@@ -51,6 +55,14 @@ async fn run(state: AppState) -> anyhow::Result<()> {
                 Ok(0) => {}
                 Ok(n) => tracing::info!(sent = n, "reminders: sent"),
                 Err(err) => tracing::error!(?err, "reminders: sweep failed"),
+            }
+        }
+        if last_weekly_sweep.elapsed() >= WEEKLY_SWEEP_EVERY {
+            last_weekly_sweep = std::time::Instant::now();
+            match crate::digest::weekly_sweep(&state).await {
+                Ok(0) => {}
+                Ok(n) => tracing::info!(sent = n, "weekly summaries: sent"),
+                Err(err) => tracing::error!(?err, "weekly summaries: sweep failed"),
             }
         }
         match process_one(&state).await {

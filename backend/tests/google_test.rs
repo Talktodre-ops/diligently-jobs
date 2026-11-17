@@ -668,3 +668,41 @@ async fn connect_failures_land_on_settings() {
         false
     );
 }
+
+#[tokio::test]
+async fn google_sign_ins_alert_on_a_new_device_but_sign_ups_do_not() {
+    let (app, google) = spawn_google().await;
+    google.person("code-1", google_person("g-1", "new@example.com"));
+    sign_in(&app, "code-1", "/").await; // creates the account: no alert
+    let alerts = || {
+        app.mail
+            .sent()
+            .into_iter()
+            .filter(|e| e.subject.starts_with("New sign-in"))
+            .collect::<Vec<_>>()
+    };
+    assert!(alerts().is_empty());
+
+    google.person("code-2", google_person("g-1", "new@example.com"));
+    let s = start(&app, "?next=/").await;
+    let cookie = format!("dl_oauth={}", s.cookie);
+    let res = app
+        .request(
+            Method::GET,
+            &format!("/v1/auth/google/callback?code=code-2&state={}", s.state),
+            None,
+            &[
+                ("cookie", cookie.as_str()),
+                ("user-agent", "Mozilla/5.0 (Windows NT 10.0) Firefox/130.0"),
+            ],
+        )
+        .await;
+    assert_eq!(location(&res), format!("{APP_ORIGIN}/"));
+    let a = alerts();
+    assert_eq!(a.len(), 1);
+    assert_eq!(
+        a[0].subject,
+        "New sign-in to Diligently: Firefox on Windows"
+    );
+    assert!(a[0].text.contains("How: Google"));
+}

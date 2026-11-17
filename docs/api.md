@@ -313,6 +313,21 @@ changed (to the old address), Google connected, Google disconnected, new
 sign-in, account deleted. Times are in the user's `time_zone`, for example
 `Mon 17 Nov, 09:14 (Lagos time)`, or UTC when unknown.
 
+## Scheduled and triggered emails
+
+- **Monday summary** (`notifications.weekly_summary`): on Monday at
+  `send_hour` in the user's zone, at most once per local Monday, verified users
+  only. Lists reminders due in the next 7 days, applications tailored but not
+  sent, and applications at `applied` for 14 or more days with no stage change
+  and no reminder waiting, with how many went out the week before. A week with
+  none of the first three sends nothing.
+- **Running low** (`notifications.running_low`): once per calendar month (UTC),
+  when starting an application leaves 2 or fewer on a plan whose monthly limit
+  is above 2.
+- **New sign-in** (security, always): a password or Google sign-in from a
+  browser (user agent) the account has not signed in from before, except the
+  account's first device. Sign-up and reset links add the device silently.
+
 ## Email preferences (Unsubscribe page, no sign-in)
 
 Optional emails (follow-up reminders, Monday summary, running low, product
