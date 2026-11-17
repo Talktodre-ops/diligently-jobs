@@ -45,10 +45,11 @@ pub fn request(
     company: &str,
     days_since: i64,
     context: &str,
+    spelling: &str,
 ) -> LlmRequest {
     LlmRequest {
         task: TASK,
-        system: system(channel),
+        system: super::with_spelling(&system(channel), spelling),
         user_text: format!(
             "Candidate: {candidate}\nRole: {role}\nCompany: {company}\nApplied {days_since} days ago.\n\n<context>\n{context}\n</context>"
         ),

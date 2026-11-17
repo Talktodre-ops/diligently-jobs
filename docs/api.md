@@ -116,7 +116,10 @@ forgot-password. Any failure lands on `/signin?error=google` with no detail.
 `time_zone` is an IANA name the database knows, or null (UTC is used);
 `spelling` is `en-GB`, `en-US` or null (inferred from `location`: United
 States, USA, US or Canada mean `en-US`); `letter_tone` is `direct`, `warm` or
-`formal`. A bad value is `422 invalid_input` with `field`.
+`formal`. A bad value is `422 invalid_input` with `field`. The pipeline's
+first letter uses `letter_tone`, and every prompt that writes text the user
+sends (rewrites and summary, gap bullets, cover letter, follow-up) is told to
+use British or American spelling from `spelling`.
 
 PATCH changes only the fields sent; an empty string clears a text field.
 `paper_size` is `a4` or `letter`; `theme` is `system`, `light` or `dark`;
@@ -234,7 +237,7 @@ does not yield a usable bullet, `note` says what to add.
 | `GET /v1/applications/{id}/research` | | `{ id, brief, sources, created_at }` |
 | `POST /v1/applications/{id}/research/refresh` *verified* | none | same; runs inline (a few seconds) |
 | `GET /v1/applications/{id}/cover-letters` | | newest letter |
-| `POST /v1/applications/{id}/cover-letters/regenerate` *verified* | `{ tone: "direct" or "warm" or "formal" }` | new letter; runs inline |
+| `POST /v1/applications/{id}/cover-letters/regenerate` *verified* | `{ tone: "direct" or "warm" or "formal" }`; without `tone`, the profile's `writing.letter_tone` | new letter; runs inline |
 | `PATCH /v1/cover-letters/{id}` | `{ paragraphs: ["...", "..."] }` | updated letter |
 
 `brief` is `{ overview, products, recent_news: [{ text, source }], culture, talking_points: [{ text, source }], why_them }`;

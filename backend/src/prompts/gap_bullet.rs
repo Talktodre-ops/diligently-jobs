@@ -30,10 +30,15 @@ pub fn schema() -> Value {
     object(&[("bullet", string())])
 }
 
-pub fn request(requirement: &str, evidence: &str, role_context: &str) -> LlmRequest {
+pub fn request(
+    requirement: &str,
+    evidence: &str,
+    role_context: &str,
+    spelling: &str,
+) -> LlmRequest {
     LlmRequest {
         task: TASK,
-        system: system(),
+        system: super::with_spelling(&system(), spelling),
         user_text: format!(
             "Requirement: {requirement}\nWhere it applies: {role_context}\n\n<candidate_words>\n{evidence}\n</candidate_words>"
         ),

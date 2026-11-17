@@ -61,10 +61,10 @@ pub fn schema() -> Value {
     ])
 }
 
-pub fn request(cv_text: &str, jd: &str, keywords: &[String]) -> LlmRequest {
+pub fn request(cv_text: &str, jd: &str, keywords: &[String], spelling: &str) -> LlmRequest {
     LlmRequest {
         task: TASK,
-        system: system(),
+        system: super::with_spelling(&system(), spelling),
         user_text: format!(
             "{}\n\nKeywords to work in where true: {}\n\n<cv>\n{cv_text}\n</cv>",
             job_block(jd),

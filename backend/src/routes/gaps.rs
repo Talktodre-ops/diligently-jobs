@@ -111,11 +111,14 @@ pub async fn answer(
         .and_then(|i| base.experience.get(i))
         .ok_or_else(|| AppError::validation("entry", "Choose one of the roles on your CV."))?;
     let context = format!("{} at {}", role.role, role.company);
+    let spelling = crate::routes::profile::writing_prefs(&state.db, user.id)
+        .await?
+        .spelling;
     let res = crate::usage::call(
         &state,
         user.id,
         Some(gap.application_id),
-        gap_bullet::request(&gap.requirement, &text, &context),
+        gap_bullet::request(&gap.requirement, &text, &context, spelling),
     )
     .await?;
     let bullet = gap_bullet::parse(res.value, &text).map_err(|e| {

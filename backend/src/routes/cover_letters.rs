@@ -32,7 +32,8 @@ pub struct CoverLetter {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RegenerateRequest {
-    pub tone: String,
+    /// Absent uses the profile's `writing.letter_tone`.
+    pub tone: Option<String>,
 }
 
 /// POST /v1/applications/{id}/cover-letters/regenerate: write a new letter in
@@ -44,9 +45,19 @@ pub async fn regenerate(
     Path(application_id): Path<Uuid>,
     Json(req): Json<RegenerateRequest>,
 ) -> Result<Json<CoverLetter>, AppError> {
-    crate::validate::one_of("tone", &req.tone, crate::prompts::cover_letter::TONES)?;
+    let tone = match req.tone {
+        Some(t) => {
+            crate::validate::one_of("tone", &t, crate::prompts::cover_letter::TONES)?;
+            t
+        }
+        None => {
+            crate::routes::profile::writing_prefs(&state.db, user.id)
+                .await?
+                .letter_tone
+        }
+    };
     crate::routes::ensure_application(&state.db, user.id, application_id).await?;
-    let id = crate::pipeline::write_letter(&state, user.id, application_id, &req.tone).await?;
+    let id = crate::pipeline::write_letter(&state, user.id, application_id, &tone).await?;
     load(&state, user.id, id).await.map(Json)
 }
 

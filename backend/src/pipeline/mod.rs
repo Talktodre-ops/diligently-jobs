@@ -339,7 +339,16 @@ async fn rewrite(state: &AppState, uid: Uuid, app_id: Uuid, app: &AppRow) -> any
     .await?
     {
         let a = analysis(app)?;
-        let req = rewrites::request(&prompts::cv_for_prompt(&doc), &app.jd_raw, &a.keywords);
+        let spelling = crate::routes::profile::writing_prefs(&state.db, uid)
+            .await
+            .map_err(ai)?
+            .spelling;
+        let req = rewrites::request(
+            &prompts::cv_for_prompt(&doc),
+            &app.jd_raw,
+            &a.keywords,
+            spelling,
+        );
         let res = crate::usage::call(state, uid, Some(app_id), req)
             .await
             .map_err(ai)?;
@@ -598,6 +607,9 @@ pub async fn write_letter(
     .await?;
     let company = ctx.company.clone().unwrap_or_else(|| "the company".into());
     let cv_text = prompts::cv_for_prompt(&doc);
+    let spelling = crate::routes::profile::writing_prefs(&state.db, uid)
+        .await?
+        .spelling;
     let req = cover_letter::request(&cover_letter::Input {
         tone,
         cv_text: &cv_text,
@@ -605,6 +617,7 @@ pub async fn write_letter(
         company: &company,
         research: research.as_deref(),
         gap_notes: &notes,
+        spelling,
     });
     let res = crate::usage::call(state, uid, Some(app_id), req).await?;
     let sources = format!(
@@ -660,9 +673,11 @@ async fn letter_step(
     {
         return Ok(true);
     }
-    write_letter(state, uid, app_id, "direct")
+    let tone = crate::routes::profile::writing_prefs(&state.db, uid)
         .await
-        .map_err(ai)?;
+        .map_err(ai)?
+        .letter_tone;
+    write_letter(state, uid, app_id, &tone).await.map_err(ai)?;
     Ok(true)
 }
 

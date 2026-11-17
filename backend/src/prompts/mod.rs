@@ -28,6 +28,21 @@ pub const VOICE: &str = "Voice:
 - Avoid: leverage, spearhead, orchestrate, facilitate, utilize, showcase, robust, cutting-edge, synergy, streamline, elevate, empower, passionate, results-driven, team player, proven track record.
 - Vary sentence length and shape. Do not make every line Verb, Object, Metric.";
 
+/// The one line every prompt that writes text the user will send carries,
+/// from the stored or inferred `writing.spelling` (`en-US` or `en-GB`).
+pub fn spelling_rule(spelling: &str) -> &'static str {
+    if spelling == "en-US" {
+        "Use American English spelling."
+    } else {
+        "Use British English spelling."
+    }
+}
+
+/// A system prompt with the spelling line appended.
+pub fn with_spelling(system: &str, spelling: &str) -> String {
+    format!("{system}\n\n{}", spelling_rule(spelling))
+}
+
 /// Normalise generated text: dashes and curly quotes become plain ASCII, and
 /// whitespace is trimmed. Applied to everything the model writes for a user,
 /// so a slip in the model's voice never reaches a recruiter.
@@ -227,6 +242,12 @@ pub fn all_objects_closed(v: &Value) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn spelling_line_follows_the_preference() {
+        assert!(with_spelling("S", "en-US").ends_with("\n\nUse American English spelling."));
+        assert!(with_spelling("S", "en-GB").ends_with("\n\nUse British English spelling."));
+    }
 
     #[test]
     fn clean_removes_dashes_and_curly_quotes() {

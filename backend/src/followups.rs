@@ -91,7 +91,10 @@ pub async fn draft(
         .max(0);
     let role = ctx.role.unwrap_or_else(|| "the role".into());
     let company = ctx.company.unwrap_or_else(|| "the company".into());
-    let req = follow_up::request(channel, &name, &role, &company, days, &context);
+    let spelling = crate::routes::profile::writing_prefs(&state.db, uid)
+        .await?
+        .spelling;
+    let req = follow_up::request(channel, &name, &role, &company, days, &context, spelling);
     let res = crate::usage::call(state, uid, Some(app_id), req).await?;
     let d = follow_up::parse(res.value, channel, &name).map_err(|e| {
         tracing::warn!(error = %e, "follow-up rejected");

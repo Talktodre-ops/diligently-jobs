@@ -100,8 +100,11 @@ async fn every_prompt_family_against_the_real_api() {
     assert_ne!(hipaa.status, "covered", "CV has no health data experience");
 
     println!("\n== rewrites");
-    let rw = rewrites::parse(run!(rewrites::request(&cv_text, JD, &jd.keywords)), &doc)
-        .expect("rewrites parse");
+    let rw = rewrites::parse(
+        run!(rewrites::request(&cv_text, JD, &jd.keywords, "en-GB")),
+        &doc,
+    )
+    .expect("rewrites parse");
     println!("  summary: {:?}", rw.summary);
     for r in &rw.rewrites {
         println!(
@@ -122,7 +125,12 @@ async fn every_prompt_family_against_the_real_api() {
     println!("\n== gap_bullet");
     let ev = "At Northfold I designed GraphQL APIs for our merchant dashboard";
     let b = gap_bullet::parse(
-        run!(gap_bullet::request("GraphQL API design", ev, "Northfold")),
+        run!(gap_bullet::request(
+            "GraphQL API design",
+            ev,
+            "Northfold",
+            "en-GB"
+        )),
         ev,
     )
     .expect("gap bullet parse");
@@ -183,6 +191,7 @@ async fn every_prompt_family_against_the_real_api() {
             company: "Halcyon Health",
             research: None,
             gap_notes: &notes,
+            spelling: "en-GB",
         })),
         &sources,
     );
@@ -200,7 +209,8 @@ async fn every_prompt_family_against_the_real_api() {
             "Senior Backend Engineer",
             "Halcyon Health",
             6,
-            JD
+            JD,
+            "en-GB"
         )),
         "email",
         "Ada Okafor",

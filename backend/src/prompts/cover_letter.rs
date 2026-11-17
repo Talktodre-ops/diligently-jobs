@@ -54,6 +54,8 @@ pub struct Input<'a> {
     pub company: &'a str,
     pub research: Option<&'a str>,
     pub gap_notes: &'a [String],
+    /// `en-GB` or `en-US`.
+    pub spelling: &'a str,
 }
 
 pub fn request(i: &Input<'_>) -> LlmRequest {
@@ -67,7 +69,7 @@ pub fn request(i: &Input<'_>) -> LlmRequest {
     };
     LlmRequest {
         task: TASK,
-        system: system(i.tone),
+        system: super::with_spelling(&system(i.tone), i.spelling),
         user_text: format!(
             "Company: {}\n{}\n\n<research>\n{research}\n</research>\n\nCandidate notes on gaps:\n- {notes}\n\n<cv>\n{}\n</cv>",
             i.company,
