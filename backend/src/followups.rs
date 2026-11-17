@@ -195,37 +195,49 @@ async fn deliver(state: &AppState, r: &Claimed) -> Result<(), AppError> {
     };
     #[derive(FromRow)]
     struct Who {
-        email: String,
-        verified: bool,
         notify: bool,
         company: Option<String>,
         role: Option<String>,
+        days: i64,
     }
     let who = sqlx::query_as::<_, Who>(
         r#"
-        select u.email, u.email_verified_at is not null as verified,
-               coalesce(p.notify_follow_ups, true) as notify, a.company, a.role
-        from users u join applications a on a.user_id = u.id and a.id = $2
-        left join profiles p on p.user_id = u.id
-        where u.id = $1
+        select coalesce(p.notify_follow_ups, true) as notify, a.company, a.role,
+               greatest(0, extract(day from now() - coalesce(a.submitted_at, a.created_at)))::bigint as days
+        from applications a left join profiles p on p.user_id = a.user_id
+        where a.id = $2 and a.user_id = $1
         "#,
     )
     .bind(r.user_id)
     .bind(r.application_id)
     .fetch_one(&state.db)
     .await?;
-    if who.verified && who.notify {
-        let link = format!(
-            "{}/jobs/{}/follow-up",
-            state.config.web.app_base_url, r.application_id
-        );
+    let to = crate::notify::recipient(&state.db, r.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if to.verified && who.notify {
+        let app = &state.config.web.app_base_url;
+        let link = format!("{app}/applications/{}/follow-up", r.application_id);
+        let send_time = crate::notify::send_time(to.send_hour);
         let msg = mail::follow_up_due(
-            &who.email,
-            who.company.as_deref().unwrap_or("the company"),
-            who.role.as_deref().unwrap_or("the role"),
-            &link,
-            d.subject.as_deref(),
-            &d.body,
+            &to.email,
+            &mail::FollowUpDue {
+                company: who.company.as_deref().unwrap_or("the company"),
+                role: who.role.as_deref().unwrap_or("the role"),
+                days_since_applied: who.days,
+                link: &link,
+                draft_subject: d.subject.as_deref(),
+                draft_body: &d.body,
+                send_time: &send_time,
+                skip_weekends: to.skip_weekends,
+            },
+            mail::unsubscribe(
+                app,
+                &to.unsubscribe_token,
+                "follow_ups",
+                "",
+                "Turn off follow-up reminders",
+            ),
             format!("reminder-{}", r.id),
         );
         state

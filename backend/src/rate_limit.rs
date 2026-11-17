@@ -91,6 +91,12 @@ pub const EXPORT_USER: Limit = Limit {
     burst: 5,
     per: minutes(60),
 };
+/// Unsubscribe and resubscribe links, which need no session.
+pub const UNSUBSCRIBE_IP: Limit = Limit {
+    name: "unsubscribe_ip",
+    burst: 30,
+    per: minutes(15),
+};
 pub const PASSWORD_CHECK_USER: Limit = Limit {
     name: "password_check_user",
     burst: 10,
@@ -210,6 +216,7 @@ fn limit_window(name: &str) -> Option<Duration> {
         VERIFY_CODE_IP,
         OAUTH_IP,
         PASSWORD_CHECK_USER,
+        UNSUBSCRIBE_IP,
         AI_USER,
         EXPORT_USER,
     ]

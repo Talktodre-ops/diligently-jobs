@@ -14,6 +14,9 @@ pub struct Config {
     /// Google sign-in. None when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
     /// are both unset, which turns the feature off.
     pub google: Option<GoogleConfig>,
+    /// SUPPORT_EMAIL: named in the account-deleted and email-changed emails
+    /// when set; those lines are left out when it is not.
+    pub support_email: Option<String>,
 }
 
 pub const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -163,6 +166,14 @@ impl Config {
             web,
             limits: crate::usage::LimitsConfig::from_env()?,
             google: GoogleConfig::from_env()?,
+            support_email: match optional_env("SUPPORT_EMAIL") {
+                None => None,
+                Some(v) => {
+                    Some(crate::validate::email("SUPPORT_EMAIL", &v).map_err(|_| {
+                        anyhow::anyhow!("SUPPORT_EMAIL is not a valid email address")
+                    })?)
+                }
+            },
         })
     }
 }

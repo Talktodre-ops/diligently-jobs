@@ -18,7 +18,7 @@ pub async fn require_allowed_origin(
     req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    if is_safe(req.method()) {
+    if is_safe(req.method()) || is_cookieless(req.uri().path()) {
         return Ok(next.run(req).await);
     }
     match request_origin(req.headers()) {
@@ -30,6 +30,13 @@ pub async fn require_allowed_origin(
             "This request did not come from the Diligently app.",
         )),
     }
+}
+
+/// Routes that never read the session cookie, so a cross-site request gains
+/// nothing from it: the email unsubscribe links, which mail clients post to
+/// with no Origin (RFC 8058) and which authorise by their own token.
+fn is_cookieless(path: &str) -> bool {
+    path.starts_with("/v1/email/")
 }
 
 fn is_safe(m: &Method) -> bool {

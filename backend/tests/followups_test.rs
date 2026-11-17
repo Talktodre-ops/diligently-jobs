@@ -57,10 +57,31 @@ async fn a_due_reminder_drafts_and_emails_exactly_once() {
 
     let mails: Vec<_> = app.mail.sent().into_iter().skip(mails_before).collect();
     assert_eq!(mails.len(), 1);
-    assert_eq!(mails[0].subject, "Follow up with Halcyon Health");
+    assert_eq!(mails[0].subject, "Time to follow up with Halcyon Health");
     assert!(mails[0].text.contains("I applied last week"));
-    assert!(mails[0].text.contains(&format!("/jobs/{id}/follow-up")));
+    assert!(mails[0]
+        .text
+        .contains(&format!("/applications/{id}/follow-up")));
     assert!(mails[0].idempotency_key.starts_with("reminder-"));
+    // Optional mail: one-click unsubscribe header and footer link.
+    let token: String = sqlx::query_scalar("select unsubscribe_token from users")
+        .fetch_one(&app.state.db)
+        .await
+        .unwrap();
+    assert!(mails[0].headers.contains(&(
+        "List-Unsubscribe".to_string(),
+        format!("<http://app.test/v1/email/unsubscribe/one-click?token={token}&kind=follow_ups>")
+    )));
+    assert!(mails[0].headers.contains(&(
+        "List-Unsubscribe-Post".to_string(),
+        "List-Unsubscribe=One-Click".to_string()
+    )));
+    assert!(mails[0].text.contains(&format!(
+        "Turn off follow-up reminders: http://app.test/unsubscribe?token={token}&kind=follow_ups"
+    )));
+    assert!(mails[0]
+        .text
+        .contains("They arrive at 9:00 your time, never at weekends."));
 
     let f = c
         .get(&format!("/v1/applications/{id}/follow-ups"))

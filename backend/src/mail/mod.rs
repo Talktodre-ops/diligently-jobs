@@ -13,6 +13,11 @@ use std::sync::Mutex;
 use anyhow::{anyhow, Context};
 use serde_json::json;
 
+pub mod layout;
+pub mod messages;
+
+pub use messages::*;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Email {
     pub to: String,
@@ -22,6 +27,19 @@ pub struct Email {
     /// Stable key for this logical message so a retried send is not delivered
     /// twice by the provider.
     pub idempotency_key: String,
+    /// Extra headers, such as List-Unsubscribe on optional emails.
+    pub headers: Vec<(String, String)>,
+}
+
+impl Email {
+    fn headers_json(&self) -> serde_json::Value {
+        let map: serde_json::Map<String, serde_json::Value> = self
+            .headers
+            .iter()
+            .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+            .collect();
+        serde_json::Value::Object(map)
+    }
 }
 
 pub type SendFuture<'a> = Pin<Box<dyn Future<Output = anyhow::Result<()>> + Send + 'a>>;
@@ -78,7 +96,15 @@ impl Mailer for FileMailer {
                 })
                 .collect();
             let path = self.dir.join(format!("{stamp}-{safe_to}.json"));
-            let body = json!({ "to": email.to, "subject": email.subject, "text": email.text });
+            // Browser tests read `to`, `subject` and `text`; html and headers
+            // are there for looking at the message locally.
+            let body = json!({
+                "to": email.to,
+                "subject": email.subject,
+                "text": email.text,
+                "html": email.html,
+                "headers": email.headers_json(),
+            });
             tokio::fs::write(&path, serde_json::to_vec_pretty(&body)?)
                 .await
                 .with_context(|| format!("write {}", path.display()))?;
@@ -112,15 +138,25 @@ impl Mailer for MemoryMailer {
     }
 }
 
-/// Resend HTTP API (POST https://api.resend.com/emails).
+/// Resend HTTP API (POST https://api.resend.com/emails). Custom headers go in
+/// the body's `headers` object, as Resend's send-email reference describes.
 pub struct ResendMailer {
     client: reqwest::Client,
     api_key: String,
     from: String,
+    endpoint: String,
 }
+
+const RESEND_ENDPOINT: &str = "https://api.resend.com/emails";
 
 impl ResendMailer {
     pub fn new(api_key: String, from: String) -> anyhow::Result<Self> {
+        Self::with_endpoint(api_key, from, RESEND_ENDPOINT.to_string())
+    }
+
+    /// Same, posting to another URL. Only tests use this, against a local
+    /// stand-in for Resend.
+    pub fn with_endpoint(api_key: String, from: String, endpoint: String) -> anyhow::Result<Self> {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
             .build()
@@ -129,6 +165,7 @@ impl ResendMailer {
             client,
             api_key,
             from,
+            endpoint,
         })
     }
 }
@@ -136,18 +173,22 @@ impl ResendMailer {
 impl Mailer for ResendMailer {
     fn send(&self, email: Email) -> SendFuture<'_> {
         Box::pin(async move {
+            let mut body = json!({
+                "from": self.from,
+                "to": [email.to],
+                "subject": email.subject,
+                "text": email.text,
+                "html": email.html,
+            });
+            if !email.headers.is_empty() {
+                body["headers"] = email.headers_json();
+            }
             let resp = self
                 .client
-                .post("https://api.resend.com/emails")
+                .post(&self.endpoint)
                 .bearer_auth(&self.api_key)
                 .header("Idempotency-Key", &email.idempotency_key)
-                .json(&json!({
-                    "from": self.from,
-                    "to": [email.to],
-                    "subject": email.subject,
-                    "text": email.text,
-                    "html": email.html,
-                }))
+                .json(&body)
                 .send()
                 .await
                 .context("resend request failed")?;
@@ -205,161 +246,9 @@ pub async fn send_best_effort(mailer: &dyn Mailer, email: Email) {
     }
 }
 
-fn escape_html(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
-/// One message with a single call-to-action link, as text and simple HTML.
-fn link_email(
-    to: &str,
-    subject: &str,
-    intro: &str,
-    cta: &str,
-    link: &str,
-    outro: &str,
-    key: String,
-) -> Email {
-    let text = format!("{intro}\n\n{cta}: {link}\n\n{outro}\n\nDiligently");
-    let html = format!(
-        "<div style=\"font-family:Inter,Arial,sans-serif;color:#3B1C32;max-width:520px\">\
-         <p>{}</p><p><a href=\"{}\" style=\"display:inline-block;background:#C2471F;color:#ffffff;\
-         padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600\">{}</a></p>\
-         <p style=\"font-size:13px;color:#6B4E62\">{}</p><p style=\"font-size:13px;color:#6B4E62\">\
-         If the button does not work, paste this into your browser:<br>{}</p></div>",
-        escape_html(intro),
-        escape_html(link),
-        escape_html(cta),
-        escape_html(outro),
-        escape_html(link),
-    );
-    Email {
-        to: to.to_string(),
-        subject: subject.to_string(),
-        text,
-        html,
-        idempotency_key: key,
-    }
-}
-
-/// Sign-up verification: the 6-digit code on its own line, then the link, so
-/// the person can type the code where they are or follow the link anywhere.
-pub fn verify_email(to: &str, code: &str, link: &str, key: String) -> Email {
-    let intro = "Enter this code in Diligently to confirm your email:";
-    let outro = "The code expires in 30 minutes and the link in 24 hours. If you did not sign up, ignore this email.";
-    let text =
-        format!("{intro}\n\n{code}\n\nOr confirm with this link: {link}\n\n{outro}\n\nDiligently");
-    let html = format!(
-        "<div style=\"font-family:Inter,Arial,sans-serif;color:#3B1C32;max-width:520px\">\
-         <p>{}</p><p style=\"font-size:32px;font-weight:700;letter-spacing:6px;margin:16px 0\">{}</p>\
-         <p>Or confirm with this link:</p><p><a href=\"{}\" style=\"display:inline-block;background:#C2471F;\
-         color:#ffffff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:600\">Confirm email</a></p>\
-         <p style=\"font-size:13px;color:#6B4E62\">{}</p><p style=\"font-size:13px;color:#6B4E62\">\
-         If the button does not work, paste this into your browser:<br>{}</p></div>",
-        escape_html(intro),
-        escape_html(code),
-        escape_html(link),
-        escape_html(outro),
-        escape_html(link),
-    );
-    Email {
-        to: to.to_string(),
-        subject: format!("{code} is your Diligently code"),
-        text,
-        html,
-        idempotency_key: key,
-    }
-}
-
-pub fn reset_password(to: &str, link: &str, key: String) -> Email {
-    link_email(
-        to,
-        "Reset your Diligently password",
-        "Someone asked to reset the password for this account.",
-        "Choose a new password",
-        link,
-        "The link works once and expires in 1 hour. If it was not you, ignore this email and your password stays the same.",
-        key,
-    )
-}
-
-pub fn confirm_new_email(to: &str, link: &str, key: String) -> Email {
-    link_email(
-        to,
-        "Confirm your new email for Diligently",
-        "Confirm that you want to use this address for your Diligently account.",
-        "Confirm new email",
-        link,
-        "The link works once and expires in 24 hours. If you did not ask for this, ignore this email.",
-        key,
-    )
-}
-
-/// "Time to follow up": the reminder, with the drafted message inline so it
-/// can be copied straight from the email.
-pub fn follow_up_due(
-    to: &str,
-    company: &str,
-    role: &str,
-    link: &str,
-    draft_subject: Option<&str>,
-    draft_body: &str,
-    key: String,
-) -> Email {
-    let intro = format!("It is time to follow up on your application for {role} at {company}. A draft is ready below and in the app.");
-    let draft = match draft_subject {
-        Some(s) => format!("Subject: {s}\n\n{draft_body}"),
-        None => draft_body.to_string(),
-    };
-    let mut e = link_email(
-        to,
-        &format!("Follow up with {company}"),
-        &intro,
-        "Open the follow-up",
-        link,
-        "You can turn these reminders off in Settings.",
-        key,
-    );
-    e.text = format!("{}\n\n---\n{draft}\n---", e.text);
-    e.html = format!(
-        "{}<pre style=\"white-space:pre-wrap;font-family:Inter,Arial,sans-serif;background:#FCF8EC;padding:12px;border-radius:8px\">{}</pre>",
-        e.html,
-        escape_html(&draft)
-    );
-    e
-}
-
-pub fn password_changed(to: &str, key: String) -> Email {
-    let text = "Your Diligently password was just changed, and other devices were signed out.\n\nIf this was not you, reset your password now from the sign-in page.\n\nDiligently".to_string();
-    let html = format!(
-        "<div style=\"font-family:Inter,Arial,sans-serif;color:#3B1C32\"><p>{}</p></div>",
-        escape_html(&text).replace('\n', "<br>")
-    );
-    Email {
-        to: to.to_string(),
-        subject: "Your Diligently password was changed".to_string(),
-        text,
-        html,
-        idempotency_key: key,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn link_is_escaped_in_html_and_plain_in_text() {
-        let e = verify_email("a@b.co", "123456", "https://app/x?token=a&b", "k".into());
-        assert_eq!(e.subject, "123456 is your Diligently code");
-        assert!(e.text.contains("\n123456\n"), "code on its own line");
-        assert!(e.text.find("123456") < e.text.find("https://app/x"));
-        assert!(e.text.contains("https://app/x?token=a&b"));
-        assert!(e.html.contains("https://app/x?token=a&amp;b"));
-        assert!(!e.html.contains("token=a&b"));
-    }
 
     #[tokio::test]
     async fn file_mailer_writes_one_json_file_per_message() {
@@ -385,12 +274,61 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn resend_request_carries_custom_headers() {
+        use axum::http::HeaderMap;
+        use std::sync::{Arc, Mutex};
+
+        type Seen = Arc<Mutex<Option<(HeaderMap, serde_json::Value)>>>;
+        let seen: Seen = Arc::default();
+        let store = seen.clone();
+        let router = axum::Router::new().route(
+            "/emails",
+            axum::routing::post(
+                move |headers: HeaderMap, axum::Json(body): axum::Json<serde_json::Value>| {
+                    let store = store.clone();
+                    async move {
+                        *store.lock().unwrap() = Some((headers, body));
+                        axum::Json(json!({ "id": "x" }))
+                    }
+                },
+            ),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+
+        let m = ResendMailer::with_endpoint(
+            "test-key".into(),
+            "Diligently <hello@example.com>".into(),
+            format!("http://{addr}/emails"),
+        )
+        .unwrap();
+        let mut e = reset_password("ada@example.com", "https://app/r", "key-1".into());
+        e.headers = vec![("List-Unsubscribe".into(), "<https://app/u>".into())];
+        m.send(e).await.unwrap();
+
+        let (headers, body) = seen.lock().unwrap().clone().unwrap();
+        assert_eq!(headers["idempotency-key"], "key-1");
+        assert_eq!(headers["authorization"], "Bearer test-key");
+        assert_eq!(body["to"], json!(["ada@example.com"]));
+        assert_eq!(
+            body["headers"],
+            json!({ "List-Unsubscribe": "<https://app/u>" })
+        );
+        assert!(body["html"]
+            .as_str()
+            .unwrap()
+            .contains("Choose a new password"));
+        assert!(body["text"].as_str().unwrap().contains("https://app/r"));
+    }
+
+    #[tokio::test]
     async fn memory_mailer_captures_messages() {
         let m = MemoryMailer::default();
-        send_best_effort(&m, password_changed("a@b.co", "k".into())).await;
+        send_best_effort(&m, reset_password("a@b.co", "https://app/r", "k".into())).await;
         assert_eq!(
             m.last_to("a@b.co").unwrap().subject,
-            "Your Diligently password was changed"
+            "Reset your Diligently password"
         );
     }
 }

@@ -5,6 +5,7 @@ pub mod blobs;
 pub mod cover_letters;
 pub mod cv;
 pub mod cv_versions;
+pub mod email_prefs;
 pub mod events;
 pub mod files;
 pub mod gaps;

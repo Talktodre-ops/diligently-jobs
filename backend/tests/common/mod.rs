@@ -133,6 +133,7 @@ impl TestApp {
             },
             limits: diligently_api::usage::LimitsConfig::default(),
             google: None,
+            support_email: None,
         };
         let mut config = config;
         adjust(&mut config);

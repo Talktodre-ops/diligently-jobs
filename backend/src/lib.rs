@@ -13,6 +13,7 @@ pub mod followups;
 pub mod jobs;
 pub mod legacy;
 pub mod mail;
+pub mod notify;
 pub mod pipeline;
 pub mod prompts;
 pub mod r2;
@@ -76,7 +77,19 @@ pub fn build_router(state: AppState) -> Router {
             "/v1/auth/sessions/revoke-others",
             post(a::revoke_other_sessions),
         )
-        .route("/v1/auth/sessions/{id}", delete(a::revoke_session));
+        .route("/v1/auth/sessions/{id}", delete(a::revoke_session))
+        .route(
+            "/v1/email/unsubscribe",
+            post(routes::email_prefs::unsubscribe),
+        )
+        .route(
+            "/v1/email/resubscribe",
+            post(routes::email_prefs::resubscribe),
+        )
+        .route(
+            "/v1/email/unsubscribe/one-click",
+            post(routes::email_prefs::one_click),
+        );
 
     // Resource routes. Every handler takes `CurrentUser`, which rejects a
     // signed-out request with 401, and scopes every query to that user.

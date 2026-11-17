@@ -456,27 +456,41 @@ pub async fn forgot_password(
     let Ok(email) = validate::email("email", &req.email) else {
         return Ok(accepted);
     };
-    let found: Option<(Uuid, String)> = sqlx::query_as(
+    let found: Option<(Uuid, String, bool)> = sqlx::query_as(
         // Google-only accounts have no password yet and may set one here; the
         // legacy owner (neither) stays unreachable.
         r#"
-        select id, email from users
+        select id, email, password_hash is not null from users
         where lower(email) = lower($1) and (password_hash is not null or google_sub is not null)
         "#,
     )
     .bind(&email)
     .fetch_optional(&state.db)
     .await?;
-    if let Some((user_id, address)) = found {
-        let (id, raw) = create_email_token(&state.db, user_id, "reset", RESET_TTL, None).await?;
-        let msg = mail::reset_password(
-            &address,
-            &link(&state, "/reset-password", &raw),
-            format!("reset-{id}"),
-        );
-        mail::send_best_effort(state.mailer.as_ref(), msg).await;
+    if let Some((user_id, address, has_password)) = found {
+        send_reset_link(&state, user_id, &address, has_password).await?;
     }
     Ok(accepted)
+}
+
+/// A single-use link to `/reset-password`: the reset email, or its "Set a
+/// password" variant for an account that has none.
+pub async fn send_reset_link(
+    state: &AppState,
+    user_id: Uuid,
+    address: &str,
+    has_password: bool,
+) -> Result<(), AppError> {
+    let (id, raw) = create_email_token(&state.db, user_id, "reset", RESET_TTL, None).await?;
+    let url = link(state, "/reset-password", &raw);
+    let key = format!("reset-{id}");
+    let msg = if has_password {
+        mail::reset_password(address, &url, key)
+    } else {
+        mail::set_password(address, &url, key)
+    };
+    mail::send_best_effort(state.mailer.as_ref(), msg).await;
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -518,11 +532,12 @@ pub async fn reset_password(
     let hash = password::hash(&req.password).await?;
 
     let mut tx = state.db.begin().await?;
-    let email: String = sqlx::query_scalar(
+    let first_password: bool = sqlx::query_scalar(
         r#"
-        update users set password_hash = $2, password_changed_at = now(),
-            email_verified_at = coalesce(email_verified_at, now())
-        where id = $1 returning email
+        with old as (select password_hash from users where id = $1 for update)
+        update users u set password_hash = $2, password_changed_at = now(),
+            email_verified_at = coalesce(u.email_verified_at, now())
+        from old where u.id = $1 returning old.password_hash is null
         "#,
     )
     .bind(claimed.user_id)
@@ -540,9 +555,11 @@ pub async fn reset_password(
         .await?;
     tx.commit().await?;
 
-    mail::send_best_effort(
-        state.mailer.as_ref(),
-        mail::password_changed(&email, format!("pwchanged-{}", Uuid::new_v4())),
+    crate::notify::password_changed(
+        &state,
+        claimed.user_id,
+        meta.user_agent.as_deref(),
+        first_password,
     )
     .await;
     let raw = session::create(
@@ -591,6 +608,7 @@ async fn check_current_password(db: &PgPool, user_id: Uuid, given: &str) -> Resu
 /// POST /v1/auth/change-password. Signs out every other device.
 pub async fn change_password(
     State(state): State<AppState>,
+    meta: ClientMeta,
     user: CurrentUser,
     Json(req): Json<ChangePasswordRequest>,
 ) -> Result<Response, AppError> {
@@ -608,11 +626,7 @@ pub async fn change_password(
         .execute(&state.db)
         .await?;
     session::revoke_all_except(&state.db, user.id, Some(user.session_id)).await?;
-    mail::send_best_effort(
-        state.mailer.as_ref(),
-        mail::password_changed(&user.email, format!("pwchanged-{}", Uuid::new_v4())),
-    )
-    .await;
+    crate::notify::password_changed(&state, user.id, meta.user_agent.as_deref(), false).await;
     Ok(Json(Ok { ok: true }).into_response())
 }
 
@@ -689,13 +703,24 @@ pub async fn confirm_email(
     let new_email = claimed
         .new_email
         .ok_or_else(|| anyhow::anyhow!("change_email token without new_email"))?;
-    let res = sqlx::query("update users set email = $2, email_verified_at = now() where id = $1")
-        .bind(claimed.user_id)
-        .bind(&new_email)
-        .execute(&state.db)
-        .await;
+    let res: Result<Option<String>, sqlx::Error> = sqlx::query_scalar(
+        r#"
+        with old as (select email from users where id = $1 for update)
+        update users u set email = $2, email_verified_at = now()
+        from old where u.id = $1 returning old.email
+        "#,
+    )
+    .bind(claimed.user_id)
+    .bind(&new_email)
+    .fetch_optional(&state.db)
+    .await;
     match res {
-        Ok(_) => Ok(Json(Ok { ok: true }).into_response()),
+        Ok(old_email) => {
+            if let Some(old) = old_email.filter(|o| !o.eq_ignore_ascii_case(&new_email)) {
+                crate::notify::email_changed(&state, claimed.user_id, &old, &new_email).await;
+            }
+            Ok(Json(Ok { ok: true }).into_response())
+        }
         Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(AppError::conflict(
             "email_taken",
             "Another account started using that email in the meantime.",

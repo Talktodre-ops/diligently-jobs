@@ -293,6 +293,26 @@ Card `type` is `follow_up`, `retry`, `review` (with `pending`) or `prepare`.
 | `GET /v1/account/export` | | JSON file download of everything the user owns, with hour-long file links |
 | `DELETE /v1/account` | `{ password }` | `204`; deletes every row and file, clears the cookie |
 
+## Email preferences (Unsubscribe page, no sign-in)
+
+Optional emails (follow-up reminders, Monday summary, running low, product
+news) carry the user's unsubscribe token: a footer link to
+`APP_BASE_URL/unsubscribe?token=<t>&kind=<kind>` and the headers
+`List-Unsubscribe: <APP_BASE_URL/v1/email/unsubscribe/one-click?token=<t>&kind=<kind>>`
+and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058). Security
+emails have neither. These routes need no session and no Origin, and are
+limited per IP. `kind` is `follow_ups`, `weekly_summary`, `running_low` or
+`product_news`.
+
+| Method and path | Body | Response |
+|---|---|---|
+| `POST /v1/email/unsubscribe` | `{ token, kind }` | `{ kind, email }`, that kind off; `email` is masked like `ad***@gmail.com` |
+| `POST /v1/email/resubscribe` | `{ token, kind }` | same shape, that kind back on (Undo) |
+| `POST /v1/email/unsubscribe/one-click?token=&kind=` | form `List-Unsubscribe=One-Click` | `200`, empty body |
+
+An unknown token is `404 not_found`; another `kind` is `400 invalid_kind` with
+`field: "kind"`.
+
 ## Older endpoints
 
 These predate the hosted app and stay for the data they hold. All are

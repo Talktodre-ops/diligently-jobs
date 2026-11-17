@@ -454,6 +454,16 @@ async fn change_email_applies_only_after_confirmation() {
     let me = c.get("/v1/auth/me").await;
     assert_eq!(me.body["user"]["email"], "ada.new@example.com");
     assert_eq!(me.body["user"]["email_verified"], true);
+
+    // The old address hears about it, and is told where the account went.
+    let notice = app.mail.last_to("ada@example.com").unwrap();
+    assert_eq!(notice.subject, "Your Diligently email was changed");
+    assert!(notice.text.contains("ada.new@example.com"));
+    assert!(notice.text.contains("(UTC)"), "{}", notice.text);
+    assert!(
+        notice.headers.is_empty(),
+        "security mail has no unsubscribe"
+    );
 }
 
 // --- sessions list ---------------------------------------------------------------
