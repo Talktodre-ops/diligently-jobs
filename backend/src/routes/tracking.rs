@@ -2,7 +2,7 @@
 //! a follow-up reminder, and pipeline retry.
 
 use axum::extract::State;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{FromRow, PgPool};
@@ -122,6 +122,12 @@ pub async fn mark_applied(
             ));
         }
     }
+    let due_at = match req.reminder_days {
+        Some(d) => {
+            Some(crate::followups::reminder_due_at(&state.db, user.id, d, Utc::now()).await?)
+        }
+        None => None,
+    };
     let mut tx = state.db.begin().await?;
     let updated = sqlx::query(
         "update applications set stage = 'applied', submitted_at = coalesce(submitted_at, now()) where id = $1 and user_id = $2",
@@ -138,14 +144,14 @@ pub async fn mark_applied(
         .bind(user.id)
         .execute(&mut *tx)
         .await?;
-    let reminder = match req.reminder_days {
-        Some(d) => Some(
+    let reminder = match due_at {
+        Some(due) => Some(
             sqlx::query_as::<_, ReminderOut>(&format!(
                 "insert into reminders (user_id, application_id, due_at) values ($1, $2, $3) returning {REMINDER_COLS}"
             ))
             .bind(user.id)
             .bind(app_id)
-            .bind(Utc::now() + Duration::days(d))
+            .bind(due)
             .fetch_one(&mut *tx)
             .await?,
         ),
@@ -295,7 +301,8 @@ pub struct SnoozeRequest {
     pub days: i64,
 }
 
-/// POST /v1/reminders/{id}/snooze: remind again in 1 to 14 days.
+/// POST /v1/reminders/{id}/snooze: remind again in 1 to 14 days, at the
+/// user's send hour in their zone.
 pub async fn snooze(
     State(state): State<AppState>,
     user: CurrentUser,
@@ -305,16 +312,17 @@ pub async fn snooze(
     if !(1..=14).contains(&req.days) {
         return Err(AppError::validation("days", "Snooze for 1 to 14 days."));
     }
+    let due = crate::followups::reminder_due_at(&state.db, user.id, req.days, Utc::now()).await?;
     let r = sqlx::query_as::<_, ReminderOut>(&format!(
         r#"
-        update reminders set status = 'scheduled', attempts = 0, due_at = now() + make_interval(days => $3)
+        update reminders set status = 'scheduled', attempts = 0, due_at = $3
         where id = $1 and user_id = $2 and status in ('scheduled', 'sent', 'failed')
         returning {REMINDER_COLS}
         "#
     ))
     .bind(id)
     .bind(user.id)
-    .bind(req.days as i32)
+    .bind(due)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;

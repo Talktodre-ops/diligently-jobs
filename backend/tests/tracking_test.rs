@@ -26,8 +26,11 @@ async fn mark_applied_sets_the_stage_and_schedules_one_reminder() {
     assert_eq!(r.body["stage"], "applied");
     let due = r.body["reminder"]["due_at"].as_str().unwrap();
     let due = chrono::DateTime::parse_from_rfc3339(due).unwrap();
-    let days = (due.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_hours();
-    assert!((167..=168).contains(&days), "{days} hours");
+    let due = due.with_timezone(&chrono::Utc);
+    // Seven days on (nine at most, past a weekend) at the 09:00 UTC default.
+    let hours = (due - chrono::Utc::now()).num_hours();
+    assert!((6 * 24..=9 * 24).contains(&hours), "{hours} hours");
+    assert_eq!(due.format("%H:%M").to_string(), "09:00");
 
     // Marking again replaces the reminder instead of adding a second.
     c.post(

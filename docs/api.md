@@ -272,6 +272,10 @@ Drafts address the reader as `{name}` for the user to fill in. When a reminder
 falls due, the server drafts the email follow-up and, if the user has follow-up
 reminders on, emails them.
 
+A reminder (from `applied` or `snooze`) is due `days` after today's date in the
+user's `reminders.time_zone` (UTC when null), at `send_hour:00` local time; with
+`skip_weekends`, a Saturday or Sunday moves to the Monday after.
+
 ## Home
 
 `GET /v1/home`:

@@ -228,10 +228,14 @@ async fn drafts_snooze_and_done() {
         .post(&format!("/v1/reminders/{rid}/snooze"), json!({ "days": 3 }))
         .await;
     assert_eq!(s.body["reminder"]["status"], "scheduled");
-    let soon: bool = sqlx::query_scalar("select due_at between now() + interval '71 hours' and now() + interval '73 hours' from reminders")
-        .fetch_one(&app.state.db)
-        .await
-        .unwrap();
+    // Three days on (five at most, past a weekend), at 09:00 UTC.
+    let soon: bool = sqlx::query_scalar(
+        "select due_at between now() + interval '2 days' and now() + interval '6 days' \
+         and extract(hour from due_at at time zone 'UTC') = 9 and extract(minute from due_at) = 0 from reminders",
+    )
+    .fetch_one(&app.state.db)
+    .await
+    .unwrap();
     assert!(soon);
     assert_eq!(
         c.post(
@@ -291,4 +295,107 @@ async fn another_user_cannot_touch_follow_ups_or_reminders() {
         StatusCode::NOT_FOUND
     );
     assert_eq!(reminder_status(&app).await.0, "scheduled");
+}
+
+fn utc(s: &str) -> chrono::DateTime<chrono::Utc> {
+    s.parse().unwrap()
+}
+
+#[tokio::test]
+async fn reminders_fall_at_the_send_hour_in_the_users_zone() {
+    let app = TestApp::spawn().await;
+    let c = common::verified_user(&app, "ada@example.com").await;
+    let uid: uuid::Uuid = c.get("/v1/auth/me").await.body["user"]["id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let due = |days: i64, now: &str| {
+        let now = utc(now);
+        let db = app.state.db.clone();
+        async move {
+            followups::reminder_due_at(&db, uid, days, now)
+                .await
+                .unwrap()
+                .to_rfc3339()
+        }
+    };
+
+    // No zone yet: UTC, 09:00. Wed 18 Nov + 3 days is Saturday, so Monday.
+    assert_eq!(
+        due(3, "2026-11-18T10:00:00Z").await,
+        "2026-11-23T09:00:00+00:00"
+    );
+
+    // Lagos is UTC+1: 09:00 there is 08:00 UTC, weekend skipped.
+    c.patch(
+        "/v1/profile",
+        json!({ "reminders": { "time_zone": "Africa/Lagos" } }),
+    )
+    .await;
+    assert_eq!(
+        due(3, "2026-11-18T10:00:00Z").await,
+        "2026-11-23T08:00:00+00:00"
+    );
+    // The local date decides "today": 23:30 UTC on Wednesday is already
+    // Thursday in Lagos, so +3 lands on Sunday, then Monday.
+    assert_eq!(
+        due(3, "2026-11-18T23:30:00Z").await,
+        "2026-11-23T08:00:00+00:00"
+    );
+    assert_eq!(
+        due(1, "2026-11-18T10:00:00Z").await,
+        "2026-11-19T08:00:00+00:00"
+    );
+
+    // Weekends allowed and a later send hour.
+    c.patch(
+        "/v1/profile",
+        json!({ "reminders": { "skip_weekends": false, "send_hour": 18 } }),
+    )
+    .await;
+    assert_eq!(
+        due(3, "2026-11-18T10:00:00Z").await,
+        "2026-11-21T17:00:00+00:00"
+    );
+
+    // New York across the end of daylight saving (1 November 2026): Friday
+    // 30 October + 5 days is Wednesday 4 November, 09:00 EST = 14:00 UTC.
+    c.patch(
+        "/v1/profile",
+        json!({ "reminders": { "time_zone": "America/New_York", "send_hour": 9, "skip_weekends": true } }),
+    )
+    .await;
+    assert_eq!(
+        due(5, "2026-10-30T15:00:00Z").await,
+        "2026-11-04T14:00:00+00:00"
+    );
+}
+
+#[tokio::test]
+async fn marking_applied_schedules_in_local_time() {
+    let app = TestApp::spawn().await;
+    let c = ready_user(&app, "ada@example.com").await;
+    c.patch(
+        "/v1/profile",
+        json!({ "reminders": { "time_zone": "Asia/Kolkata", "send_hour": 13 } }),
+    )
+    .await;
+    let id = started(&app, &c).await;
+    let r = c
+        .post(
+            &format!("/v1/applications/{id}/applied"),
+            json!({ "reminder_days": 7 }),
+        )
+        .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.body);
+    // 13:00 in Kolkata is 07:30 UTC, on a weekday.
+    let (hour, minute, dow): (f64, f64, f64) = sqlx::query_as(
+        "select extract(hour from due_at at time zone 'Asia/Kolkata')::float8, extract(minute from due_at at time zone 'UTC')::float8, extract(isodow from due_at at time zone 'Asia/Kolkata')::float8 from reminders",
+    )
+    .fetch_one(&app.state.db)
+    .await
+    .unwrap();
+    assert_eq!((hour, minute), (13.0, 30.0));
+    assert!(dow <= 5.0, "never at weekends");
 }

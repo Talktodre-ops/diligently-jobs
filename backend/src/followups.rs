@@ -109,6 +109,45 @@ pub async fn draft(
     .await?)
 }
 
+/// When a reminder `days` from `now` is due for this user: that many days
+/// after today's local date in their time zone (UTC when unknown), at their
+/// send hour, moved from a Saturday or Sunday to the Monday after when they
+/// skip weekends. Postgres does the zone arithmetic with its tz database, so
+/// daylight saving changes in between are handled. The result can be in the
+/// past (a send hour already gone today); the next sweep then sends it.
+pub async fn reminder_due_at(
+    db: &PgPool,
+    user_id: Uuid,
+    days: i64,
+    now: DateTime<Utc>,
+) -> Result<DateTime<Utc>, AppError> {
+    crate::routes::profile::ensure(db, user_id).await?;
+    let days =
+        i32::try_from(days).map_err(|_| AppError::validation("days", "That is too many days."))?;
+    Ok(sqlx::query_scalar(
+        r#"
+        with p as (
+            select coalesce(time_zone, 'UTC') as tz, send_hour, skip_weekends
+            from profiles where user_id = $1
+        ), d as (
+            select tz, send_hour, skip_weekends, ($3::timestamptz at time zone tz)::date + $2 as day
+            from p
+        )
+        select ((day + case when not skip_weekends then 0
+                            when extract(isodow from day) = 6 then 2
+                            when extract(isodow from day) = 7 then 1
+                            else 0 end)
+                + make_time(send_hour, 0, 0)) at time zone tz
+        from d
+        "#,
+    )
+    .bind(user_id)
+    .bind(days)
+    .bind(now)
+    .fetch_one(db)
+    .await?)
+}
+
 #[derive(Debug, FromRow)]
 struct Claimed {
     id: Uuid,
