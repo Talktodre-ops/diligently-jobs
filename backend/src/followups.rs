@@ -260,6 +260,7 @@ async fn deliver(state: &AppState, r: &Claimed) -> Result<(), AppError> {
         let send_time = crate::notify::send_time(to.send_hour);
         let msg = mail::follow_up_due(
             &to.email,
+            app,
             &mail::FollowUpDue {
                 company: who.company.as_deref().unwrap_or("the company"),
                 role: who.role.as_deref().unwrap_or("the role"),

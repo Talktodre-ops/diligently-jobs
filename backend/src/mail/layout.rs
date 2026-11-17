@@ -1,5 +1,5 @@
 //! The one layout every email uses, after the Email boards in
-//! docs/design/settings: the wordmark, a white card on a warm background
+//! docs/design/settings: the logo, a white card on a warm background
 //! with a heading and body, and a footer under the card. HTML with inline
 //! styles only (email clients drop style sheets), tables for anything laid
 //! out side by side, a hidden preheader, and a plain-text part that carries
@@ -18,7 +18,6 @@ const SOFT: &str = "#FCF8EC";
 const RULE: &str = "#F1E8D2";
 const ACCENT: &str = "#C2471F";
 const ACCENT_TEXT: &str = "#B5401C";
-const DOT: &str = "#E8603C";
 const BORDER: &str = "#D9CCAE";
 const SANS: &str = "Inter, Arial, sans-serif";
 const SERIF: &str = "Fraunces, Georgia, serif";
@@ -162,7 +161,8 @@ impl Message {
         self
     }
 
-    pub fn into_email(self, to: &str, idempotency_key: String) -> Email {
+    /// `app` is APP_BASE_URL, where the web app serves the logo image.
+    pub fn into_email(self, app: &str, to: &str, idempotency_key: String) -> Email {
         let headers = match &self.unsubscribe {
             Some(u) => vec![
                 (
@@ -180,7 +180,7 @@ impl Message {
             to: to.to_string(),
             subject: self.subject.clone(),
             text: self.text(),
-            html: self.html(),
+            html: self.html(app),
             idempotency_key,
             headers,
         }
@@ -218,7 +218,7 @@ impl Message {
             .join("\n\n")
     }
 
-    fn html(&self) -> String {
+    fn html(&self, app: &str) -> String {
         let mut card = String::new();
         if let Some(e) = &self.eyebrow {
             card.push_str(&format!(
@@ -262,12 +262,13 @@ impl Message {
              <span style=\"display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:{BG}\">{pre}</span>\
              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background:{BG}\"><tr><td align=\"center\" style=\"padding:28px 16px 32px\">\
              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:600px;font-family:{SANS};color:{INK}\">\
-             <tr><td style=\"padding:4px 8px 18px;font-family:{SERIF};font-weight:600;font-size:24px;letter-spacing:-0.02em;color:{INK}\">diligently<span style=\"color:{DOT}\">.</span></td></tr>\
+             <tr><td style=\"padding:4px 8px 18px\"><img src=\"{logo}\" width=\"180\" height=\"34\" alt=\"Diligently\" style=\"display:block;border:0\"></td></tr>\
              <tr><td style=\"background:#FFFFFF;border:1px solid {LINE};border-radius:16px;padding:36px 32px 32px\">{card}</td></tr>\
              <tr><td style=\"padding:18px 8px 0\">{below}</td></tr>\
              </table></td></tr></table></body></html>",
             title = esc(&self.subject),
             pre = esc(&self.preheader),
+            logo = esc(&format!("{app}/email/lockup.png")),
         )
     }
 }
@@ -503,7 +504,11 @@ mod tests {
 
     #[test]
     fn html_escapes_and_bolds_while_text_stays_plain() {
-        let e = sample().into_email("a@b.co", "k".into());
+        let e = sample().into_email("https://app", "a@b.co", "k".into());
+        assert!(e.html.contains(
+            "<img src=\"https://app/email/lockup.png\" width=\"180\" height=\"34\" alt=\"Diligently\" style=\"display:block;border:0\">"
+        ));
+        assert!(e.text.starts_with("Heading"), "no logo in the text part");
         assert!(e.html.contains("Hello <strong>Ada</strong> &lt;b&gt;"));
         assert!(e.html.contains("https://app/x?token=a&amp;b"));
         assert!(!e.html.contains("token=a&b"));
@@ -526,7 +531,7 @@ mod tests {
                     .into(),
                 settings_url: "https://app/settings".into(),
             })
-            .into_email("a@b.co", "k".into());
+            .into_email("https://app", "a@b.co", "k".into());
         assert_eq!(
             e.headers,
             vec![

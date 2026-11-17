@@ -256,6 +256,7 @@ mod tests {
         let m = FileMailer::new(dir.path().join("outbox")).unwrap();
         m.send(verify_email(
             "ada@example.com",
+            "https://app",
             "123456",
             "https://app/verify?token=t1",
             "k".into(),
@@ -303,7 +304,12 @@ mod tests {
             format!("http://{addr}/emails"),
         )
         .unwrap();
-        let mut e = reset_password("ada@example.com", "https://app/r", "key-1".into());
+        let mut e = reset_password(
+            "ada@example.com",
+            "https://app",
+            "https://app/r",
+            "key-1".into(),
+        );
         e.headers = vec![("List-Unsubscribe".into(), "<https://app/u>".into())];
         m.send(e).await.unwrap();
 
@@ -325,7 +331,11 @@ mod tests {
     #[tokio::test]
     async fn memory_mailer_captures_messages() {
         let m = MemoryMailer::default();
-        send_best_effort(&m, reset_password("a@b.co", "https://app/r", "k".into())).await;
+        send_best_effort(
+            &m,
+            reset_password("a@b.co", "https://app", "https://app/r", "k".into()),
+        )
+        .await;
         assert_eq!(
             m.last_to("a@b.co").unwrap().subject,
             "Reset your Diligently password"

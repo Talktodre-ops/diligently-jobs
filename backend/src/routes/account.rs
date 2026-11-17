@@ -174,7 +174,12 @@ pub async fn delete_code(
         return Err(has_password_conflict());
     }
     let c = code::issue(&state.db, user.id, code::Purpose::Delete).await?;
-    let msg = crate::mail::delete_code(&user.email, &c, format!("delcode-{}", Uuid::new_v4()));
+    let msg = crate::mail::delete_code(
+        &user.email,
+        &state.config.web.app_base_url,
+        &c,
+        format!("delcode-{}", Uuid::new_v4()),
+    );
     crate::mail::send_best_effort(state.mailer.as_ref(), msg).await;
     Ok(StatusCode::NO_CONTENT.into_response())
 }

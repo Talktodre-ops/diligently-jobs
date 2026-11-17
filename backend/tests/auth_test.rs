@@ -464,6 +464,10 @@ async fn change_email_applies_only_after_confirmation() {
         notice.headers.is_empty(),
         "security mail has no unsubscribe"
     );
+    assert!(notice.html.contains(
+        "<img src=\"http://app.test/email/lockup.png\" width=\"180\" height=\"34\" alt=\"Diligently\""
+    ));
+    assert!(notice.text.starts_with("Your email was changed"));
 }
 
 // --- sessions list ---------------------------------------------------------------

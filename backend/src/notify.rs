@@ -202,6 +202,7 @@ pub async fn account_deleted(state: &AppState, r: &Recipient) {
     };
     let email = mail::account_deleted(
         &r.email,
+        &state.config.web.app_base_url,
         &when,
         state.config.support_email.as_deref(),
         key("deleted"),

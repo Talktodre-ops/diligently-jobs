@@ -203,6 +203,7 @@ async fn send_verification(state: &AppState, user_id: Uuid, email: &str) -> Resu
     let verify_code = code::issue(&state.db, user_id, code::Purpose::Verify).await?;
     let msg = mail::verify_email(
         email,
+        &state.config.web.app_base_url,
         &verify_code,
         &link(state, "/verify-email", &raw),
         format!("verify-{id}"),
@@ -485,9 +486,9 @@ pub async fn send_reset_link(
     let url = link(state, "/reset-password", &raw);
     let key = format!("reset-{id}");
     let msg = if has_password {
-        mail::reset_password(address, &url, key)
+        mail::reset_password(address, &state.config.web.app_base_url, &url, key)
     } else {
-        mail::set_password(address, &url, key)
+        mail::set_password(address, &state.config.web.app_base_url, &url, key)
     };
     mail::send_best_effort(state.mailer.as_ref(), msg).await;
     Ok(())
@@ -685,6 +686,7 @@ pub async fn change_email(
     .await?;
     let msg = mail::confirm_new_email(
         &new_email,
+        &state.config.web.app_base_url,
         &link(&state, "/confirm-email", &raw),
         format!("chemail-{id}"),
     );

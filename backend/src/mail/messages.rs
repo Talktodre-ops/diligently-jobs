@@ -30,7 +30,7 @@ fn plural(n: i64, one: &str, many: &str) -> String {
 
 /// Sign-up verification: the 6-digit code on its own line, then the link, so
 /// the person can type the code where they are or follow the link anywhere.
-pub fn verify_email(to: &str, code: &str, link: &str, key: String) -> Email {
+pub fn verify_email(to: &str, app: &str, code: &str, link: &str, key: String) -> Email {
     Message::new(
         format!("{code} is your Diligently code"),
         "Enter it where you signed up. It works for 30 minutes.",
@@ -45,11 +45,11 @@ pub fn verify_email(to: &str, code: &str, link: &str, key: String) -> Email {
         aside: None,
     })
     .note("Someone signed up for Diligently with this address. If it wasn't you, ignore this email and nothing happens.")
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
 /// The code that deletes an account without a password.
-pub fn delete_code(to: &str, code: &str, key: String) -> Email {
+pub fn delete_code(to: &str, app: &str, code: &str, key: String) -> Email {
     Message::new(
         format!("{code} is your code to delete your Diligently account"),
         "It works for 30 minutes. Deleting can't be undone.",
@@ -61,10 +61,10 @@ pub fn delete_code(to: &str, code: &str, key: String) -> Email {
         "**This can't be undone.** Your CV, applications, cover letters and files will be deleted.",
     )
     .note("Didn't ask for this? Ignore this email and your account stays as it is.")
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
-pub fn reset_password(to: &str, link: &str, key: String) -> Email {
+pub fn reset_password(to: &str, app: &str, link: &str, key: String) -> Email {
     Message::new(
         "Reset your Diligently password",
         "The link works once, for the next hour.",
@@ -74,11 +74,11 @@ pub fn reset_password(to: &str, link: &str, key: String) -> Email {
     .button(Button::new("Choose a new password", link))
     .block(Block::LinkFallback(link.to_string()))
     .note("If it wasn't you, ignore this email. Your password stays the same.")
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
 /// The reset email for an account that has no password yet (Google only).
-pub fn set_password(to: &str, link: &str, key: String) -> Email {
+pub fn set_password(to: &str, app: &str, link: &str, key: String) -> Email {
     Message::new(
         "Set a password for Diligently",
         "The link works once, for the next hour.",
@@ -88,10 +88,10 @@ pub fn set_password(to: &str, link: &str, key: String) -> Email {
     .button(Button::new("Set a password", link))
     .block(Block::LinkFallback(link.to_string()))
     .note("If it wasn't you, ignore this email. Nothing changes.")
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
-pub fn confirm_new_email(to: &str, link: &str, key: String) -> Email {
+pub fn confirm_new_email(to: &str, app: &str, link: &str, key: String) -> Email {
     Message::new(
         "Confirm your new email for Diligently",
         "Nothing changes until you confirm.",
@@ -102,7 +102,7 @@ pub fn confirm_new_email(to: &str, link: &str, key: String) -> Email {
     .small("The link works once, for 24 hours.")
     .block(Block::LinkFallback(link.to_string()))
     .note("Didn't ask for this? Ignore it and nothing changes. Once a change goes through, the old address gets a note saying so.")
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
 const SECURITY_NOTE: &str =
@@ -140,7 +140,7 @@ pub fn password_changed(
             format!("{app}/forgot-password"),
         ))
         .note(SECURITY_NOTE)
-        .into_email(to, key)
+        .into_email(app, to, key)
 }
 
 /// To the old address once an email change has gone through.
@@ -169,7 +169,7 @@ pub fn email_changed(
     }
     m.button(Button::new("Open Diligently", format!("{app}/settings")))
         .note(SECURITY_NOTE)
-        .into_email(to_old, key)
+        .into_email(app, to_old, key)
 }
 
 pub fn google_connected(to: &str, google_email: &str, app: &str, when: &str, key: String) -> Email {
@@ -186,7 +186,7 @@ pub fn google_connected(to: &str, google_email: &str, app: &str, when: &str, key
     .para("**Not you?** Disconnect it in Settings and change your password.")
     .button(Button::new("Open Settings", format!("{app}/settings")))
     .note(SECURITY_NOTE)
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
 pub fn google_disconnected(to: &str, app: &str, when: &str, key: String) -> Email {
@@ -203,7 +203,7 @@ pub fn google_disconnected(to: &str, app: &str, when: &str, key: String) -> Emai
         format!("{app}/forgot-password"),
     ))
     .note(SECURITY_NOTE)
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
 pub struct SignIn<'a> {
@@ -240,10 +240,16 @@ pub fn new_sign_in(to: &str, app: &str, s: &SignIn<'_>, key: String) -> Email {
         aside: None,
     })
     .note(SECURITY_NOTE)
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
-pub fn account_deleted(to: &str, when: &str, support: Option<&str>, key: String) -> Email {
+pub fn account_deleted(
+    to: &str,
+    app: &str,
+    when: &str,
+    support: Option<&str>,
+    key: String,
+) -> Email {
     let mut m = Message::new(
         "Your Diligently account is deleted",
         "Everything you stored with us is gone.",
@@ -256,7 +262,7 @@ pub fn account_deleted(to: &str, when: &str, support: Option<&str>, key: String)
             "Didn't delete it yourself? Write to {s} and we'll look into it."
         ));
     }
-    m.into_email(to, key)
+    m.into_email(app, to, key)
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +285,7 @@ pub struct FollowUpDue<'a> {
 /// can be copied straight from the email.
 pub fn follow_up_due(
     to: &str,
+    app: &str,
     f: &FollowUpDue<'_>,
     unsubscribe: Unsubscribe,
     key: String,
@@ -321,7 +328,7 @@ pub fn follow_up_due(
         aside: Some("Not yet? Snooze it from there.".into()),
     })
     .unsubscribe(u)
-    .into_email(to, key)
+    .into_email(app, to, key)
 }
 
 pub struct Weekly<'a> {
@@ -385,7 +392,7 @@ pub fn weekly_summary(to: &str, w: Weekly<'_>, unsubscribe: Unsubscribe, key: St
     .block(Block::Rows(w.rows))
     .button(Button::new("Open Diligently", format!("{}/", w.app)))
     .unsubscribe(u)
-    .into_email(to, key)
+    .into_email(w.app, to, key)
 }
 
 pub struct RunningLow<'a> {
@@ -424,7 +431,7 @@ pub fn running_low(to: &str, r: &RunningLow<'_>, unsubscribe: Unsubscribe, key: 
     .para("Worth spending them on the jobs you want most. Anything you have already tailored stays yours to edit and send.")
     .button(Button::new("See your jobs", format!("{}/jobs", r.app)))
     .unsubscribe(u)
-    .into_email(to, key)
+    .into_email(r.app, to, key)
 }
 
 #[cfg(test)]
@@ -445,6 +452,7 @@ mod tests {
     fn codes_come_before_links_and_stay_on_their_own_line() {
         let e = verify_email(
             "a@b.co",
+            "https://app",
             "123456",
             "https://app/verify-email?token=t",
             "k".into(),
@@ -452,7 +460,7 @@ mod tests {
         assert_eq!(e.subject, "123456 is your Diligently code");
         assert!(e.text.contains("\n123456\n"));
         assert!(e.text.find("123456") < e.text.find("https://app/verify-email?token=t"));
-        let d = delete_code("a@b.co", "654321", "k".into());
+        let d = delete_code("a@b.co", "https://app", "654321", "k".into());
         assert!(
             !d.subject.contains("is your Diligently code"),
             "not mistaken for a sign-up code"
@@ -508,16 +516,16 @@ mod tests {
     fn no_dashes_in_any_copy() {
         let app = "https://app";
         let all = [
-            verify_email("a@b.co", "123456", "l", "k".into()),
-            delete_code("a@b.co", "123456", "k".into()),
-            reset_password("a@b.co", "l", "k".into()),
-            set_password("a@b.co", "l", "k".into()),
-            confirm_new_email("a@b.co", "l", "k".into()),
+            verify_email("a@b.co", app, "123456", "l", "k".into()),
+            delete_code("a@b.co", app, "123456", "k".into()),
+            reset_password("a@b.co", app, "l", "k".into()),
+            set_password("a@b.co", app, "l", "k".into()),
+            confirm_new_email("a@b.co", app, "l", "k".into()),
             password_changed("a@b.co", app, "w", "d", false, "k".into()),
             email_changed("a@b.co", "n@b.co", app, "w", Some("s@b.co"), "k".into()),
             google_connected("a@b.co", "g@b.co", app, "w", "k".into()),
             google_disconnected("a@b.co", app, "w", "k".into()),
-            account_deleted("a@b.co", "w", Some("s@b.co"), "k".into()),
+            account_deleted("a@b.co", app, "w", Some("s@b.co"), "k".into()),
         ];
         for e in all {
             for bad in ['\u{2014}', '\u{2013}'] {
