@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Email: new sign-in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 600px; height: 760px; box-sizing: border-box; background: #F6EFDC; color: #3B1C32; font-family: Inter, Arial, sans-serif; padding: 28px 28px 32px; display: flex; flex-direction: column; gap: 18px;">
+  <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5E4456; border-bottom: 1px dashed #D9CCAE; padding-bottom: 12px;">
+    <span><strong style="color: #3B1C32;">Subject</strong> New sign-in to Diligently: Chrome on Android</span>
+    <span><strong style="color: #3B1C32;">Preview</strong> If this was you, there's nothing to do.</span>
+  </div>
+  <div style="font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 24px; letter-spacing: -0.02em; padding: 4px 8px 0;">diligently<span style="color: #E8603C;">.</span></div>
+  <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 36px 36px 32px; display: flex; flex-direction: column; gap: 18px;">
+    <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 30px; line-height: 1.1;">A new device signed in</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 1.6;">We haven't seen this device on your account before.</p>
+    <div style="display: grid; grid-template-columns: 90px minmax(0, 1fr); row-gap: 8px; column-gap: 12px; background: #FCF8EC; border-radius: 12px; padding: 14px 16px; font-size: 14px;">
+      <span style="color: #5E4456;">Device</span><span>Chrome on Android</span>
+      <span style="color: #5E4456;">When</span><span>Mon 17 Nov, 21:40 (Lagos time)</span>
+      <span style="color: #5E4456;">How</span><span>Password</span>
+      <span style="color: #5E4456;">IP address</span><span>102.89.34.17</span>
+    </div>
+    <p style="margin: 0; font-size: 16px; line-height: 1.6;">If this was you, there's nothing to do. <strong>If it wasn't</strong>, reset your password. That signs every device out, then check your signed-in devices.</p>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <a href="#" style="display: inline-block; background: #C2471F; color: #FFFFFF; padding: 14px 24px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 16px;">Reset my password</a>
+      <a href="#" style="display: inline-block; background: #FFFFFF; border: 1.5px solid #D9CCAE; color: #3B1C32; padding: 12px 22px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px;">See devices</a>
+    </div>
+  </div>
+  <p style="margin: 0; padding: 0 8px; font-size: 13px; line-height: 1.6; color: #5E4456;">A security email, always sent. Not sent for your first sign-in, or for a browser that has signed in before.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":600,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

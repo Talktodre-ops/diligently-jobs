@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Delete a Google-only account</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline:2px solid #C2471F;outline-offset:1px}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: rgba(59, 28, 50, 0.55); font-family: Inter, system-ui, sans-serif; color: #3B1C32; display: flex; flex-direction: column; justify-content: flex-end;">
+  <div role="dialog" aria-modal="true" aria-labelledby="del-h" style="background: #FCF8EC; border-radius: 24px 24px 0 0; padding: 12px 24px 32px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="align-self: center; width: 40px; height: 4px; border-radius: 2px; background: #D9CCAE;"></div>
+    <h2 id="del-h" style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 28px; line-height: 1.1;">Delete your account?</h2>
+    <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #5E4456;">Your CV, every application, letter and file go for good. This can't be undone. Download your data first if you want a copy.</p>
+    <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.5;">You sign in with Google, so there is no password to check. We sent a 6-digit code to <strong>ada.okafor@gmail.com</strong> instead.</div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <label for="del-code" style="font-weight: 600; font-size: 15px;">Code from the email</label>
+      <input id="del-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="{{ code }}" onInput="{{ type }}" placeholder="000000" style="height: 56px; border-radius: 14px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 16px; font: 600 24px Inter, sans-serif; letter-spacing: 0.3em; color: #3B1C32;">
+      <span style="font-size: 13px; color: #6B4E62;">It works for 30 minutes. <a href="#" style="font-weight: 600;">Send a new code</a></span>
+    </div>
+    <button type="button" aria-disabled="{{ disabled }}" style="height: 54px; border-radius: 999px; border: 0; background: {{ btnBg }}; color: #FFFFFF; font: 600 16px Inter, sans-serif; cursor: pointer;">Delete my account</button>
+    <a href="SettingsPhone.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; text-decoration: none; color: #3B1C32;">Keep my account</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const code = (this.state && this.state.code) || '';
+    const ready = code.length === 6;
+    return {
+      code,
+      type: (e) => this.setState({ code: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      disabled: ready ? 'false' : 'true',
+      btnBg: ready ? '#A3341A' : '#C9A79A'
+    };
+  }
+}
+</script>
+</body>
+</html>

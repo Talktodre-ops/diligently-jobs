@@ -14,7 +14,9 @@ import UploadPage from './UploadPage'
 const me = { id: 'u', email: 'mara@example.com', email_verified: true, plan: 'free', created_at: '' }
 const profile = (step: string, extra = {}) => ({
   full_name: null, headline: null, location: null, target_roles: [], work_settings: [], open_to: null, paper_size: 'a4', theme: 'system',
-  notifications: { follow_ups: true, interview_prep: true, product_news: false }, onboarding_step: step, updated_at: '', ...extra,
+  notifications: { follow_ups: true, weekly_summary: true, running_low: true, product_news: false },
+  reminders: { follow_up_days: 7, send_hour: 9, time_zone: 'Africa/Lagos', skip_weekends: true },
+  writing: { spelling: null, letter_tone: 'direct' }, onboarding_step: step, updated_at: '', ...extra,
 })
 const cv = (over: Partial<MasterCv> = {}): MasterCv => ({
   id: 'c',

@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { PageState } from '../ui/PageState'
 import { useMe, useProfile } from './session'
+import { useSyncTimeZone } from './timeZone'
 
 const onboardingPath = {
   upload: '/onboarding/upload',
@@ -33,6 +34,7 @@ export function RequireAccount() {
   const me = useMe()
   const location = useLocation()
   const profile = useProfile(!!me.data?.email_verified)
+  useSyncTimeZone(profile.data)
   if (me.isPending) return <PageState.Loading />
   if (me.isError) return <PageState.Error error={me.error} onRetry={() => me.refetch()} />
   if (!me.data) return <Navigate to="/welcome" replace state={{ from: location.pathname + location.search }} />

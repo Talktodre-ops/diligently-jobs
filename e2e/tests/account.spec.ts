@@ -69,8 +69,8 @@ test('profile replaces the master CV by uploading a new file', async ({ page, ba
 test('settings: paper, theme and notifications save, and the theme is applied app-wide', async ({ page, baseURL }, info) => {
   await openSignedIn(page, main, '/settings')
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
-  await expect(page.getByText('Applications this month')).toBeVisible()
-  await expect(page.getByRole('button', { name: new RegExp(`Email\\s*${main.email}`) })).toBeVisible()
+  await expect(page.getByRole('meter', { name: 'Applications used this month' })).toBeVisible()
+  await expect(page.getByText(main.email, { exact: true })).toBeVisible()
   await shot(page, 'settings-light', info.project.name)
 
   const html = page.locator('html')
@@ -125,7 +125,7 @@ test('settings: export downloads a JSON file with the account in it', async ({ p
 
 test('settings: change email sends the confirmation to the new address', async ({ page }, info) => {
   await openSignedIn(page, main, '/settings')
-  await page.getByRole('button', { name: new RegExp(`Email\\s*${main.email}`) }).click()
+  await page.getByRole('button', { name: 'Change email' }).click()
   const dialog = page.getByRole('dialog', { name: 'Change your email' })
   await expect(dialog).toBeVisible()
   await shot(page, 'settings-email-dialog', info.project.name)
@@ -141,7 +141,7 @@ test('settings: change email sends the confirmation to the new address', async (
   expect(mail.to.toLowerCase()).toBe(next)
   await page.getByRole('button', { name: 'Done' }).click()
   // Nothing changed until the link is opened.
-  await expect(page.getByRole('button', { name: new RegExp(`Email\\s*${main.email}`) })).toBeVisible()
+  await expect(page.getByText(main.email, { exact: true })).toBeVisible()
 })
 
 test('settings: revoke another device, then every other device', async ({ page, browser, baseURL }, info) => {
@@ -155,14 +155,14 @@ test('settings: revoke another device, then every other device', async ({ page, 
   const one = await other()
   const two = await other()
   await page.reload()
-  const rows = page.getByRole('listitem').filter({ hasText: 'Last active' })
+  const rows = page.getByRole('listitem').filter({ hasText: /Active now|Last active/ })
   await expect(rows.filter({ hasText: 'This device' })).toHaveCount(1)
   await expect(rows.filter({ hasText: 'Firefox on Linux' })).toHaveCount(2)
   await shot(page, 'settings-devices', info.project.name)
 
   await rows.filter({ hasText: 'Firefox on Linux' }).first().getByRole('button', { name: /^Sign out/ }).click()
   const confirm = page.getByRole('alertdialog', { name: 'Sign out this device?' })
-  await expect(confirm).toContainText('needs your password to get back in')
+  await expect(confirm).toContainText('needs to sign in again')
   await confirm.getByRole('button', { name: 'Sign it out' }).click()
   await expect(rows.filter({ hasText: 'Firefox on Linux' })).toHaveCount(1)
   const alive = async (ctx: typeof one) => (await ctx.request.get(`${baseURL}/v1/auth/me`)).status()
@@ -186,7 +186,7 @@ test('settings: change password signs other devices out, then delete account goe
   const dev = await browser.newContext({ extraHTTPHeaders: { Origin: baseURL! } })
   expect((await dev.request.post(`${baseURL}/v1/auth/signin`, { data: { email: acct.email, password: acct.password } })).ok()).toBe(true)
 
-  await page.getByRole('button', { name: /^Password/ }).click()
+  await page.getByRole('button', { name: 'Change password' }).click()
   const dialog = page.getByRole('dialog', { name: 'Change your password' })
   await shot(page, 'settings-password-dialog', info.project.name)
   await dialog.getByLabel('Current password').fill('wrong passphrase 1')

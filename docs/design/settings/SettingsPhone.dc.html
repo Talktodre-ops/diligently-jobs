@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 2600px; box-sizing: border-box; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="position: sticky; top: 0; z-index: 2; background: #FCF8EC; border-bottom: 1px solid #EADFC2; padding: 8px 16px 8px 8px; display: flex; align-items: center; gap: 4px;">
+    <a href="#" aria-label="Back to profile" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; flex: 1; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 22px;">Settings</h1>
+    <span role="status" style="font-size: 13px; color: #2F6B3A; font-weight: 600;">{{ savedText }}</span>
+  </header>
+
+  <main style="padding: 20px 16px 48px; display: flex; flex-direction: column; gap: 28px;">
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Account</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; display: flex; flex-direction: column;">
+        <button type="button" style="min-height: 60px; padding: 10px 16px; border: 0; border-bottom: 1px solid #F1E8D2; background: none; display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; color: inherit; cursor: pointer;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Email</span><span style="font-size: 14px; color: #5E4456;">ada.okafor@gmail.com</span></span>
+          <span style="font-size: 14px; font-weight: 600; color: #B5401C;">Change</span>
+        </button>
+        <button type="button" style="min-height: 60px; padding: 10px 16px; border: 0; border-bottom: 1px solid #F1E8D2; background: none; display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; color: inherit; cursor: pointer;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Password</span><span style="font-size: 14px; color: #5E4456;">Last changed 12 October</span></span>
+          <span style="font-size: 14px; font-weight: 600; color: #B5401C;">Change</span>
+        </button>
+        <div style="min-height: 60px; padding: 10px 16px; display: flex; align-items: center; gap: 12px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 12h8M12 12v-1"></path></svg>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Google</span><span style="font-size: 14px; color: #5E4456;">Connected, you can sign in with it</span></span>
+          <button type="button" style="height: 44px; border: 0; background: none; font: 600 14px Inter, sans-serif; color: #B5401C; cursor: pointer;">Disconnect</button>
+        </div>
+      </div>
+      <p style="margin: 0 4px; font-size: 13px; line-height: 1.5; color: #6B4E62;">Signed up with Google only? Password reads “Set a password”, and Disconnect stays hidden until one is set, so nobody locks themselves out.</p>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Reminders</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="min-height: 60px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F1E8D2;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Follow-up reminders</span><span style="font-size: 14px; color: #5E4456;">An email with a follow-up already drafted</span></span>
+          <button type="button" role="switch" aria-checked="{{ t.remind.on }}" aria-label="Follow-up reminders" onClick="{{ t.remind.flip }}" style="flex: none; width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 3px; background: {{ t.remind.track }}; display: flex; justify-content: {{ t.remind.side }}; cursor: pointer;"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF;"></span></button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span id="wait-l" style="font-weight: 600; font-size: 15px;">Follow up after</span>
+          <div role="radiogroup" aria-labelledby="wait-l" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; background: #F6EFDC; border-radius: 12px; padding: 4px;">
+            <sc-for list="{{ wait }}" as="o" hint-placeholder-count="4">
+              <button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height: 44px; border: 0; border-radius: 9px; background: {{ o.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <span style="font-size: 13px; color: #6B4E62;">Picked for you on the Send screen. You can still change it per job.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span id="time-l" style="font-weight: 600; font-size: 15px;">Send reminders</span>
+          <div role="radiogroup" aria-labelledby="time-l" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: #F6EFDC; border-radius: 12px; padding: 4px;">
+            <sc-for list="{{ time }}" as="o" hint-placeholder-count="3">
+              <button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height: 52px; border: 0; border-radius: 9px; background: {{ o.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;"><span>{{ o.label }}</span><span style="font-weight: 400; font-size: 12px; color: #5E4456;">{{ o.sub }}</span></button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: #5E4456;"><span>Time zone: Lagos (GMT+1)</span><button type="button" style="height: 44px; border: 0; background: none; font: 600 14px Inter, sans-serif; color: #B5401C; cursor: pointer;">Change</button></div>
+        </div>
+        <div style="min-height: 56px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #F1E8D2; padding-top: 6px;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Keep weekends quiet</span><span style="font-size: 14px; color: #5E4456;">A reminder due on Saturday or Sunday waits for Monday</span></span>
+          <button type="button" role="switch" aria-checked="{{ t.weekends.on }}" aria-label="Keep weekends quiet" onClick="{{ t.weekends.flip }}" style="flex: none; width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 3px; background: {{ t.weekends.track }}; display: flex; justify-content: {{ t.weekends.side }}; cursor: pointer;"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF;"></span></button>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Emails we send you</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 0 16px; display: flex; flex-direction: column;">
+        <div style="min-height: 68px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F1E8D2;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Monday summary</span><span style="font-size: 14px; color: #5E4456;">What needs you this week, and which applications have gone quiet</span></span>
+          <button type="button" role="switch" aria-checked="{{ t.weekly.on }}" aria-label="Monday summary" onClick="{{ t.weekly.flip }}" style="flex: none; width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 3px; background: {{ t.weekly.track }}; display: flex; justify-content: {{ t.weekly.side }}; cursor: pointer;"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF;"></span></button>
+        </div>
+        <div style="min-height: 68px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F1E8D2;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Running low</span><span style="font-size: 14px; color: #5E4456;">When you have 2 applications left this month</span></span>
+          <button type="button" role="switch" aria-checked="{{ t.usage.on }}" aria-label="Running low" onClick="{{ t.usage.flip }}" style="flex: none; width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 3px; background: {{ t.usage.track }}; display: flex; justify-content: {{ t.usage.side }}; cursor: pointer;"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF;"></span></button>
+        </div>
+        <div style="min-height: 68px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F1E8D2;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Product news</span><span style="font-size: 14px; color: #5E4456;">A few emails a year. Off unless you turn it on.</span></span>
+          <button type="button" role="switch" aria-checked="{{ t.news.on }}" aria-label="Product news" onClick="{{ t.news.flip }}" style="flex: none; width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 3px; background: {{ t.news.track }}; display: flex; justify-content: {{ t.news.side }}; cursor: pointer;"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF;"></span></button>
+        </div>
+        <div style="min-height: 60px; display: flex; align-items: center; gap: 12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+          <span style="flex: 1; font-size: 14px; line-height: 1.45; color: #5E4456;">New sign-ins, password and email changes always reach you. They keep your account safe.</span>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Your documents</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span id="paper-l" style="font-weight: 600; font-size: 15px;">Paper size</span>
+          <div role="radiogroup" aria-labelledby="paper-l" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; background: #F6EFDC; border-radius: 12px; padding: 4px;">
+            <sc-for list="{{ paper }}" as="o" hint-placeholder-count="2">
+              <button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height: 44px; border: 0; border-radius: 9px; background: {{ o.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ o.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span id="sp-l" style="font-weight: 600; font-size: 15px;">Spelling</span>
+          <div role="radiogroup" aria-labelledby="sp-l" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; background: #F6EFDC; border-radius: 12px; padding: 4px;">
+            <sc-for list="{{ spelling }}" as="o" hint-placeholder-count="2">
+              <button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height: 44px; border: 0; border-radius: 9px; background: {{ o.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <span style="font-size: 13px; color: #6B4E62;">Organised or organized, CV or résumé. Used in every CV and letter we write.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span id="tone-l" style="font-weight: 600; font-size: 15px;">Cover letters start</span>
+          <div role="radiogroup" aria-labelledby="tone-l" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: #F6EFDC; border-radius: 12px; padding: 4px;">
+            <sc-for list="{{ tone }}" as="o" hint-placeholder-count="3">
+              <button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height: 44px; border: 0; border-radius: 9px; background: {{ o.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <span style="font-size: 13px; color: #6B4E62;">The first draft's tone. Each letter can still switch.</span>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Appearance</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 16px;">
+        <div role="radiogroup" aria-label="Appearance" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; background: #F6EFDC; border-radius: 12px; padding: 4px;">
+          <sc-for list="{{ theme }}" as="o" hint-placeholder-count="3">
+            <button type="button" role="radio" aria-checked="{{ o.on }}" onClick="{{ o.pick }}" style="min-height: 44px; border: 0; border-radius: 9px; background: {{ o.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Plan</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;"><strong style="font-family: Fraunces, Georgia, serif; font-size: 20px;">Free</strong><span style="font-size: 14px; color: #5E4456;">7 of 10 applications</span></div>
+        <div role="meter" aria-label="Applications used this month" aria-valuemin="0" aria-valuemax="10" aria-valuenow="7" style="height: 8px; border-radius: 999px; background: #F1E8D2; overflow: hidden;"><div style="width: 70%; height: 8px; background: #C2471F;"></div></div>
+        <span style="font-size: 13px; color: #6B4E62;">Resets on 1 December.</span>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Signed-in devices</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 4px 16px; display: flex; flex-direction: column;">
+        <div style="min-height: 60px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F1E8D2;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Safari on iOS <span style="margin-left: 6px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #F6E7A6;">This device</span></span><span style="font-size: 13px; color: #5E4456;">Active now</span></span>
+        </div>
+        <div style="min-height: 60px; display: flex; align-items: center; gap: 12px;">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 15px;">Edge on Windows</span><span style="font-size: 13px; color: #5E4456;">Last active 14 Nov, 09:12</span></span>
+          <button type="button" style="height: 44px; border: 0; background: none; font: 600 14px Inter, sans-serif; color: #B5401C; cursor: pointer;">Sign out</button>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Privacy and data</h2>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #3B1C32;">To write and score, your CV and the job you paste go to Anthropic's Claude. To research a company, its name goes to Tavily. Nothing is sold or used for ads.</p>
+        <button type="button" style="min-height: 48px; border-radius: 999px; border: 1.5px solid #D9CCAE; background: #FFFFFF; font: 600 15px Inter, sans-serif; color: #3B1C32; cursor: pointer;">Download my data</button>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px;">
+      <button type="button" style="min-height: 52px; border-radius: 999px; border: 0; background: #F1E8D2; font: 600 15px Inter, sans-serif; color: #3B1C32; cursor: pointer;">Sign out</button>
+      <a href="DeleteWithCode.dc.html" style="min-height: 52px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: #A3341A; text-decoration: none;">Delete account</a>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const v = Object.assign({ remind: true, weekends: true, weekly: true, usage: true, news: false, wait: '7 days', time: 'Morning', paper: 'A4', spelling: 'British', tone: 'Direct', theme: 'System' }, s.v || {});
+    const save = (patch) => this.setState({ v: Object.assign({}, v, patch), saved: true });
+    const toggle = (k) => ({ on: v[k] ? 'true' : 'false', track: v[k] ? '#3B1C32' : '#D9CCAE', side: v[k] ? 'flex-end' : 'flex-start', flip: () => save({ [k]: !v[k] }) });
+    const seg = (k, opts) => opts.map((o) => {
+      const label = typeof o === 'string' ? o : o.label;
+      return { label, sub: o.sub || '', on: v[k] === label ? 'true' : 'false', bg: v[k] === label ? '#FFFFFF' : 'transparent', pick: () => save({ [k]: label }) };
+    });
+    return {
+      savedText: s.saved ? 'Saved' : '',
+      t: { remind: toggle('remind'), weekends: toggle('weekends'), weekly: toggle('weekly'), usage: toggle('usage'), news: toggle('news') },
+      wait: seg('wait', ['5 days', '7 days', '10 days', '14 days']),
+      time: seg('time', [{ label: 'Morning', sub: '9:00' }, { label: 'Midday', sub: '13:00' }, { label: 'Evening', sub: '18:00' }]),
+      paper: seg('paper', ['A4', 'US Letter']),
+      spelling: seg('spelling', ['British', 'American']),
+      tone: seg('tone', ['Direct', 'Warm', 'Formal']),
+      theme: seg('theme', ['System', 'Light', 'Dark'])
+    };
+  }
+}
+</script>
+</body>
+</html>
