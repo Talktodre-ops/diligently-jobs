@@ -32,6 +32,8 @@ export const routes = [
   { path: '/verify-email', element: page(() => import('../features/auth/VerifyEmailPage')) },
   { path: '/reset-password', element: page(() => import('../features/auth/ResetPasswordPage')) },
   { path: '/confirm-email', element: page(() => import('../features/auth/ConfirmEmailPage')) },
+  // The unsubscribe link in an optional email: no session needed.
+  { path: '/unsubscribe', element: page(() => import('../features/account/UnsubscribePage')) },
   {
     element: <RequireSession />,
     children: [
