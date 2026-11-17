@@ -1,0 +1,14 @@
+{
+  "name": "Diligently",
+  "short_name": "Diligently",
+  "description": "Paste a job. Get a tailored CV, a match score and a cover letter.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FCF8EC",
+  "theme_color": "#3B1C32",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
