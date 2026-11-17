@@ -70,7 +70,8 @@ or `failed`.
 | `GET /v1/auth/google/start?next=/path` | | `302` to Google. `404 provider_disabled` when off |
 | `GET /v1/auth/google/callback?code=&state=` | | `302` to `APP_BASE_URL` + `next` with the session cookie set, or to `/signin?error=google` |
 
-`user` is `{ id, email, email_verified, plan, created_at }`. Passwords are 10 to
+`user` is `{ id, email, email_verified, plan, created_at, has_password, google_connected, password_changed_at }`;
+`password_changed_at` is null for a Google-only account or when unknown. Passwords are 10 to
 128 characters and may not equal the email. Email links point at
 `APP_BASE_URL` + `/verify-email?token=`, `/reset-password?token=` and
 `/confirm-email?token=`; the web app posts the token back.
@@ -104,9 +105,18 @@ forgot-password. Any failure lands on `/signin?error=google` with no detail.
   "target_roles": ["Backend Engineer"], "work_settings": ["remote", "hybrid"],
   "open_to": ["Remote anywhere", "United Kingdom"],
   "paper_size": "a4", "theme": "system",
-  "notifications": { "follow_ups": true, "interview_prep": true, "product_news": false },
+  "notifications": { "follow_ups": true, "weekly_summary": true, "running_low": true, "product_news": false },
+  "reminders": { "follow_up_days": 7, "send_hour": 9, "time_zone": "Africa/Lagos", "skip_weekends": true },
+  "writing": { "spelling": "en-GB", "letter_tone": "direct" },
   "onboarding_step": "check", "updated_at": "..." }
 ```
+
+`notifications`, `reminders` and `writing` merge field by field on PATCH.
+`follow_up_days` is 5, 7, 10 or 14; `send_hour` is 9, 13 or 18 (local time);
+`time_zone` is an IANA name the database knows, or null (UTC is used);
+`spelling` is `en-GB`, `en-US` or null (inferred from `location`: United
+States, USA, US or Canada mean `en-US`); `letter_tone` is `direct`, `warm` or
+`formal`. A bad value is `422 invalid_input` with `field`.
 
 PATCH changes only the fields sent; an empty string clears a text field.
 `paper_size` is `a4` or `letter`; `theme` is `system`, `light` or `dark`;

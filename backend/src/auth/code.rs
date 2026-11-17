@@ -19,6 +19,23 @@ use super::token;
 use crate::error::AppError;
 
 pub const TTL: Duration = Duration::minutes(30);
+
+/// What a code is for. Each purpose has its own live code, so a delete code
+/// never replaces or satisfies a sign-up code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Purpose {
+    Verify,
+    Delete,
+}
+
+impl Purpose {
+    fn as_str(self) -> &'static str {
+        match self {
+            Purpose::Verify => "verify",
+            Purpose::Delete => "delete",
+        }
+    }
+}
 pub const MAX_ATTEMPTS: i32 = 5;
 
 /// Largest multiple of 1,000,000 that fits in a u32. Values at or above it
@@ -37,9 +54,15 @@ pub fn generate() -> String {
     }
 }
 
-fn hash(user_id: Uuid, salt: &[u8], code: &str) -> Vec<u8> {
+fn hash(purpose: Purpose, user_id: Uuid, salt: &[u8], code: &str) -> Vec<u8> {
     let mut h = Sha256::new();
     h.update(b"diligently-verify-code\0");
+    if purpose != Purpose::Verify {
+        // Sign-up codes keep their original hash input; other purposes are
+        // domain separated.
+        h.update(purpose.as_str().as_bytes());
+        h.update(b"\0");
+    }
     h.update(user_id.as_bytes());
     h.update(salt);
     h.update(code.as_bytes());
@@ -50,17 +73,17 @@ fn well_formed(code: &str) -> bool {
     code.len() == 6 && code.bytes().all(|b| b.is_ascii_digit())
 }
 
-/// Create a fresh code for the user, replacing any earlier one, and return
-/// the plain code for the email.
-pub async fn issue(db: &PgPool, user_id: Uuid) -> Result<String, AppError> {
+/// Create a fresh code for the user and purpose, replacing any earlier one,
+/// and return the plain code for the email.
+pub async fn issue(db: &PgPool, user_id: Uuid, purpose: Purpose) -> Result<String, AppError> {
     let code = generate();
     let mut salt = [0u8; 16];
     rand::fill(&mut salt[..]);
     sqlx::query(
         r#"
-        insert into verification_codes (user_id, code_hash, salt, expires_at)
-        values ($1, $2, $3, $4)
-        on conflict (user_id) do update set
+        insert into verification_codes (user_id, purpose, code_hash, salt, expires_at)
+        values ($1, $5, $2, $3, $4)
+        on conflict (user_id, purpose) do update set
             code_hash = excluded.code_hash,
             salt = excluded.salt,
             expires_at = excluded.expires_at,
@@ -69,9 +92,10 @@ pub async fn issue(db: &PgPool, user_id: Uuid) -> Result<String, AppError> {
         "#,
     )
     .bind(user_id)
-    .bind(hash(user_id, &salt, &code))
+    .bind(hash(purpose, user_id, &salt, &code))
     .bind(&salt[..])
     .bind(Utc::now() + TTL)
+    .bind(purpose.as_str())
     .execute(db)
     .await?;
     Ok(code)
@@ -87,16 +111,22 @@ pub enum Check {
 
 /// Count an attempt against the user's live code and compare. A match
 /// deletes the code so it cannot be used twice.
-pub async fn check(db: &PgPool, user_id: Uuid, given: &str) -> Result<Check, AppError> {
+pub async fn check(
+    db: &PgPool,
+    user_id: Uuid,
+    purpose: Purpose,
+    given: &str,
+) -> Result<Check, AppError> {
     let live: Option<(Vec<u8>, Vec<u8>)> = sqlx::query_as(
         r#"
         update verification_codes set attempts = attempts + 1
-        where user_id = $1 and expires_at > now() and attempts < $2
+        where user_id = $1 and purpose = $3 and expires_at > now() and attempts < $2
         returning code_hash, salt
         "#,
     )
     .bind(user_id)
     .bind(MAX_ATTEMPTS)
+    .bind(purpose.as_str())
     .fetch_optional(db)
     .await?;
     let Some((stored, salt)) = live else {
@@ -104,12 +134,14 @@ pub async fn check(db: &PgPool, user_id: Uuid, given: &str) -> Result<Check, App
     };
     // A malformed code still costs an attempt; it is hashed like any other so
     // the timing does not depend on its shape.
-    let matched = token::ct_eq(&hash(user_id, &salt, given), &stored) && well_formed(given);
+    let matched =
+        token::ct_eq(&hash(purpose, user_id, &salt, given), &stored) && well_formed(given);
     if !matched {
         return Ok(Check::Wrong);
     }
-    sqlx::query("delete from verification_codes where user_id = $1")
+    sqlx::query("delete from verification_codes where user_id = $1 and purpose = $2")
         .bind(user_id)
+        .bind(purpose.as_str())
         .execute(db)
         .await?;
     Ok(Check::Matched)
@@ -131,8 +163,13 @@ mod tests {
     fn hash_is_bound_to_user_and_salt() {
         let u1 = Uuid::new_v4();
         let u2 = Uuid::new_v4();
-        assert_eq!(hash(u1, b"s", "123456"), hash(u1, b"s", "123456"));
-        assert_ne!(hash(u1, b"s", "123456"), hash(u2, b"s", "123456"));
-        assert_ne!(hash(u1, b"s", "123456"), hash(u1, b"t", "123456"));
+        let v = Purpose::Verify;
+        assert_eq!(hash(v, u1, b"s", "123456"), hash(v, u1, b"s", "123456"));
+        assert_ne!(hash(v, u1, b"s", "123456"), hash(v, u2, b"s", "123456"));
+        assert_ne!(hash(v, u1, b"s", "123456"), hash(v, u1, b"t", "123456"));
+        assert_ne!(
+            hash(v, u1, b"s", "123456"),
+            hash(Purpose::Delete, u1, b"s", "123456")
+        );
     }
 }

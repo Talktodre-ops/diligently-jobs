@@ -55,6 +55,9 @@ async fn signup_creates_account_session_and_sends_verification() {
     let me = c.get("/v1/auth/me").await;
     assert_eq!(me.status, StatusCode::OK);
     assert_eq!(me.body["user"]["email"], "ada@example.com");
+    assert_eq!(me.body["user"]["has_password"], true);
+    assert_eq!(me.body["user"]["google_connected"], false);
+    assert!(me.body["user"]["password_changed_at"].is_string());
 
     let mail = app
         .mail
@@ -408,6 +411,12 @@ async fn change_password_needs_current_and_keeps_only_this_device() {
     assert_eq!(ok.status, StatusCode::OK);
     assert_eq!(a.get("/v1/auth/me").await.status, StatusCode::OK);
     assert_eq!(b.get("/v1/auth/me").await.status, StatusCode::UNAUTHORIZED);
+    let changed: bool =
+        sqlx::query_scalar("select password_changed_at > now() - interval '1 minute' from users")
+            .fetch_one(&app.state.db)
+            .await
+            .unwrap();
+    assert!(changed, "password_changed_at stamped");
 }
 
 #[tokio::test]

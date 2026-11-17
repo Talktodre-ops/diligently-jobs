@@ -37,7 +37,15 @@ pub struct UserRow {
     pub email_verified_at: Option<DateTime<Utc>>,
     pub plan: String,
     pub created_at: DateTime<Utc>,
+    pub has_password: bool,
+    pub google_connected: bool,
+    pub password_changed_at: Option<DateTime<Utc>>,
 }
+
+/// Columns for `UserRow`, usable in select and returning lists.
+pub const USER_COLS: &str = "id, email, email_verified_at, plan, created_at, \
+    password_hash is not null as has_password, google_sub is not null as google_connected, \
+    password_changed_at";
 
 #[derive(Debug, Serialize)]
 pub struct UserOut {
@@ -46,6 +54,9 @@ pub struct UserOut {
     pub email_verified: bool,
     pub plan: String,
     pub created_at: DateTime<Utc>,
+    pub has_password: bool,
+    pub google_connected: bool,
+    pub password_changed_at: Option<DateTime<Utc>>,
 }
 
 impl From<UserRow> for UserOut {
@@ -56,13 +67,16 @@ impl From<UserRow> for UserOut {
             email_verified: u.email_verified_at.is_some(),
             plan: u.plan,
             created_at: u.created_at,
+            has_password: u.has_password,
+            google_connected: u.google_connected,
+            password_changed_at: u.password_changed_at,
         }
     }
 }
 
 #[derive(Serialize)]
-struct UserEnvelope {
-    user: UserOut,
+pub struct UserEnvelope {
+    pub user: UserOut,
 }
 
 #[derive(Serialize)]
@@ -106,16 +120,14 @@ fn with_cookie(status: StatusCode, cookie: HeaderValue, body: impl Serialize) ->
     resp
 }
 
-async fn load_user(db: &PgPool, id: Uuid) -> Result<UserRow, AppError> {
-    sqlx::query_as::<_, UserRow>(
-        "select id, email, email_verified_at, plan, created_at from users where id = $1",
-    )
-    .bind(id)
-    .fetch_optional(db)
-    .await?
-    .ok_or(AppError::Unauthorized(
-        "Your session has ended. Sign in again.",
-    ))
+pub async fn load_user(db: &PgPool, id: Uuid) -> Result<UserRow, AppError> {
+    sqlx::query_as::<_, UserRow>(&format!("select {USER_COLS} from users where id = $1"))
+        .bind(id)
+        .fetch_optional(db)
+        .await?
+        .ok_or(AppError::Unauthorized(
+            "Your session has ended. Sign in again.",
+        ))
 }
 
 /// Create a single-use email token and return (row id, raw token).
@@ -188,7 +200,7 @@ fn link(state: &AppState, path: &str, raw: &str) -> String {
 /// a new single-use link.
 async fn send_verification(state: &AppState, user_id: Uuid, email: &str) -> Result<(), AppError> {
     let (id, raw) = create_email_token(&state.db, user_id, "verify", VERIFY_TTL, None).await?;
-    let verify_code = code::issue(&state.db, user_id).await?;
+    let verify_code = code::issue(&state.db, user_id, code::Purpose::Verify).await?;
     let msg = mail::verify_email(
         email,
         &verify_code,
@@ -220,13 +232,13 @@ pub async fn signup(
     password::check_policy(&req.password, &email)?;
     let hash = password::hash(&req.password).await?;
 
-    let inserted = sqlx::query_as::<_, UserRow>(
+    let inserted = sqlx::query_as::<_, UserRow>(&format!(
         r#"
-        insert into users (email, password_hash) values ($1, $2)
+        insert into users (email, password_hash, password_changed_at) values ($1, $2, now())
         on conflict (lower(email)) do nothing
-        returning id, email, email_verified_at, plan, created_at
-        "#,
-    )
+        returning {USER_COLS}
+        "#
+    ))
     .bind(&email)
     .bind(&hash)
     .fetch_optional(&state.db)
@@ -382,7 +394,7 @@ pub async fn verify_code(
     limit(&state.limiter, rl::VERIFY_CODE_IP, meta.ip_key())?;
     limit(&state.limiter, rl::VERIFY_CODE_USER, &user.id.to_string())?;
     if !user.is_verified() {
-        match code::check(&state.db, user.id, req.code.trim()).await? {
+        match code::check(&state.db, user.id, code::Purpose::Verify, req.code.trim()).await? {
             code::Check::Matched => {
                 sqlx::query(
                     "update users set email_verified_at = coalesce(email_verified_at, now()) where id = $1",
@@ -508,7 +520,8 @@ pub async fn reset_password(
     let mut tx = state.db.begin().await?;
     let email: String = sqlx::query_scalar(
         r#"
-        update users set password_hash = $2, email_verified_at = coalesce(email_verified_at, now())
+        update users set password_hash = $2, password_changed_at = now(),
+            email_verified_at = coalesce(email_verified_at, now())
         where id = $1 returning email
         "#,
     )
@@ -589,7 +602,7 @@ pub async fn change_password(
     check_current_password(&state.db, user.id, &req.current_password).await?;
     password::check_policy(&req.new_password, &user.email)?;
     let hash = password::hash(&req.new_password).await?;
-    sqlx::query("update users set password_hash = $2 where id = $1")
+    sqlx::query("update users set password_hash = $2, password_changed_at = now() where id = $1")
         .bind(user.id)
         .bind(&hash)
         .execute(&state.db)
