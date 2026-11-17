@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { isApiError } from '../../api/client'
 import { Button } from '../../ui/Button'
+import { LogoMark } from '../../ui/LogoMark'
 import { Notice } from '../../ui/Notice'
 import { isEmailKind, resubscribe, unsubscribe, type EmailKind } from './api'
 import s from './UnsubscribePage.module.css'
@@ -96,7 +97,7 @@ export default function UnsubscribePage() {
 
   return (
     <div className={s.page}>
-      <div className={s.brand} aria-hidden="true">diligently<span>.</span></div>
+      <div className={s.brand} aria-hidden="true"><LogoMark />diligently<span>.</span></div>
       <main className={s.main} aria-busy={shown.name === 'working' || undefined}>
         {shown.name === 'working' && (
           <p className={s.body} role="status">Turning that email off.</p>
