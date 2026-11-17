@@ -79,4 +79,30 @@ describe('HomePage', () => {
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/applications/new1/running'))
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ url: 'https://jobs.example.com/42', research: true, letter: true })
   })
+
+  it('folds a long week after six items and expands in place', async () => {
+    const week = Array.from({ length: 9 }, (_, n) => ({
+      at: new Date(Date.now() - n * 3600_000).toISOString(), kind: 'pipeline_done', application_id: `a${n}`,
+      company: 'Ledgerline', role: 'Product Engineer', text: `Tailored your CV, job ${n + 1}`,
+    }))
+    open({ ...busyHome, this_week: week }, apps)
+    const region = await screen.findByRole('region', { name: 'This week' })
+    expect(within(region).getAllByRole('listitem')).toHaveLength(6)
+    const more = within(region).getByRole('button', { name: 'See all 9' })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+
+    await userEvent.click(more)
+    expect(within(region).getAllByRole('listitem')).toHaveLength(9)
+    expect(within(region).getByText('Tailored your CV, job 9')).toBeInTheDocument()
+    expect(within(region).getByRole('button', { name: 'Show fewer' })).toHaveAttribute('aria-expanded', 'true')
+
+    await userEvent.click(within(region).getByRole('button', { name: 'Show fewer' }))
+    expect(within(region).getAllByRole('listitem')).toHaveLength(6)
+  })
+
+  it('shows no See all control for six items or fewer', async () => {
+    open(busyHome, apps)
+    const region = await screen.findByRole('region', { name: 'This week' })
+    expect(within(region).queryByRole('button')).not.toBeInTheDocument()
+  })
 })

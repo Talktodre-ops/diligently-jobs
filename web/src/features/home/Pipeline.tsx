@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { companyName } from '../apply/api'
@@ -25,7 +26,7 @@ export function Pipeline({ apps, cards }: { apps: UseQueryResult<ApplicationList
       {apps.isError ? (
         <p className={s.quiet}>The pipeline did not load. <button type="button" className={s.textButton} onClick={() => apps.refetch()}>Try again</button></p>
       ) : (
-        <div className={s.stages}>
+        <div className={s.stages} style={{ '--stage-cols': shown.length } as CSSProperties}>
           {shown.map((col) => {
             const items = apps.data?.filter((a) => a.stage === col.stage) ?? []
             return (

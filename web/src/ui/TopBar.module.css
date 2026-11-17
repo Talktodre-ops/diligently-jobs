@@ -1,10 +1,12 @@
-.bar { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px; min-height: 64px; }
+/* Same gutter and max width as the pages under it. The back button's glyph is inset 11px in its tap target, so pull it out to sit on the gutter. */
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px var(--page-pad) 8px; min-height: 64px; width: 100%; max-width: var(--page-max); }
 .back {
   width: var(--tap); height: var(--tap); flex: none; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-pill); color: var(--ink);
+  border-radius: var(--radius-pill); color: var(--ink); margin-left: -11px;
 }
 .back:hover { background: var(--paper-deep); color: var(--ink); }
 .titles { flex: 1; min-width: 0; padding-left: 4px; }
+.titles:first-child { padding-left: 0; }
 .eyebrow { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .end { display: flex; align-items: center; gap: 8px; flex: none; }

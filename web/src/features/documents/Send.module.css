@@ -22,7 +22,7 @@
 .optionNote { display: block; font-size: 13px; color: var(--ink-2); }
 
 .letterRow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
-.noLetter { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.5; }
+.noLetter { margin: 0; max-width: 70ch; font-size: 14px; color: var(--ink-3); line-height: 1.5; }
 
 .files { display: flex; flex-direction: column; gap: 8px; }
 .filesTitle { font-size: 13px; font-weight: 600; }
@@ -45,7 +45,7 @@
 }
 @media (min-width: 1024px) {
   .layout {
-    flex: none; display: grid; grid-template-columns: minmax(0, 760px) 400px; gap: 48px; align-items: start;
+    flex: none; display: grid; grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 480px); gap: 48px; align-items: start;
     padding: 16px var(--page-pad) 64px; max-width: var(--page-max); width: 100%;
   }
   .main { padding: 0; }

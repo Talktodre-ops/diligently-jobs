@@ -107,6 +107,7 @@ a.eventLink:hover .eventTitle { text-decoration: underline; }
 .chipTitle { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .chipSub { font-size: 12px; opacity: 0.85; }
 .more { font-size: 13px; font-weight: 600; }
+.seeAll { align-self: flex-start; min-height: var(--tap); padding: 0 4px; border: 0; background: none; color: var(--persimmon-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: underline; }
 
 @media (min-width: 640px) {
   .followUp { flex-direction: row; align-items: center; flex-wrap: wrap; }
@@ -125,8 +126,10 @@ a.eventLink:hover .eventTitle { text-decoration: underline; }
   .pipeline { flex: 1.4 1 420px; }
 }
 
-/* Wide: Needs you, This week and Pipeline sit side by side in one row. */
-@media (min-width: 1360px) {
-  .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr); gap: 28px; }
+/* Wide: Needs you and This week side by side, the pipeline on one row beneath them. */
+@media (min-width: 1280px) {
+  .columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
   .main { display: contents; }
+  .pipeline { grid-column: 1 / -1; }
+  .stages { grid-template-columns: repeat(var(--stage-cols, 3), minmax(0, 1fr)); }
 }
