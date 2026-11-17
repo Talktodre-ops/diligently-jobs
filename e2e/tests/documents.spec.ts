@@ -232,8 +232,14 @@ test.describe.serial('documents', () => {
     }
   })
 
-  test('send: choose files, hand them over, mark as applied', async ({ page }, info) => {
+  test('send: choose files, hand them over, mark as applied', async ({ page, baseURL }, info) => {
     test.setTimeout(120_000)
+    // The reminder starts at the number of days chosen in Settings.
+    const setDays = async (days: number) => {
+      const res = await page.request.patch('/v1/profile', { data: { reminders: { follow_up_days: days } }, headers: { Origin: baseURL! } })
+      expect(res.ok()).toBe(true)
+    }
+    await setDays(14)
     await page.goto(`/applications/${f.applicationId}/cv`)
     await page.getByRole('link', { name: 'Send CV' }).click()
     await expect(page).toHaveURL(new RegExp(`/applications/${f.applicationId}/send$`))
@@ -264,7 +270,8 @@ test.describe.serial('documents', () => {
 
     await dialog.getByRole('button', { name: 'Yes, mark as applied' }).click()
     await expect(page.getByRole('heading', { name: 'Applied.' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '7 days' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: '14 days' })).toHaveAttribute('aria-pressed', 'true')
+    await setDays(7)
     const before = await page.getByText(/We will nudge you on/).textContent()
     await page.getByRole('button', { name: '10 days' }).click()
     await expect(page.getByRole('button', { name: '10 days' })).toHaveAttribute('aria-pressed', 'true')

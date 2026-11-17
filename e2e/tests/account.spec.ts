@@ -69,7 +69,7 @@ test('profile replaces the master CV by uploading a new file', async ({ page, ba
 test('settings: paper, theme and notifications save, and the theme is applied app-wide', async ({ page, baseURL }, info) => {
   await openSignedIn(page, main, '/settings')
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
-  await expect(page.getByRole('meter', { name: 'Applications used this month' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Plan' }).getByRole('meter', { name: 'Applications used this month' })).toBeVisible()
   await expect(page.getByText(main.email, { exact: true })).toBeVisible()
   await shot(page, 'settings-light', info.project.name)
 
