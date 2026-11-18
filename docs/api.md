@@ -288,10 +288,22 @@ user's `reminders.time_zone` (UTC when null), at `send_hour:00` local time; with
   "needs_you": [ { "type": "follow_up", "application_id": "...", "reminder_id": "...", "company": "Halcyon Health",
                    "role": "...", "due_at": "...", "text": "Follow up with Halcyon Health" } ],
   "this_week": [ { "at": "...", "kind": "applied", "application_id": "...", "company": "Halcyon Health", "text": "Applied to Halcyon Health" } ],
-  "stats": { "applied_this_week": 1, "active": 3, "interviewing": 1 } }
+  "stats": { "applied_this_week": 1, "active": 3, "interviewing": 1 },
+  "setup": { "cv": true, "check": false, "targets": false, "first_application": false,
+             "hidden_until": null, "show": true } }
 ```
 
 Card `type` is `follow_up`, `retry`, `review` (with `pending`) or `prepare`.
+
+`setup` holds the four setup milestones, each read from the account's data:
+a master CV exists, the CV check was confirmed, at least one target role, at
+least one application. `show` is true while something is left and the card is
+not hidden; `hidden_until` is set only while it is hidden.
+
+| Method and path | Body | Response |
+|---|---|---|
+| `POST /v1/setup/cv-checked` | none | `204`; marks the "check what we read" milestone done (idempotent) |
+| `POST /v1/setup/hide` | none | `204`; hides the setup card for 7 days on every device. It comes back after that if anything is left |
 
 ## Account (Settings)
 

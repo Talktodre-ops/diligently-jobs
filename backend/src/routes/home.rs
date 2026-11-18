@@ -194,11 +194,13 @@ pub async fn home(
     .await?;
     let name = crate::followups::candidate_name(db, uid).await?;
     let first_name = name.split_whitespace().next().map(str::to_string);
+    let setup = crate::routes::setup::status(db, uid).await?;
 
     Ok(Json(json!({
         "first_name": first_name,
         "needs_you": cards,
         "this_week": this_week,
         "stats": { "applied_this_week": applied_this_week, "active": active, "interviewing": interviews },
+        "setup": setup,
     })))
 }

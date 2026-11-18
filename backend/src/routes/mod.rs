@@ -16,6 +16,7 @@ pub mod jobs;
 pub mod profile;
 pub mod research;
 pub mod review;
+pub mod setup;
 pub mod tracking;
 pub mod uploads;
 pub mod workspace;
