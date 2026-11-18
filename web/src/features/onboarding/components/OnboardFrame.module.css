@@ -25,7 +25,14 @@
 .stepName {
   position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
-.meta { grid-area: meta; display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--ink-2); }
+.meta { grid-area: meta; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-2); }
+.later {
+  min-height: var(--tap); margin: -12px -8px; padding: 0 8px; border: 0; background: none; border-radius: var(--radius-pill);
+  color: var(--persimmon-text); font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.later:hover { color: var(--ink); }
+.later:disabled { opacity: 0.6; cursor: default; }
+.laterError { padding: 12px 24px 0; }
 
 .body { flex: 1; display: flex; flex-direction: column; }
 .formPane { flex: 1; display: flex; flex-direction: column; min-width: 0; }

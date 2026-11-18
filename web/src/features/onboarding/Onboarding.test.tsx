@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RequireAccount } from '../../auth/gates'
-import { cvCounts, fileProblem, pastedFile, type MasterCv } from './api'
+import { cvCounts, fileProblem, pastedFile, safeThen, type MasterCv } from './api'
 import CheckPage from './CheckPage'
 import { countryOf, foundFacts, inferPaper, mergeAnswer, strengthenCandidates } from './cvFacts'
 import FirstJobPage, { usageLine } from './FirstJobPage'
@@ -53,6 +53,7 @@ function setup(ui: React.ReactElement, state: State, extra?: (url: string, init?
     if (hit) return hit
     if (url === '/v1/auth/me') return json({ user: me })
     if (url === '/v1/usage') return json(usage)
+    if (url === '/v1/setup/cv-checked') return new Response(null, { status: 204 })
     if (url === '/v1/profile' && method === 'PATCH') {
       const patch = JSON.parse(init!.body as string)
       live.step = patch.onboarding_step ?? live.step
@@ -79,6 +80,7 @@ function setup(ui: React.ReactElement, state: State, extra?: (url: string, init?
           <Route path="/onboarding/check" element={<div>Check route</div>} />
           <Route path="/onboarding/targets" element={<div>Targets route</div>} />
           <Route path="/onboarding/first-job" element={<div>First job route</div>} />
+          <Route path="/new" element={<div>New job route</div>} />
           <Route path="/applications/:id/running" element={<Where />} />
           <Route path="/verify-email" element={<div>Verify route</div>} />
           <Route element={<RequireAccount />}>
@@ -103,6 +105,13 @@ describe('helpers', () => {
     expect(fileProblem(new File([], 'cv.pdf'))).toMatch(/empty/)
     expect(fileProblem(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'cv.PDF'))).toMatch(/5 MB/)
     expect(fileProblem(new File(['x'], 'cv.docx'))).toBeNull()
+  })
+  it('only returns to paths inside the app', () => {
+    expect(safeThen('/new')).toBe('/new')
+    expect(safeThen(null)).toBeNull()
+    expect(safeThen('//evil.example')).toBeNull()
+    expect(safeThen('/\\evil.example')).toBeNull()
+    expect(safeThen('https://evil.example')).toBeNull()
   })
   it('sends pasted text as cv.txt', () => {
     const f = pastedFile('  hello  ')
@@ -274,9 +283,28 @@ describe('UploadPage', () => {
     expect(await screen.findByText('Verify route')).toBeInTheDocument()
   })
 
-  it('does not let a finished account back in', async () => {
-    setup(<UploadPage />, { step: 'done', master: cv() })
+  it('can wait: Do this later ends the guided run and goes Home', async () => {
+    const calls = setup(<UploadPage />, { step: 'upload', master: null })
+    await userEvent.click(await screen.findByRole('button', { name: 'Do this later' }))
     expect(await screen.findByText('Home page')).toBeInTheDocument()
+    expect(patches(calls)).toEqual([{ onboarding_step: 'done' }])
+  })
+
+  it('opens from Home after the guided run, and Do this later just goes back', async () => {
+    const calls = setup(<UploadPage />, { step: 'done', master: null })
+    expect(await screen.findByText('Finish any time')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Do this later' }))
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    expect(patches(calls)).toEqual([])
+  })
+
+  it('returns to a job pasted before the CV, without moving the saved step', async () => {
+    const calls = setup(<UploadPage />, { step: 'done', master: null }, undefined, '/x?then=/new')
+    await userEvent.click(await screen.findByRole('button', { name: 'Start from scratch' }))
+    await userEvent.type(screen.getByLabelText('Full name'), 'Mara Quill')
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText('New job route')).toBeInTheDocument()
+    expect(patches(calls)).toEqual([])
   })
 
   it('starts from scratch with a name', async () => {
@@ -328,6 +356,23 @@ describe('CheckPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
     expect(await screen.findByText('Targets route')).toBeInTheDocument()
     expect(patches(calls)).toEqual([{ onboarding_step: 'targets' }])
+    expect(calls.filter((c) => c.url === '/v1/setup/cv-checked' && c.method === 'POST')).toHaveLength(1)
+  })
+
+  it('from Home, Continue marks the check done and goes back Home', async () => {
+    const clean = cv({ issues: [] })
+    const calls = setup(<CheckPage />, { step: 'done', master: clean })
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    expect(calls.filter((c) => c.url === '/v1/setup/cv-checked')).toHaveLength(1)
+    expect(patches(calls)).toEqual([])
+  })
+
+  it('Fix later does not count as checked', async () => {
+    const calls = setup(<CheckPage />, { step: 'check', master: cv() })
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix later in Profile' }))
+    expect(await screen.findByText('Targets route')).toBeInTheDocument()
+    expect(calls.filter((c) => c.url === '/v1/setup/cv-checked')).toHaveLength(0)
   })
 
   it('asks for both dates before saving', async () => {
@@ -390,6 +435,15 @@ describe('CheckPage', () => {
 })
 
 describe('TargetsPage', () => {
+  it('from Home, saves the targets and goes back Home without moving the step', async () => {
+    const calls = setup(<TargetsPage />, { step: 'done', master: cv(), profile: { target_roles: ['Backend Engineer'], work_settings: ['remote'] } })
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    const [patch] = patches(calls)
+    expect(patch).toMatchObject({ target_roles: ['Backend Engineer'], work_settings: ['remote'] })
+    expect(patch).not.toHaveProperty('onboarding_step')
+  })
+
   it('picks roles from the CV, needs a work setting, and saves everything in one PATCH', async () => {
     const calls = setup(<TargetsPage />, { step: 'targets', master: cv() })
     const headline = await screen.findByRole('button', { name: 'Backend Engineer' })

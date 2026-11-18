@@ -1,7 +1,7 @@
 // Home: GET /v1/home for the cards and timeline, GET /v1/applications for the
 // desktop pipeline overview and the empty state. Shapes per docs/api.md and
 // backend/src/routes/home.rs.
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
 
 export type NeedsYouCard = {
@@ -29,7 +29,22 @@ export type HomeData = {
   needs_you: NeedsYouCard[]
   this_week: WeekEvent[]
   stats: { applied_this_week: number; active: number; interviewing: number }
+  setup: Setup
 }
+
+/** The four setup milestones, each read from the account's data. */
+export type Setup = {
+  cv: boolean
+  check: boolean
+  targets: boolean
+  first_application: boolean
+  /** Set only while the card is hidden. */
+  hidden_until: string | null
+  /** Something is left and the card is not hidden. */
+  show: boolean
+}
+
+export const homeKey = ['home'] as const
 
 export type Stage = 'saved' | 'applied' | 'interviewing' | 'offer' | 'closed'
 export type ApplicationListItem = {
@@ -43,7 +58,28 @@ export type ApplicationListItem = {
 }
 
 export function useHome() {
-  return useQuery({ queryKey: ['home'], queryFn: () => api.get<HomeData>('/v1/home') })
+  return useQuery({ queryKey: homeKey, queryFn: () => api.get<HomeData>('/v1/home') })
+}
+
+/** Hide the setup card for a week, on every device. */
+export function useHideSetup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<void>('/v1/setup/hide'),
+    onSuccess: () => {
+      qc.setQueryData<HomeData>(homeKey, (h) => (h ? { ...h, setup: { ...h.setup, show: false } } : h))
+      return qc.invalidateQueries({ queryKey: homeKey })
+    },
+  })
+}
+
+/** The user confirmed what we read from their CV. */
+export function useCvChecked() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<void>('/v1/setup/cv-checked'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: homeKey }),
+  })
 }
 
 /** Newest first. The list endpoint also returns each job's full text, so keep the page small. */

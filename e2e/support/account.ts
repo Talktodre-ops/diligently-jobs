@@ -45,7 +45,25 @@ export async function createReadyAccount(baseURL: string, opts: { name?: string;
       data: { full_name: name, target_roles: ['Senior Backend Engineer'], work_settings: ['remote'], onboarding_step: 'done' },
     })
     if (!prof.ok()) throw new Error(`profile ${prof.status()}: ${await prof.text()}`)
+    const checked = await ctx.post('/v1/setup/cv-checked')
+    if (!checked.ok()) throw new Error(`cv-checked ${checked.status()}`)
     return { email, password: PASSWORD, name }
+  } finally {
+    await ctx.dispose()
+  }
+}
+
+/** A verified account with nothing else done: no CV, onboarding not started. */
+export async function createVerifiedAccount(baseURL: string, tag = 'verified') {
+  const email = freshEmail(tag)
+  const ctx: APIRequestContext = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL } })
+  try {
+    const signup = await ctx.post('/v1/auth/signup', { data: { email, password: PASSWORD } })
+    if (signup.status() !== 201) throw new Error(`signup ${signup.status()}: ${await signup.text()}`)
+    const token = new URL(linkIn(await latestMail(email, '/verify-email'), '/verify-email')).searchParams.get('token')
+    const verify = await ctx.post('/v1/auth/verify', { data: { token } })
+    if (!verify.ok()) throw new Error(`verify ${verify.status()}`)
+    return { email, password: PASSWORD }
   } finally {
     await ctx.dispose()
   }

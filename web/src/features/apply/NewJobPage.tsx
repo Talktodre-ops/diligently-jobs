@@ -6,6 +6,8 @@ import { Notice } from '../../ui/Notice'
 import { TextArea, TextField } from '../../ui/TextField'
 import { useStartApplication } from './api'
 import { SheetHeader } from './SheetHeader'
+import { clearJobDraft, loadJobDraft, saveJobDraft } from './jobDraft'
+import { isApiError } from '../../api/client'
 import { looksLikeUrl, MIN_JD_CHARS, startProblem } from './startErrors'
 import { Switch } from '../../ui/Switch'
 import s from './NewJobPage.module.css'
@@ -18,9 +20,12 @@ const modes: { mode: Mode; label: string }[] = [
 
 export default function NewJobPage() {
   const [params] = useSearchParams()
-  const [mode, setMode] = useState<Mode>(params.get('mode') === 'link' ? 'link' : 'text')
-  const [jd, setJd] = useState('')
-  const [url, setUrl] = useState('')
+  // A job pasted before there was a CV comes back here after the upload.
+  const [draft] = useState(() => loadJobDraft())
+  const draftIsUrl = !!draft && looksLikeUrl(draft)
+  const [mode, setMode] = useState<Mode>(draftIsUrl || params.get('mode') === 'link' ? 'link' : 'text')
+  const [jd, setJd] = useState(draft && !draftIsUrl ? draft : '')
+  const [url, setUrl] = useState(draftIsUrl ? draft!.trim() : '')
   const [research, setResearch] = useState(true)
   const [letter, setLetter] = useState(true)
   const [localError, setLocalError] = useState<{ field: Mode; message: string } | null>(null)
@@ -88,7 +93,13 @@ export default function NewJobPage() {
 
   function go(input: Parameters<typeof start.mutate>[0]) {
     start.mutate(input, {
-      onSuccess: (r) => navigate(`/applications/${r.application_id}/running`, { replace: true, state: { jobId: r.job_id } }),
+      onSuccess: (r) => {
+        clearJobDraft()
+        navigate(`/applications/${r.application_id}/running`, { replace: true, state: { jobId: r.job_id } })
+      },
+      onError: (e) => {
+        if (isApiError(e, 'no_master_cv')) saveJobDraft('url' in input && input.url ? input.url : jd)
+      },
     })
   }
 
@@ -183,7 +194,7 @@ export default function NewJobPage() {
             <p className={s.promise}>Every change is a suggestion. Nothing reaches your CV until you choose it.</p>
 
             {pageError && (
-              <Notice tone="error">
+              <Notice tone={pageError.needsCv ? 'info' : 'error'}>
                 {pageError.message}{' '}
                 {pageError.action && <Link to={pageError.action.to}>{pageError.action.label}</Link>}
               </Notice>

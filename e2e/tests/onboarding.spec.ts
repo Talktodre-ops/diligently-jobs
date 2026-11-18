@@ -214,8 +214,9 @@ test('a PDF goes through every step, a fix and a stronger bullet, then Home', as
     await page.getByRole('button', { name: 'No job in mind yet? Go to Home' }).click()
     await expect(page).toHaveURL(/\/$/)
     expect((await profile(page)).onboarding_step).toBe('done')
+    // After the guided run, the steps stay open from the setup card on Home.
     await page.goto('/onboarding/upload')
-    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByText('Finish any time')).toBeVisible()
   })
 })
 

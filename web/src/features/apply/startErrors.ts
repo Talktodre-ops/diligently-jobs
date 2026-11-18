@@ -8,6 +8,8 @@ export type StartProblem = {
   action?: { to: string; label: string }
   /** The link could not be read: the screen should offer the text box instead. */
   pasteInstead?: boolean
+  /** There is no CV yet: the screen keeps the pasted job for after the upload. */
+  needsCv?: boolean
 }
 
 /** Turns a failed POST /v1/applications/start into something a screen can show. */
@@ -15,7 +17,12 @@ export function startProblem(e: unknown): StartProblem {
   if (!isApiError(e)) return { field: null, message: 'Something went wrong on our side. Try again.' }
   switch (e.code) {
     case 'no_master_cv':
-      return { field: null, message: e.message, action: { to: '/onboarding/upload', label: 'Upload your CV' } }
+      return {
+        field: null,
+        message: 'Add your CV first. We tailor from it, so there is nothing to work with yet. It takes about 2 minutes, and we keep this job for you.',
+        action: { to: '/onboarding/upload?then=/new', label: 'Add your CV' },
+        needsCv: true,
+      }
     case 'plan_limit_reached':
       return { field: null, message: e.message, action: { to: '/settings', label: 'See your plan' } }
     case 'link_unreadable':

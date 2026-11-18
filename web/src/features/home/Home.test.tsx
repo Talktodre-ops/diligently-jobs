@@ -7,7 +7,12 @@ import HomePage from './HomePage'
 
 afterEach(() => vi.unstubAllGlobals())
 
-const emptyHome: HomeData = { first_name: 'Ada', needs_you: [], this_week: [], stats: { applied_this_week: 0, active: 0, interviewing: 0 } }
+const allSet = { cv: true, check: true, targets: true, first_application: true, hidden_until: null, show: false }
+const emptyHome: HomeData = { first_name: 'Ada', needs_you: [], this_week: [], stats: { applied_this_week: 0, active: 0, interviewing: 0 }, setup: allSet }
+const newHome: HomeData = {
+  ...emptyHome,
+  setup: { cv: true, check: false, targets: false, first_application: false, hidden_until: null, show: true },
+}
 const busyHome: HomeData = {
   first_name: 'Ada',
   needs_you: [
@@ -17,6 +22,7 @@ const busyHome: HomeData = {
   ],
   this_week: [{ at: new Date().toISOString(), kind: 'pipeline_done', application_id: 'a2', company: 'Ledgerline', role: 'Product Engineer', text: 'Tailored your CV for Ledgerline' }],
   stats: { applied_this_week: 1, active: 2, interviewing: 0 },
+  setup: allSet,
 }
 const apps = [
   { id: 'a2', company: 'Ledgerline', role: 'Product Engineer', status: 'draft', stage: 'saved', created_at: '', updated_at: '' },
@@ -57,6 +63,56 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: /Stopped.*New job/ })).toHaveAttribute('href', '/applications/a3/running')
     const week = screen.getByRole('region', { name: 'This week' })
     expect(within(week).getByRole('link', { name: /Tailored your CV for Ledgerline/ })).toHaveAttribute('href', '/applications/a2')
+  })
+
+  it('lists the setup steps that are left, each opening its screen', async () => {
+    open(newHome)
+    const card = await screen.findByRole('region', { name: 'Get set up' })
+    expect(within(card).getByText('1 of 4 done')).toBeInTheDocument()
+    expect(within(card).queryByRole('link', { name: /Add your CV/ })).not.toBeInTheDocument()
+    expect(within(card).getByText(/Add your CV/)).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: /Check what we read/ })).toHaveAttribute('href', '/onboarding/check')
+    expect(within(card).getByRole('link', { name: /Say what you want/ })).toHaveAttribute('href', '/onboarding/targets')
+    expect(within(card).getByRole('link', { name: /Tailor your first CV/ })).toHaveAttribute('href', '/new')
+    // The card already offers the first job, so the empty-state card stays away.
+    expect(screen.queryByText('Your first application')).not.toBeInTheDocument()
+  })
+
+  it('keeps steps that need a CV closed until there is one', async () => {
+    open({ ...newHome, setup: { ...newHome.setup, cv: false } })
+    const card = await screen.findByRole('region', { name: 'Get set up' })
+    expect(within(card).getByRole('link', { name: /Add your CV/ })).toHaveAttribute('href', '/onboarding/upload')
+    expect(within(card).queryByRole('link', { name: /Check what we read/ })).not.toBeInTheDocument()
+    expect(within(card).queryByRole('link', { name: /Tailor your first CV/ })).not.toBeInTheDocument()
+    expect(within(card).getAllByText('After you add your CV.')).toHaveLength(2)
+  })
+
+  it('hides the setup card through the API, so it stays hidden everywhere', async () => {
+    let hidden = false
+    const calls = renderRoute(<HomePage />, {
+      path: '/', pattern: '/',
+      api: (c) => {
+        if (c.method === 'POST' && c.url === '/v1/setup/hide') {
+          hidden = true
+          return new Response(null, { status: 204 })
+        }
+        if (c.url === '/v1/home') return json(hidden ? { ...newHome, setup: { ...newHome.setup, show: false, hidden_until: '2026-11-25T09:00:00Z' } } : newHome)
+        if (c.url.startsWith('/v1/applications?')) return json([])
+        if (c.url === '/v1/profile') return json({ profile: { full_name: 'Ada Okafor' } })
+        return undefined
+      },
+    })
+    const card = await screen.findByRole('region', { name: 'Get set up' })
+    await userEvent.click(within(card).getByRole('button', { name: 'Hide' }))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Get set up' })).not.toBeInTheDocument())
+    expect(hidden).toBe(true)
+    expect(calls.filter((c) => c.url === '/v1/setup/hide')).toHaveLength(1)
+  })
+
+  it('shows no setup card when the server says so', async () => {
+    open(busyHome, apps)
+    await screen.findByText('Three things need you today.')
+    expect(screen.queryByRole('region', { name: 'Get set up' })).not.toBeInTheDocument()
   })
 
   it('shows an error with a retry when Home does not load', async () => {

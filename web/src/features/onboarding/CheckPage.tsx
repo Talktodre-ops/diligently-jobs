@@ -7,7 +7,9 @@ import { PageState } from '../../ui/PageState'
 import { TextArea, TextField } from '../../ui/TextField'
 import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { toFormError } from '../auth/errors'
-import { useMaster, useSaveMaster, useUpdateProfile, type Issue, type MasterCv, type ResumeDoc } from './api'
+import { useProfile } from '../../auth/session'
+import { useCvChecked } from '../home/api'
+import { isLater, useMaster, useSaveMaster, useUpdateProfile, type Issue, type MasterCv, type ResumeDoc } from './api'
 import { CvSheet } from './components/CvSheet'
 import { IssueCard } from './components/IssueCards'
 import { OnboardFrame } from './components/OnboardFrame'
@@ -60,6 +62,8 @@ function CheckBody({ cv }: { cv: MasterCv }) {
   const navigate = useNavigate()
   const save = useSaveMaster()
   const updateProfile = useUpdateProfile()
+  const checked = useCvChecked()
+  const profile = useProfile()
   const desktop = useMediaQuery(DESKTOP)
   // The questions are picked once, so answering one does not reshuffle the rest.
   const [questions, setQuestions] = useState<Candidate[]>(() => strengthenCandidates(cv.doc))
@@ -85,9 +89,12 @@ function CheckBody({ cv }: { cv: MasterCv }) {
     })
   }
 
-  async function next() {
+  /** Continue (the CV is checked) or Fix later (it is not). */
+  async function next(done: boolean) {
     setError(null)
     try {
+      if (done) await checked.mutateAsync()
+      if (isLater(profile.data?.onboarding_step)) return navigate('/')
       await updateProfile.mutateAsync({ onboarding_step: 'targets' })
       navigate('/onboarding/targets')
     } catch (e) {
@@ -109,9 +116,9 @@ function CheckBody({ cv }: { cv: MasterCv }) {
       aside={<CvSheet contained doc={cv.doc} legend marks={marks} />}
       footer={
         <>
-          <Button block className={blocked ? s.blocked : undefined} busy={!blocked && updateProfile.isPending} disabled={blocked} onClick={next}>{ctaLabel}</Button>
+          <Button block className={blocked ? s.blocked : undefined} busy={!blocked && (updateProfile.isPending || checked.isPending)} disabled={blocked} onClick={() => next(true)}>{ctaLabel}</Button>
           {blocked && (
-            <Button variant="ghost" small data-quiet className={s.later} busy={updateProfile.isPending} onClick={next}>Fix later in Profile</Button>
+            <Button variant="ghost" small data-quiet className={s.later} busy={updateProfile.isPending} onClick={() => next(false)}>Fix later in Profile</Button>
           )}
         </>
       }

@@ -11,6 +11,7 @@ import { Composer } from './Composer'
 import { NeedsYou } from './NeedsYou'
 import { Pipeline } from './Pipeline'
 import { ThisWeek } from './ThisWeek'
+import { SetupCard } from './SetupCard'
 import s from './HomePage.module.css'
 
 function initials(name: string | null | undefined) {
@@ -39,7 +40,7 @@ export default function HomePage() {
   if (home.isPending) return <PageState.Loading />
   if (home.isError) return <PageState.Error error={home.error} onRetry={() => home.refetch()} />
 
-  const { first_name, needs_you, this_week } = home.data
+  const { first_name, needs_you, this_week, setup } = home.data
   const hello = `${greeting()}${first_name ? `, ${first_name}` : ''}.`
   // A brand-new account has no applications at all: Home leads with the first step.
   const empty = apps.data?.length === 0 && needs_you.length === 0 && this_week.length === 0
@@ -65,9 +66,12 @@ export default function HomePage() {
           </div>
         )}
 
+        {setup && <SetupCard setup={setup} />}
+
         <div className={s.columns}>
           <div className={s.main}>
-            {empty && !desktop ? <FirstJob /> : <NeedsYou cards={needs_you} desktop={desktop} />}
+            {/* The setup card already offers the first job; do not say it twice. */}
+            {empty && !desktop ? (!setup?.show && <FirstJob />) : <NeedsYou cards={needs_you} desktop={desktop} />}
             <ThisWeek events={this_week} desktop={desktop} />
           </div>
           {desktop && <Pipeline apps={apps} cards={needs_you} />}

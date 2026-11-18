@@ -46,6 +46,20 @@ export const stepPath: Record<FlowStep, string> = {
 }
 export const stepOrder: OnboardingStep[] = ['upload', 'check', 'targets', 'first_job', 'done']
 
+/**
+ * A step opened from the setup card on Home, after the guided first run is
+ * over: finishing it goes back Home instead of on to the next step, and the
+ * saved step is left alone.
+ */
+export function isLater(step: OnboardingStep | undefined) {
+  return step === 'done'
+}
+
+/** An in-app path to return to (`?then=/new`), or null for anything else. */
+export function safeThen(value: string | null): string | null {
+  return value && /^\/(?![/\\])/.test(value) ? value : null
+}
+
 /** The master CV, or null when none exists yet (the API answers 422 no_master_cv). */
 export function useMaster() {
   return useQuery({

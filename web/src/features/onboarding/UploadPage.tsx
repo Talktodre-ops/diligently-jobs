@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { profileKey, useMe, useProfile } from '../../auth/session'
 import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
@@ -9,8 +9,7 @@ import { TextArea, TextField } from '../../ui/TextField'
 import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { toFormError } from '../auth/errors'
 import {
-  fileProblem, masterKey, MIN_PASTE_CHARS, pastedFile, useMaster, useSaveMaster, useStartUpload, useUpdateProfile, useUpload,
-} from './api'
+  fileProblem, masterKey, MIN_PASTE_CHARS, pastedFile, useMaster, useSaveMaster, useStartUpload, useUpdateProfile, useUpload, isLater, safeThen } from './api'
 import { CvEmpty, CvSheet } from './components/CvSheet'
 import { OnboardFrame } from './components/OnboardFrame'
 import { foundFacts } from './cvFacts'
@@ -46,6 +45,9 @@ type Mode = 'choose' | 'paste' | 'hand'
 
 export default function UploadPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  // Sent here from a job pasted before there was a CV: go back to it after.
+  const then = safeThen(params.get('then'))
   const qc = useQueryClient()
   const me = useMe()
   const profile = useProfile(!!me.data?.email_verified)
@@ -159,8 +161,8 @@ export default function UploadPage() {
         header: { name: name.trim(), title: '', email: me.data?.email ?? null },
         experience: [], education: [], skills: [], projects: [],
       })
-      await updateProfile.mutateAsync({ onboarding_step: 'check' })
-      navigate('/onboarding/check')
+      if (!isLater(profile.data?.onboarding_step)) await updateProfile.mutateAsync({ onboarding_step: 'check' })
+      navigate(then ?? '/onboarding/check')
     } catch (err) {
       setNameError(toFormError(err).message)
     }
@@ -171,7 +173,7 @@ export default function UploadPage() {
     try {
       // A finished upload already moves the step on; this covers a CV saved some other way.
       if (profile.data?.onboarding_step === 'upload') await updateProfile.mutateAsync({ onboarding_step: 'check' })
-      navigate('/onboarding/check')
+      navigate(then ?? '/onboarding/check')
     } catch (err) {
       setNextError(toFormError(err).message)
     }

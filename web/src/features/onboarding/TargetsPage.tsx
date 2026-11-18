@@ -7,7 +7,7 @@ import { Notice } from '../../ui/Notice'
 import { PageState } from '../../ui/PageState'
 import { TextField } from '../../ui/TextField'
 import { toFormError } from '../auth/errors'
-import { useMaster, useUpdateProfile, type ResumeDoc } from './api'
+import { isLater, useMaster, useUpdateProfile, type ResumeDoc } from './api'
 import { CvSheet } from './components/CvSheet'
 import { OnboardFrame } from './components/OnboardFrame'
 import { countryOf, inferPaper } from './cvFacts'
@@ -92,6 +92,7 @@ function AddOwn({ label, field, placeholder, onAdd }: { label: string; field: st
 }
 
 function TargetsForm({ profile, doc }: { profile: Profile; doc: ResumeDoc | undefined }) {
+  const later = isLater(profile.onboarding_step)
   const navigate = useNavigate()
   const update = useUpdateProfile()
   const fromCv = suggestedRoles(doc)
@@ -161,9 +162,9 @@ function TargetsForm({ profile, doc }: { profile: Profile; doc: ResumeDoc | unde
         // Only places still on offer: a country chip goes away when the location changes.
         open_to: openTo.filter((p) => has(placeOptions, p)),
         paper_size: paper,
-        onboarding_step: 'first_job',
+        ...(later ? {} : { onboarding_step: 'first_job' as const }),
       })
-      navigate('/onboarding/first-job')
+      navigate(later ? '/' : '/onboarding/first-job')
     } catch (err) {
       const f = toFormError(err)
       const key = f.field === 'target_roles' ? 'roles' : f.field === 'work_settings' ? 'settings' : f.field === 'open_to' ? 'openTo' : f.field === 'location' ? 'location' : 'form'

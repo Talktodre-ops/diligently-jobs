@@ -8,7 +8,10 @@ import RunningPage from './RunningPage'
 import WorkspacePage from './WorkspacePage'
 import { APP, apiError, brief, gap, json, renderRoute, rewrites, type Call } from './testing'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  sessionStorage.clear()
+})
 
 const JD = 'Senior Backend Engineer at Cobalt Harbor. '.repeat(8)
 const is = (c: Call, method: string, path: string) => c.method === method && c.url === path
@@ -49,8 +52,26 @@ describe('NewJobPage', () => {
     await u.click(screen.getByLabelText('Job description'))
     await u.paste(JD)
     await u.click(screen.getByRole('button', { name: 'Tailor my CV' }))
-    expect(await screen.findByText('Upload your CV first.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Upload your CV' })).toHaveAttribute('href', '/onboarding/upload')
+    expect(await screen.findByText(/Add your CV first\..*we keep this job for you/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Add your CV' })).toHaveAttribute('href', '/onboarding/upload?then=/new')
+    expect(sessionStorage.getItem('diligently:job-draft')).toBe(JD)
+  })
+
+  it('brings back a job pasted before there was a CV, and forgets it once started', async () => {
+    sessionStorage.setItem('diligently:job-draft', JD)
+    const calls = open((c) => (is(c, 'POST', '/v1/applications/start') ? json({ application_id: APP, job_id: 'j1', progress: [] }, 202) : undefined))
+    expect(screen.getByLabelText('Job description')).toHaveValue(JD)
+    await userEvent.click(screen.getByRole('button', { name: 'Tailor my CV' }))
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/applications/${APP}/running`))
+    expect(calls[0]!.body).toMatchObject({ jd_text: JD.trim() })
+    expect(sessionStorage.getItem('diligently:job-draft')).toBeNull()
+  })
+
+  it('brings back a pasted link on the link tab', () => {
+    sessionStorage.setItem('diligently:job-draft', 'https://jobs.example.com/7')
+    open()
+    expect(screen.getByRole('tab', { name: 'Job link' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('Link to the job')).toHaveValue('https://jobs.example.com/7')
   })
 
   it('offers the text box when a link cannot be read', async () => {
