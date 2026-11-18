@@ -55,15 +55,18 @@ pub async fn claim(db: &PgPool, target_email: &str) -> Result<ClaimReport> {
         return Ok(ClaimReport::default());
     };
 
-    let target: Option<(Uuid, Option<String>)> =
-        sqlx::query_as("select id, password_hash from users where lower(email) = $1")
-            .bind(&target_email)
-            .fetch_optional(&mut *tx)
-            .await?;
-    let (target, hash) =
+    // The target must be an account someone can sign in to, with a password
+    // or with Google, so the data never lands on another placeholder.
+    let target: Option<(Uuid, bool)> = sqlx::query_as(
+        "select id, password_hash is not null or google_sub is not null from users where lower(email) = $1",
+    )
+    .bind(&target_email)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let (target, can_sign_in) =
         target.ok_or_else(|| anyhow!("no account for {target_email}; sign up first"))?;
-    if hash.is_none() {
-        bail!("{target_email} has no password set and cannot receive data");
+    if !can_sign_in {
+        bail!("{target_email} has no password or Google sign-in and cannot receive data");
     }
 
     // Count first: cascades mean later updates touch fewer rows than moved.

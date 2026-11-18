@@ -115,3 +115,40 @@ async fn claim_refuses_an_unknown_account_and_changes_nothing() {
     .unwrap();
     assert_eq!(owned_by_legacy, 1);
 }
+
+#[tokio::test]
+async fn claim_accepts_an_account_that_signs_in_with_google() {
+    let app = TestApp::spawn().await;
+    legacy_data(&app).await;
+    sqlx::query("insert into users (email, password_hash, google_sub) values ('dre@example.com', null, 'google-123')")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+
+    let report = legacy::claim(&app.state.db, "dre@example.com")
+        .await
+        .unwrap();
+    assert_eq!(report.total(), 5);
+}
+
+#[tokio::test]
+async fn claim_refuses_an_account_nobody_can_sign_in_to() {
+    let app = TestApp::spawn().await;
+    legacy_data(&app).await;
+    sqlx::query("insert into users (email, password_hash, google_sub) values ('ghost@example.com', null, null)")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+
+    let err = legacy::claim(&app.state.db, "ghost@example.com")
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("cannot receive data"), "{err}");
+    let owned_by_legacy: i64 = sqlx::query_scalar(
+        "select count(*) from applications a join users u on u.id = a.user_id where u.email = 'legacy@diligently.local'",
+    )
+    .fetch_one(&app.state.db)
+    .await
+    .unwrap();
+    assert_eq!(owned_by_legacy, 1);
+}
