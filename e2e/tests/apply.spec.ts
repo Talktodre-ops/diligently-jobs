@@ -89,8 +89,11 @@ test('a new user sees a useful Home with a clear first step', async ({ page, bas
   await expect(page.getByRole('heading', { level: 1, name: /(Morning|Afternoon|Evening), Ada\./ })).toBeVisible()
   await expect(page.getByText('Paste a job you want and we will tailor your CV to it.')).toBeVisible()
   await expect(page.getByText(/Nothing yet this week/)).toBeVisible()
+  // A ready account has a CV, a check and targets: one setup step is left.
+  const setup = page.getByRole('region', { name: 'Get set up' })
+  await expect(setup.getByText('3 of 4 done')).toBeVisible()
+  await expect(setup.getByRole('link', { name: /Tailor your first CV/ })).toHaveAttribute('href', '/new')
   if (info.project.name === 'mobile' || info.project.name === 'tablet') {
-    await expect(page.getByRole('link', { name: 'Start with a job' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'New application' })).toBeVisible()
   } else {
     await expect(page.getByLabel('Job link or description')).toBeVisible()
@@ -237,7 +240,8 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
 
   // Home now has the application: an unfinished card and a timeline entry.
   await page.goto('/')
-  await expect(page.getByText(/Tailored your CV for Cobalt Harbor/)).toBeVisible()
-  await expect(page.getByText('Unfinished')).toBeVisible()
+  // The account is reused between runs, so earlier runs can leave entries too: the newest comes first.
+  await expect(page.getByText(/Tailored your CV for Cobalt Harbor/).first()).toBeVisible()
+  await expect(page.getByText('Unfinished').first()).toBeVisible()
   await bothSizes(page, 'home')
 })
