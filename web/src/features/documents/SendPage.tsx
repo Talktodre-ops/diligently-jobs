@@ -13,6 +13,7 @@ import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { useFreshFiles, useLetter, useMarkApplied, type Applied, type FileLinks } from './api'
 import { canShareFiles, fetchAsFiles, MIME, shareOrDownload, type ShareFile, type ShareOutcome } from './download'
 import { fileNameFromUrl, shownScore } from './format'
+import { plural } from '../apply/format'
 import { SendDone } from './SendDone'
 import { useRenderedFiles } from './useRenderedFiles'
 import s from './Send.module.css'
@@ -156,6 +157,7 @@ export default function SendPage() {
       <div className={s.layout}>
         <main className={s.main}>
           <h1 className={s.h1}>How should it go out?</h1>
+          <ChangesNote id={id} inCv={brief.data.score.decided} notSeen={brief.data.score.pending} />
 
           <fieldset className={s.fieldset}>
             <legend className={s.legend}>Format</legend>
@@ -208,5 +210,20 @@ export default function SendPage() {
         </Dialog>
       )}
     </>
+  )
+}
+
+/** What goes out: how far the CV moved from the original, and what was not looked at. */
+function ChangesNote({ id, inCv, notSeen }: { id: string; inCv: number; notSeen: number }) {
+  if (inCv === 0) return <p className={s.changes}>Your CV goes out as you wrote it.</p>
+  return (
+    <p className={s.changes}>
+      Your CV has {plural(inCv, 'change')} for this job.
+      {notSeen > 0 && (
+        <>
+          {' '}You have not looked at {notSeen}. <Link to={`/applications/${id}/review`}>Look them over</Link>
+        </>
+      )}
+    </p>
   )
 }

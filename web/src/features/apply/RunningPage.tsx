@@ -124,8 +124,8 @@ function subtitle(status: string | undefined, brief: Brief, linkFailed: boolean)
     const after = projected != null && before != null ? Math.max(projected, before) : current
     if (before != null && after != null && after > before) parts.push(`Your match could go from ${before} to ${after}.`)
     else if (before != null) parts.push(`Your match is ${before}.`)
-    if (pending > 0) parts.push(`${countWord(pending)} ${pending === 1 ? 'rewrite is' : 'rewrites are'} waiting for your call.`)
-    else parts.push('Nothing is waiting for you.')
+    if (pending > 0) parts.push(`${countWord(pending)} ${pending === 1 ? 'rewrite is' : 'rewrites are'} in your CV. Look them over before you send.`)
+    else parts.push('Your CV is ready to send.')
     return parts.join(' ')
   }
   if (status === 'failed') {

@@ -167,29 +167,30 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
   await expect(score.getByText('Before')).toBeVisible()
   const nowBefore = Number(await score.getByRole('status').textContent())
   const cvRow = page.getByRole('link', { name: /CV tailored/ })
-  await expect(cvRow).toContainText(/(\d+) waiting for you/)
-  const waitingBefore = Number((await cvRow.textContent())!.match(/(\d+) waiting for you/)![1])
+  await expect(cvRow).toContainText(/(\d+) to look over/)
+  const waitingBefore = Number((await cvRow.textContent())!.match(/(\d+) to look over/)![1])
   expect(waitingBefore).toBeGreaterThan(1)
   await bothSizes(page, 'workspace')
 
   // Review: use one rewrite, edit the next, and the count goes down by two.
   await cvRow.click()
   await expect(page).toHaveURL(`${appUrl}/review`)
-  await expect(page.getByRole('heading', { name: `${waitingBefore} left to review` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: `${waitingBefore} to look over` })).toBeVisible()
   await bothSizes(page, 'review')
   await page.getByRole('button', { name: 'Use rewrite' }).click()
-  await expect(page.getByRole('heading', { name: `${waitingBefore - 1} left to review` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: `${waitingBefore - 1} to look over` })).toBeVisible()
 
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
   const edit = page.getByRole('textbox', { name: 'Edit the rewrite' })
   await edit.fill('Owned Go services for payment reconciliation, matching ledger entries against bank files every day.')
   await bothSizes(page, 'review-edit')
   await page.getByRole('button', { name: 'Save and use' }).click()
-  await expect(page.getByRole('heading', { name: `${waitingBefore - 2} left to review` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: `${waitingBefore - 2} to look over` })).toBeVisible()
 
-  // Back on the workspace the brief reflects both decisions.
+  // Back on the workspace the brief reflects both decisions. Both were in the
+  // CV already, so the score holds.
   await page.getByRole('link', { name: 'Back to application' }).click()
-  await expect(page.getByRole('link', { name: /CV tailored/ })).toContainText(`${waitingBefore - 2} waiting for you`)
+  await expect(page.getByRole('link', { name: /CV tailored/ })).toContainText(`${waitingBefore - 2} to look over`)
   const nowAfter = Number(await score.getByRole('status').textContent())
   expect(nowAfter).toBeGreaterThanOrEqual(nowBefore)
 

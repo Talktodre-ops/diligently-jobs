@@ -105,7 +105,7 @@ export default function ReviewPage() {
           {current ? (
             <>
               <div className={s.titleRow}>
-                <h2 className={s.h1}>{current.status === 'pending' ? `${waiting} left to review` : 'Change your choice'}</h2>
+                <h2 className={s.h1}>{current.status === 'pending' ? `${waiting} to look over` : 'Change your choice'}</h2>
                 <span className={s.position}>{index + 1} of {items.length}</span>
               </div>
               <ItemCard

@@ -51,5 +51,5 @@ export function decisionWord(status: string) {
   if (status === 'accepted') return 'Using the rewrite'
   if (status === 'edited') return 'Using your edit'
   if (status === 'kept') return 'Keeping your original'
-  return 'Waiting for you'
+  return 'In your CV, not looked at yet'
 }

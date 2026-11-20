@@ -31,7 +31,7 @@ export function InlineRewrites({ id }: { id: string }) {
     <section aria-labelledby="inline-rewrites" className={s.box}>
       <div className={s.head}>
         <h2 id="inline-rewrites" className={s.h2}>
-          {items.length === 0 ? 'No changes suggested' : waiting === 0 ? 'All rewrites reviewed' : `${waiting} ${waiting === 1 ? 'rewrite needs' : 'rewrites need'} you`}
+          {items.length === 0 ? 'No changes suggested' : waiting === 0 ? 'All rewrites looked over' : `${waiting} to look over`}
         </h2>
         {items.length > 0 && <Link to={`/applications/${id}/review`} className={s.headLink}>One at a time</Link>}
       </div>

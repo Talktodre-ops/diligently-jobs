@@ -324,6 +324,19 @@ describe('SendPage', () => {
     expect(within(group).getByRole('button', { name: '14 days' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('says how many changes go out and links to the ones not looked at', async () => {
+    setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
+    expect(await screen.findByText(/Your CV has 1 change for this job\. You have not looked at 2\./)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Look them over' })).toHaveAttribute('href', `/applications/${APP}/review`)
+  })
+
+  it('says the CV goes out unchanged when every original was kept', async () => {
+    setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) =>
+      u === `/v1/applications/${APP}/brief` ? { ...brief, score: { ...brief.score, decided: 0, pending: 0 } } : u.endsWith('/files') ? files() : base(u, m, b))
+    expect(await screen.findByText('Your CV goes out as you wrote it.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Look them over' })).not.toBeInTheDocument()
+  })
+
   it('sends the CV alone when there is no letter', async () => {
     setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => (u.endsWith('/files') ? files({ letter: false }) : base(u, m, b)))
     expect(await screen.findByText(/No cover letter for this job yet/)).toBeInTheDocument()

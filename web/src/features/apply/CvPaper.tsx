@@ -26,8 +26,8 @@ function marks(data: Rewrites | undefined) {
 
 /**
  * The tailored CV as decided so far, set like the page the recruiter gets.
- * Butter marks a suggestion in use; a dashed outline marks one still waiting
- * (the page shows the original text until the user decides).
+ * Butter marks a suggestion in use; a dashed outline marks one that is in use
+ * but not looked at yet. Kept originals are unmarked.
  */
 export function CvPaper({ id }: { id: string }) {
   const cv = useTailoredCv(id)
@@ -55,7 +55,7 @@ export function CvPaper({ id }: { id: string }) {
       </div>
       {show && (
         <p className={s.legend}>
-          <span className={s.used}>In use</span> <span className={s.waiting}>Waiting for you</span>
+          <span className={s.used}>In use</span> <span className={s.waiting}>Not looked at yet</span>
         </p>
       )}
       <article className={s.paper}>

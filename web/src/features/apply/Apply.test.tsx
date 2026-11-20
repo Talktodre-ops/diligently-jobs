@@ -164,7 +164,7 @@ describe('WorkspacePage', () => {
     expect(within(score).getByText('72')).toBeInTheDocument()
     expect(within(score).getByRole('status')).toHaveTextContent('78')
     expect(within(score).getByText('Good match')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /CV tailored.*3 rewrites · 2 waiting for you.*Review/ })).toHaveAttribute('href', `/applications/${APP}/review`)
+    expect(screen.getByRole('link', { name: /CV tailored.*3 rewrites in your CV · 2 to look over.*Look over/ })).toHaveAttribute('href', `/applications/${APP}/review`)
     expect(screen.getByRole('link', { name: /2 gaps to address.*GraphQL API design/ })).toHaveAttribute('href', `/applications/${APP}/gaps`)
     expect(screen.getByRole('link', { name: /Cover letter.*228 words/ })).toHaveAttribute('href', `/applications/${APP}/letter`)
     expect(screen.getByRole('link', { name: /Send CV/ })).toHaveAttribute('href', `/applications/${APP}/send`)
@@ -220,17 +220,17 @@ describe('ReviewPage', () => {
 
   it('walks the waiting rewrites one at a time and updates the score', async () => {
     const calls = open()
-    expect(await screen.findByRole('heading', { name: '3 left to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '3 to look over' })).toBeInTheDocument()
     expect(screen.getByText('Backend engineer for payment systems.')).toBeInTheDocument()
     expect(screen.getByText('Match 72')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Use rewrite' }))
-    expect(await screen.findByRole('heading', { name: '2 left to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '2 to look over' })).toBeInTheDocument()
     expect(screen.getByText('Match 75')).toBeInTheDocument()
     expect(screen.getByText('Led a 4-person on-call rotation.')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Keep original' }))
-    expect(await screen.findByRole('heading', { name: '1 left to review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '1 to look over' })).toBeInTheDocument()
     expect(screen.getByText(/A number would make this stronger/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
@@ -251,7 +251,7 @@ describe('ReviewPage', () => {
 
   it('never decides anything on its own', async () => {
     const calls = open()
-    await screen.findByRole('heading', { name: '3 left to review' })
+    await screen.findByRole('heading', { name: '3 to look over' })
     expect(calls.filter((c) => c.method !== 'GET')).toHaveLength(0)
   })
 
@@ -355,7 +355,7 @@ describe('WorkspacePage on desktop', () => {
         }
       },
     })
-    expect(await screen.findByRole('heading', { name: '3 rewrites need you' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '3 to look over' })).toBeInTheDocument()
     const cv = await screen.findByRole('region', { name: /Your tailored CV/ })
     expect(within(cv).getByText('Ada Okafor')).toBeInTheDocument()
     expect(within(cv).getByText('Ran on-call.')).toHaveClass('waiting')

@@ -12,7 +12,7 @@ export type BriefRow = {
   to: string
 }
 
-/** Proposals waiting for a decision: bullet rewrites plus the summary, as the score counts them. */
+/** Suggestions (bullet rewrites plus the summary) and how many are in the CV but not looked at yet. */
 export function proposalCounts(b: Brief) {
   const total = b.rewrites.total + (b.summary.proposed ? 1 : 0)
   return { total, waiting: b.score.pending }
@@ -36,9 +36,9 @@ export function briefRows(id: string, b: Brief): BriefRow[] {
       total === 0
         ? 'No changes suggested for this job'
         : waiting > 0
-          ? `${plural(total, 'rewrite')} · ${waiting} waiting for you`
-          : `${plural(total, 'rewrite')} · all decided`,
-    action: waiting > 0 ? 'Review' : 'Change',
+          ? `${plural(total, 'rewrite')} in your CV · ${waiting} to look over`
+          : `${plural(total, 'rewrite')} · all looked over`,
+    action: waiting > 0 ? 'Look over' : 'Change',
     to: `${base}/review`,
   }
   const gapCount = openGaps(b)
@@ -83,7 +83,7 @@ export function briefRows(id: string, b: Brief): BriefRow[] {
 /** The line at the top of the score card. */
 export function scoreStatus(b: Brief) {
   const { waiting } = proposalCounts(b)
-  if (waiting > 0) return `${plural(waiting, 'rewrite')} waiting for you`
+  if (waiting > 0) return `Ready to send · ${plural(waiting, 'rewrite')} to look over`
   if (b.gaps.unanswered > 0) return `${plural(b.gaps.unanswered, 'gap')} left to look at`
   return 'Ready to send'
 }

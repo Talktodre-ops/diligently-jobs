@@ -56,7 +56,7 @@ function Card({ card: c }: { card: NeedsYouCard }) {
   const view = {
     review: {
       eyebrow: 'Unfinished',
-      sub: `${plural(c.pending ?? 0, 'rewrite')} left to review`,
+      sub: `${plural(c.pending ?? 0, 'rewrite')} to look over`,
       to: `/applications/${c.application_id}`,
     },
     retry: {
