@@ -6,6 +6,9 @@ use std::net::SocketAddr;
 /// here are fatal — better to crash with a clear error than start half-broken.
 #[derive(Clone, Debug)]
 pub struct Config {
+    /// The built web app to serve on the same origin (WEB_DIST). None when
+    /// the pages come from elsewhere, like Vite in development.
+    pub web_dist: Option<std::path::PathBuf>,
     pub bind_addr: SocketAddr,
     pub database_url: String,
     pub r2: R2Config,
@@ -116,9 +119,17 @@ impl Config {
             tracing::warn!(error = %err, ".env not loaded — relying on OS environment for required vars");
         }
 
-        let bind_addr: SocketAddr = required_env("BIND_ADDR")?
-            .parse()
-            .context("BIND_ADDR is not a valid socket address (expected host:port)")?;
+        // BIND_ADDR wins; a host that only hands out PORT (Railway) gets all
+        // interfaces on that port.
+        let bind_addr: SocketAddr = match (optional_env("BIND_ADDR"), optional_env("PORT")) {
+            (Some(addr), _) => addr
+                .parse()
+                .context("BIND_ADDR is not a valid socket address (expected host:port)")?,
+            (None, Some(port)) => format!("0.0.0.0:{port}")
+                .parse()
+                .context("PORT is not a valid port number")?,
+            (None, None) => anyhow::bail!("set BIND_ADDR (host:port) or PORT"),
+        };
 
         let database_url = required_env("DATABASE_URL")?;
         if !database_url.starts_with("postgres://") && !database_url.starts_with("postgresql://") {
@@ -159,8 +170,18 @@ impl Config {
             trust_proxy: env_bool("TRUST_PROXY", false)?,
         };
 
+        let web_dist = crate::site::dist_from_env();
+        if let Some(dir) = &web_dist {
+            anyhow::ensure!(
+                dir.join("index.html").is_file(),
+                "WEB_DIST {} has no index.html",
+                dir.display()
+            );
+        }
+
         Ok(Self {
             bind_addr,
+            web_dist,
             database_url,
             r2,
             web,

@@ -23,6 +23,7 @@ pub mod r2;
 pub mod rate_limit;
 pub mod render;
 pub mod routes;
+pub mod site;
 pub mod usage;
 pub mod validate;
 pub mod web;
@@ -214,22 +215,31 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/account/delete-code", post(account::delete_code));
 
     let cors = cors_layer(&state.config.web);
-    Router::new()
-        .merge(public)
-        .merge(resources)
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth::csrf::require_allowed_origin,
-        ))
-        .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_BYTES))
-        .layer(middleware::from_fn(request_timeout))
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            security_headers,
-        ))
-        .with_state(state)
-        .layer(cors)
-        .layer(TraceLayer::new_for_http())
+    let mut app = Router::new().merge(public).merge(resources);
+    if let Some(dir) = state.config.web_dist.clone() {
+        let r2 = &state.config.r2;
+        let files = site::origin_of(r2.public_endpoint.as_deref().unwrap_or(&r2.endpoint));
+        let site = site::Site::new(dir, files.as_deref(), state.config.web.cookie_secure)
+            .expect("WEB_DIST is checked when the config loads");
+        app = app.fallback(move |req: axum::extract::Request| {
+            let site = site.clone();
+            async move { site.serve(req).await }
+        });
+    }
+    app.layer(middleware::from_fn_with_state(
+        state.clone(),
+        auth::csrf::require_allowed_origin,
+    ))
+    .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_BYTES))
+    .layer(middleware::from_fn(request_timeout))
+    .layer(middleware::from_fn_with_state(
+        state.clone(),
+        security_headers,
+    ))
+    .with_state(state)
+    .layer(cors)
+    .layer(tower_http::compression::CompressionLayer::new())
+    .layer(TraceLayer::new_for_http())
 }
 
 /// CORS for the web app when it is served from another origin. Only the
@@ -275,10 +285,14 @@ async fn security_headers(
         header::REFERRER_POLICY,
         HeaderValue::from_static("no-referrer"),
     );
-    h.insert(
-        header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
-    );
+    // Pages from the web build set their own policy; everything else is
+    // JSON or a file and may load nothing.
+    if !h.contains_key(header::CONTENT_SECURITY_POLICY) {
+        h.insert(
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
+        );
+    }
     if state.config.web.cookie_secure {
         h.insert(
             header::STRICT_TRANSPORT_SECURITY,

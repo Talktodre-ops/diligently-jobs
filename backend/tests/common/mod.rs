@@ -125,6 +125,7 @@ impl TestApp {
             bind_addr: "127.0.0.1:0".parse().unwrap(),
             database_url: url,
             r2: r2_cfg,
+            web_dist: None,
             web: WebConfig {
                 app_base_url: APP_ORIGIN.to_string(),
                 allowed_origins: vec![APP_ORIGIN.to_string()],

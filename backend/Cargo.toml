@@ -14,7 +14,8 @@ path = "src/main.rs"
 # HTTP + async runtime
 axum = { version = "0.8", features = ["macros", "multipart"] }
 tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6", features = ["trace", "cors"] }
+tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace", "cors", "fs", "compression-gzip", "compression-br"] }
 
 # Database
 sqlx = { version = "0.8", features = [
@@ -76,7 +77,6 @@ zip = { version = "9.5.1", default-features = false, features = ["deflate-flate2
 http-body-util = "0.1.5"
 lopdf = "0.47.0"
 tokio   = { version = "1", features = ["macros", "rt-multi-thread"] }
-tower = { version = "0.5.3", features = ["util"] }
 
 [profile.release]
 opt-level     = 3
