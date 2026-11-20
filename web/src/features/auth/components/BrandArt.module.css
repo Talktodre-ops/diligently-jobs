@@ -1,0 +1,20 @@
+.art { position: relative; width: 100%; max-width: 340px; height: 330px; margin-inline: auto; }
+.back {
+  position: absolute; left: 46px; top: 18px; width: 210px; height: 272px;
+  background: var(--butter); border-radius: 6px; transform: rotate(-7deg); opacity: 0.35;
+}
+.page {
+  position: absolute; left: 70px; top: 10px; width: 210px; height: 272px; background: #fff;
+  border-radius: 6px; transform: rotate(3deg); padding: 18px; display: flex; flex-direction: column;
+  gap: 7px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+.bar { display: block; height: 4px; border-radius: 2px; background: #D5CFD2; }
+.center { align-self: center; }
+.rule { display: block; height: 1px; background: #1A1A1A; margin-top: 8px; }
+.badge {
+  position: absolute; right: 22px; top: 196px; width: 112px; height: 112px; border-radius: 999px;
+  background: var(--persimmon); color: var(--aubergine); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+.score { font-family: var(--font-display); font-size: 44px; font-weight: 600; line-height: 1; }
+.word { font-size: 12px; font-weight: 600; }

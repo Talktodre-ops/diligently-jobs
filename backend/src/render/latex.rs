@@ -13,6 +13,7 @@ use std::process::Stdio;
 use tokio::process::Command;
 
 use super::resume::{Header, ResumeDoc};
+use super::Paper;
 
 /// Tera-templated CV, driven by `ResumeDoc`.
 ///
@@ -59,39 +60,41 @@ pub async fn render_flat_cv(
     sections: &serde_json::Value,
     app: Option<&super::ApplicationContext>,
     base_header: Option<&Header>,
+    paper: Paper,
 ) -> Result<Vec<u8>> {
-    render_tex(&build_flat_cv_tex(sections, app, base_header)?).await
+    render_tex(&build_flat_cv_tex(sections, app, base_header, paper)?).await
 }
 
-/// Icon contact line (email · linkedin · github · website · phone), styled to
-/// match the templated header. URLs raw; display text `tex_escape`d.
+/// Icon contact line (email, linkedin, github, website, phone), styled to
+/// match the templated header. URLs through `tex_url`, display text through
+/// `tex_escape`.
 fn flat_contact_line(h: &Header) -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(e) = h.email.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         parts.push(format!(
             "\\href{{mailto:{}}}{{\\raisebox{{-0.2\\height}}\\faEnvelope\\  \\underline{{{}}}}}",
-            e,
+            tex_url(e),
             tex_escape(e)
         ));
     }
     if let Some(l) = &h.linkedin {
         parts.push(format!(
             "\\href{{{}}}{{\\raisebox{{-0.2\\height}}\\faLinkedin\\ \\underline{{{}}}}}",
-            l.url,
+            tex_url(&l.url),
             tex_escape(&l.display)
         ));
     }
     if let Some(g) = &h.github {
         parts.push(format!(
             "\\href{{{}}}{{\\raisebox{{-0.2\\height}}\\faGithub\\ \\underline{{{}}}}}",
-            g.url,
+            tex_url(&g.url),
             tex_escape(&g.display)
         ));
     }
     if let Some(w) = &h.website {
         parts.push(format!(
             "\\href{{{}}}{{\\raisebox{{-0.2\\height}}\\faGlobe\\ \\underline{{{}}}}}",
-            w.url,
+            tex_url(&w.url),
             tex_escape(&w.display)
         ));
     }
@@ -112,6 +115,7 @@ fn build_flat_cv_tex(
     sections_json: &serde_json::Value,
     app: Option<&super::ApplicationContext>,
     base_header: Option<&Header>,
+    paper: Paper,
 ) -> Result<String> {
     let sections = super::parse_sections(sections_json).context("parse flat sections")?;
 
@@ -129,7 +133,10 @@ fn build_flat_cv_tex(
         .unwrap_or("Curriculum Vitae");
 
     let mut s = String::new();
-    s.push_str("\\documentclass[letterpaper,10pt]{article}\n");
+    s.push_str(&format!(
+        "\\documentclass[{},10pt]{{article}}\n",
+        paper.latex_option()
+    ));
     s.push_str("\\usepackage[empty]{fullpage}\n");
     s.push_str("\\usepackage{titlesec}\n");
     s.push_str("\\usepackage[usenames,dvipsnames]{color}\n");
@@ -191,21 +198,23 @@ fn build_flat_cv_tex(
 /// The template lives at `backend/templates/cv.tex.tera`. Every interpolated
 /// value passes through the `tex` filter which escapes LaTeX specials so user
 /// input can never break compilation.
-pub async fn render_cv(doc: &ResumeDoc) -> Result<Vec<u8>> {
-    let tex_source = expand_template(doc).context("expand Tera template")?;
+pub async fn render_cv(doc: &ResumeDoc, paper: Paper) -> Result<Vec<u8>> {
+    let tex_source = expand_template(doc, paper).context("expand Tera template")?;
     render_tex(&tex_source).await
 }
 
 /// Build the Tera engine, register filters, render `cv.tex.tera` against the
 /// provided `ResumeDoc`. Returns the populated `.tex` source.
-fn expand_template(doc: &ResumeDoc) -> Result<String> {
+fn expand_template(doc: &ResumeDoc, paper: Paper) -> Result<String> {
     let mut tera = tera::Tera::default();
     tera.register_filter("tex", tex_escape_filter);
+    tera.register_filter("url", tex_url_filter);
     tera.add_raw_template("cv.tex.tera", TEMPLATE_CV_TERA)
         .context("register cv.tex.tera with Tera")?;
 
-    let ctx = tera::Context::from_serialize(doc)
-        .context("serialize ResumeDoc into Tera context")?;
+    let mut ctx =
+        tera::Context::from_serialize(doc).context("serialize ResumeDoc into Tera context")?;
+    ctx.insert("paper", paper.latex_option());
 
     tera.render("cv.tex.tera", &ctx)
         .context("render cv.tex.tera")
@@ -238,6 +247,45 @@ pub fn tex_escape(s: &str) -> String {
     out
 }
 
+/// Make a user-supplied URL safe inside `\\href{...}`.
+///
+/// `tex_escape` is wrong for URLs (it would turn `_` into `\\_` inside the
+/// link target), but URLs still must not be able to close the group and run
+/// their own commands: `https://x.co/}\\input{/etc/passwd}` would otherwise
+/// read a server file into the PDF. Backslashes, braces, whitespace and
+/// control characters are percent-encoded, which keeps the link working and
+/// leaves nothing for TeX to interpret. `%` is escaped as `\\%`, which hyperref
+/// turns back into a literal percent in the link.
+pub fn tex_url(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 8);
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("%5C"),
+            '{' => out.push_str("%7B"),
+            '}' => out.push_str("%7D"),
+            '%' => out.push_str("\\%"),
+            c if c.is_whitespace() || c.is_control() => {
+                let mut buf = [0u8; 4];
+                for b in c.encode_utf8(&mut buf).bytes() {
+                    out.push_str(&format!("%{b:02X}"));
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+fn tex_url_filter(
+    value: &tera::Value,
+    _args: &HashMap<String, tera::Value>,
+) -> tera::Result<tera::Value> {
+    let s = value
+        .as_str()
+        .ok_or_else(|| tera::Error::msg("url filter expects a string"))?;
+    Ok(tera::Value::String(tex_url(s)))
+}
+
 /// Tera filter wrapper around `tex_escape`. Used in the template as
 /// `{{ field | tex }}`.
 fn tex_escape_filter(
@@ -253,16 +301,19 @@ fn tex_escape_filter(
 /// Render a structured cover letter to PDF. Builds a simple, standard
 /// article-class letter (no exotic packages → reliable Tectonic compile) and
 /// runs it through the same Tectonic path as the CV.
-pub async fn render_cover_letter(doc: &super::CoverLetterDoc) -> Result<Vec<u8>> {
-    render_tex(&build_cover_letter_tex(doc)).await
+pub async fn render_cover_letter(doc: &super::CoverLetterDoc, paper: Paper) -> Result<Vec<u8>> {
+    render_tex(&build_cover_letter_tex(doc, paper)).await
 }
 
 /// Assemble the `.tex` source for a cover letter. Each logical block is its own
 /// paragraph (blank-line separated); `parskip` gives the spacing. Every
 /// interpolated value is `tex_escape`d so user content can't break compilation.
-fn build_cover_letter_tex(doc: &super::CoverLetterDoc) -> String {
+fn build_cover_letter_tex(doc: &super::CoverLetterDoc, paper: Paper) -> String {
     let mut s = String::new();
-    s.push_str("\\documentclass[11pt]{article}\n");
+    s.push_str(&format!(
+        "\\documentclass[{},11pt]{{article}}\n",
+        paper.latex_option()
+    ));
     s.push_str("\\usepackage[margin=1in]{geometry}\n");
     s.push_str("\\usepackage{parskip}\n");
     s.push_str("\\usepackage[hidelinks]{hyperref}\n");
@@ -377,4 +428,43 @@ pub async fn render_tex(tex_source: &str) -> Result<Vec<u8>> {
     }
 
     Ok(pdf_bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tex_url_neutralises_group_breakouts() {
+        let evil = r"https://x.co/}\input{/etc/hostname}";
+        let safe = tex_url(evil);
+        assert!(!safe.contains('\\') || safe.contains("\\%"), "{safe}");
+        assert!(!safe.contains('{') && !safe.contains('}'), "{safe}");
+        assert_eq!(tex_url("https://x.co/a b"), "https://x.co/a%20b");
+        assert_eq!(tex_url("https://x.co/?q=100%"), "https://x.co/?q=100\\%");
+        assert_eq!(
+            tex_url("https://x.co/my_page#top"),
+            "https://x.co/my_page#top"
+        );
+    }
+
+    #[test]
+    fn expanded_template_contains_no_injected_commands() {
+        let doc: ResumeDoc = serde_json::from_value(serde_json::json!({
+            "header": {
+                "name": r"Ada \input{/etc/hostname}",
+                "title": "Engineer",
+                "email": r"ada@x.co}\input{/etc/hostname}",
+                "website": { "url": r"https://x.co/}\input{/etc/hostname}", "display": "x.co" }
+            },
+            "experience": [{ "role": "Eng", "company": "N", "start": "2021", "end": "Now",
+                             "bullets": [r"Did \write18{rm -rf /} things"] }],
+            "projects": [{ "description": "Tool", "link": { "url": r"https://g.co/}\def\x{1}", "display": "g" } }]
+        }))
+        .unwrap();
+        let tex = expand_template(&doc, Paper::A4).unwrap();
+        for needle in [r"\input{/etc", r"\write18", r"\def\x"] {
+            assert!(!tex.contains(needle), "found {needle} in rendered TeX");
+        }
+    }
 }

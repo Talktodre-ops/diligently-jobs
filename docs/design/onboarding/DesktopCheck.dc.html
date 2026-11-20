@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check and strengthen, desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;family=Source+Serif+4:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline:2px solid #C2471F;outline-offset:1px}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 40px; padding: 22px clamp(20px, 3.5vw, 48px); border-bottom: 1px solid #EADFC2;">
+    <div style="font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 24px; letter-spacing: -0.02em;">diligently<span style="color: #E8603C;">.</span></div>
+    <ol style="flex: 1; min-width: 320px; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B4E62;"><span style="height: 4px; border-radius: 2px; background: #3B1C32;"></span>Your CV</li>
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 600;"><span style="height: 4px; border-radius: 2px; background: #E8603C;"></span>Check</li>
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B4E62;"><span style="height: 4px; border-radius: 2px; background: #EADFC2;"></span>What you want</li>
+      <li style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B4E62;"><span style="height: 4px; border-radius: 2px; background: #EADFC2;"></span>First job</li>
+    </ol>
+    <span style="font-size: 13px; color: #6B4E62;">About 2 minutes left</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch;">
+    <section style="flex: 1 1 380px; max-width: 560px; min-width: 0; box-sizing: border-box; padding: clamp(28px, 4vw, 56px) clamp(20px, 3.5vw, 48px); display: flex; flex-direction: column; gap: 22px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 44px; line-height: 1.04; letter-spacing: -0.02em;">Two quick things</h1>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #5E4456; max-width: 46ch;">One fix, then a chance to make every tailored CV stronger. Your CV on the right updates as you go.</p>
+      </div>
+
+      <section aria-labelledby="dfix" style="display: flex; flex-direction: column; gap: 10px;">
+        <h2 id="dfix" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B4E62;">Needs fixing</h2>
+        <sc-if value="{{ datesOpen }}" hint-placeholder-val="{{ true }}">
+          <div style="background: #FBE3D8; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 15px; font-weight: 600;">When did you work at Kestrel Systems?</div>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><label for="dk-s" style="font-size: 13px; font-weight: 600;">Started</label><input id="dk-s" placeholder="Jan 2016" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;"></div>
+              <div style="display: flex; flex-direction: column; gap: 4px;"><label for="dk-e" style="font-size: 13px; font-weight: 600;">Ended</label><input id="dk-e" placeholder="Jun 2018" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;"></div>
+            </div>
+            <button type="button" onClick="{{ saveDates }}" style="align-self: flex-start; height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 14px Inter, sans-serif; cursor: pointer;">Save dates</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ datesDone }}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 14px 16px; display: flex; gap: 10px; align-items: center; font-size: 14px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C2471F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+            Kestrel Systems, Jan 2016 to Jun 2018
+          </div>
+        </sc-if>
+      </section>
+
+      <section aria-labelledby="dstr" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between;">
+          <h2 id="dstr" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B4E62;">Make it stronger</h2>
+          <span style="font-size: 13px; color: #6B4E62;">{{ progress }}</span>
+        </div>
+        <sc-if value="{{ hasQ }}" hint-placeholder-val="{{ true }}">
+          <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <label for="dq" style="font-size: 15px; font-weight: 600;">{{ q.ask }}</label>
+            <input id="dq" placeholder="{{ q.hint }}" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;">
+            <div style="display: flex; gap: 8px;">
+              <button type="button" onClick="{{ add }}" style="height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 14px Inter, sans-serif; cursor: pointer;">Add it</button>
+              <button type="button" onClick="{{ skip }}" style="height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; color: #5E4456; font: 600 14px Inter, sans-serif; cursor: pointer;">I do not know</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noQ }}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="background: #3B1C32; color: #F6E7A6; border-radius: 18px; padding: 16px; font-size: 15px; line-height: 1.5;">Done. Your additions are marked on the CV and used in every tailored version.</div>
+        </sc-if>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #6B4E62;">We never add numbers you did not give us.</p>
+      </section>
+
+      <a href="#targets" style="align-self: flex-start; height: 54px; padding: 0 32px; border-radius: 999px; background: {{ ctaBg }}; color: {{ ctaFg }}; font-size: 16px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;">{{ cta }}</a>
+    </section>
+
+    <section aria-label="Your master CV" style="flex: 999 1 560px; min-width: 0; background: #EFE6CC; padding: clamp(24px, 3.5vw, 56px); display: flex; justify-content: center; align-items: flex-start;">
+      <div style="width: 100%; max-width: 760px; box-sizing: border-box; background: #FFFFFF; border-radius: 4px; box-shadow: 0 1px 2px rgba(59,28,50,0.12), 0 8px 24px rgba(59,28,50,0.1); padding: 56px 64px; font-family: 'Source Serif 4', Georgia, serif; color: #1A1A1A; display: flex; flex-direction: column; gap: 18px;">
+        <div style="border-bottom: 1px solid #E5E5E5; padding-bottom: 14px;">
+          <div style="font-size: 30px; font-weight: 600;">Ada Okafor</div>
+          <div style="font-size: 15px; color: #444;">Senior Backend Engineer · Lagos · ada@example.com</div>
+        </div>
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: Inter, sans-serif;">Experience</div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; font-size: 16px;"><strong>Larkspur Payments, Senior Backend Engineer</strong><span>2021 to Present</span></div>
+          <ul style="margin: 2px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.6;">
+            <li><span style="background: {{ b1bg }}; border-radius: 3px; padding: 1px 2px;">{{ b1 }}</span></li>
+            <li>Cut reconciliation time by 60% by moving batch jobs to Kafka consumers.</li>
+          </ul>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; font-size: 16px;"><strong>Quarry Labs, Backend Engineer</strong><span>2018 to 2021</span></div>
+          <ul style="margin: 2px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.6;"><li><span style="background: {{ b2bg }}; border-radius: 3px; padding: 1px 2px;">{{ b2 }}</span></li></ul>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; font-size: 16px;"><strong>Kestrel Systems, Software Engineer</strong><span style="background: {{ datesBg }}; border-radius: 3px; padding: 0 4px;">{{ dates }}</span></div>
+          <ul style="margin: 2px 0 0; padding-left: 18px; font-size: 15px; line-height: 1.6;"><li>Mentored junior engineers on the payments team.</li></ul>
+        </div>
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: Inter, sans-serif; margin-top: 6px;">Skills</div>
+        <div style="font-size: 15px; line-height: 1.5;">Go, Rust, SQL, Postgres, Kafka, Kubernetes, Terraform</div>
+        <div style="display: flex; gap: 16px; font-family: Inter, sans-serif; font-size: 12px; color: #5E4456; border-top: 1px solid #E5E5E5; padding-top: 12px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #FBE3D8;"></span>Needs fixing</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #F6E7A6;"></span>Being strengthened</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #EFE7F0;"></span>Added by you</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const i = s.i || 0;
+    const added = s.added || {};
+    const qs = [
+      { ask: 'Led the migration of the settlement service to Rust. What changed after it?', hint: 'For example, p99 latency down 40%' },
+      { ask: 'Built the billing API used by merchant integrations. Roughly how many merchants?', hint: 'For example, 30 merchants' }
+    ];
+    const hasQ = i < qs.length;
+    const fixed = !!s.dates;
+    const mark = (k) => added[k] ? '#EFE7F0' : (i === k && hasQ ? '#F6E7A6' : 'transparent');
+    return {
+      datesOpen: !fixed,
+      datesDone: fixed,
+      dates: fixed ? 'Jan 2016 to Jun 2018' : 'Dates missing',
+      datesBg: fixed ? 'transparent' : '#FBE3D8',
+      hasQ,
+      noQ: !hasQ,
+      q: qs[Math.min(i, qs.length - 1)],
+      progress: hasQ ? (i + 1) + ' of ' + qs.length + ', optional' : 'Done',
+      b1: added[0] ? 'Led the migration of the settlement service to Rust, cutting p99 latency by 40%.' : 'Led the migration of the settlement service to Rust.',
+      b2: added[1] ? 'Built the billing API used by 30 merchant integrations.' : 'Built the billing API used by merchant integrations.',
+      b1bg: mark(0),
+      b2bg: mark(1),
+      cta: fixed ? 'Continue' : 'Fix the dates to continue',
+      ctaBg: fixed ? '#C2471F' : '#EFE6CC',
+      ctaFg: fixed ? '#FFFFFF' : '#5E4456',
+      saveDates: () => this.setState({ dates: true }),
+      add: () => { const a = Object.assign({}, added); a[i] = true; this.setState({ added: a, i: i + 1 }); },
+      skip: () => this.setState({ i: i + 1 })
+    };
+  }
+}
+</script>
+</body>
+</html>

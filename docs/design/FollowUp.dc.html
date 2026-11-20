@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Follow up</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+textarea:focus{outline: 2px solid #E8603C; outline-offset: 1px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 8px; padding: 12px 12px 4px;">
+    <a href="Home.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; min-width: 0;">
+      <div style="font-size: 13px; color: #6B4E62;">Halcyon Health</div>
+      <div style="font-size: 16px; font-weight: 600;">Follow up</div>
+    </div>
+  </header>
+
+  <sc-if value="{{ drafting }}" hint-placeholder-val="{{ true }}">
+    <main style="flex: 1; overflow-y: auto; padding: 12px 20px 16px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 28px; line-height: 1.1; letter-spacing: -0.015em;">A week since you applied</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">A short, specific nudge works best. Here is one to start from.</p>
+      </div>
+
+      <div role="tablist" aria-label="Where to send it" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 14px; background: #EADFC2;">
+        <sc-for list="{{ channels }}" as="ch" hint-placeholder-count="2">
+          <button type="button" role="tab" aria-selected="{{ ch.on }}" onClick="{{ ch.pick }}" style="height: 40px; border: 0; border-radius: 10px; background: {{ ch.bg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ ch.label }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isEmail }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 13px; font-weight: 600;">Subject</div>
+          <div style="font-size: 15px; padding: 12px 14px; border-radius: 12px; background: #FFFFFF; border: 1px solid #EADFC2;">Senior Backend Engineer application</div>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label for="msg" style="font-size: 13px; font-weight: 600;">Message</label>
+        <textarea id="msg" rows="{{ rows }}" value="{{ body }}" style="resize: none; box-sizing: border-box; width: 100%; border: 1.5px solid #D9CCAE; border-radius: 14px; background: #FFFFFF; padding: 12px 14px; font: 15px/1.55 Inter, sans-serif; color: #3B1C32;"></textarea>
+        <div style="font-size: 12px; color: #6B4E62; text-align: right;">{{ count }}</div>
+      </div>
+
+      <button type="button" onClick="{{ snooze }}" style="align-self: flex-start; height: 40px; padding: 0; border: 0; background: transparent; color: #B5401C; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ snoozeLabel }}</button>
+    </main>
+
+    <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: #3B1C32; color: #F6E7A6; font-size: 14px; font-weight: 600; white-space: nowrap;">Copied. Paste it in {{ channelName }}.</div>
+    </sc-if>
+
+    <footer style="padding: 12px 20px 32px; border-top: 1px solid #EADFC2; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; gap: 10px;">
+        <button type="button" onClick="{{ copy }}" style="flex: 1; height: 52px; border-radius: 999px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 15px Inter, sans-serif; cursor: pointer;">Copy</button>
+        <button type="button" onClick="{{ copy }}" style="flex: 1.4; height: 52px; border-radius: 999px; border: 0; background: #C2471F; color: #FFFFFF; font: 600 15px Inter, sans-serif; cursor: pointer;">Open {{ channelName }}</button>
+      </div>
+      <button type="button" onClick="{{ markDone }}" style="height: 44px; border: 0; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer; text-decoration: underline;">I sent it, mark as followed up</button>
+    </footer>
+  </sc-if>
+
+  <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+    <main style="flex: 1; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div aria-hidden="true" style="width: 72px; height: 72px; border-radius: 20px; background: #F6E7A6; display: flex; align-items: center; justify-content: center;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+      </div>
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.05;">Followed up</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5E4456;">If you hear nothing in another week, we will suggest closing it out so it stops taking up space.</p>
+      <a href="Home.dc.html" style="margin-top: auto; height: 54px; border-radius: 999px; background: #3B1C32; color: #F6E7A6; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Back home</a>
+    </main>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const s = this.state || {};
+    const ch = s.ch || 'Email';
+    const bodies = {
+      Email: 'Hi Halcyon team,\n\nI applied for the Senior Backend Engineer role last Wednesday and wanted to check in. Your post on moving claims onto Kafka stuck with me, since I led a similar move for payments at Northfold.\n\nHappy to share more or talk whenever suits you.\n\nAda Okafor',
+      LinkedIn: 'Hi, I applied for the Senior Backend Engineer role last week. I led a Kafka move for payments at Northfold and would love to bring that to your claims platform. Happy to talk.'
+    };
+    const body = bodies[ch];
+    return {
+      drafting: !s.done, done: !!s.done,
+      channels: ['Email', 'LinkedIn'].map((l) => ({ label: l, on: ch === l, pick: () => this.setState({ ch: l }), bg: ch === l ? '#FFFFFF' : 'transparent' })),
+      isEmail: ch === 'Email',
+      channelName: ch === 'Email' ? 'email' : 'LinkedIn',
+      body: body,
+      rows: ch === 'Email' ? 9 : 5,
+      count: ch === 'LinkedIn' ? body.length + ' of 300 characters' : body.split(/\s+/).length + ' words',
+      copied: !!s.copied,
+      copy: () => { this.setState({ copied: true }); clearTimeout(this.t); this.t = setTimeout(() => this.setState({ copied: false }), 1600); },
+      snooze: () => this.setState({ snoozed: !s.snoozed }),
+      snoozeLabel: s.snoozed ? 'Snoozed until Saturday. Undo' : 'Not now, remind me in 3 days',
+      markDone: () => this.setState({ done: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

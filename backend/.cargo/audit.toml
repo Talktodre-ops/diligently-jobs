@@ -1,0 +1,25 @@
+# cargo audit exceptions. Each one is reviewed; remove it when the cause goes.
+
+[advisories]
+ignore = [
+    # rsa 0.9 (Marvin timing attack) and libsqlite3-sys 0.30 (SQLite CVE):
+    # optional sqlx MySQL and SQLite drivers that Cargo.lock records but that
+    # are never compiled here (`cargo tree -i rsa --target all` is empty).
+    "RUSTSEC-2023-0071",
+    "RUSTSEC-2026-0459",
+    # zip 8.6 via docx-rs: all four concern extracting archives to disk
+    # (ZipArchive::extract, ZipStreamReader::extract). docx-rs only writes
+    # DOCX files with ZipWriter; our own DOCX reading uses zip 9.
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
+    "RUSTSEC-2026-0429",
+    # zip 8.6 via docx-rs 0.4.22 (the latest), November 2026: unchecked AES
+    # MACs and decoder preallocation when reading, and extraction outside the
+    # destination. All are on the read and extract side; docx-rs only writes
+    # here (render/docx.rs), and uploaded DOCX files are read with zip 9.
+    "RUSTSEC-2026-0545",
+    "RUSTSEC-2026-0546",
+    "RUSTSEC-2026-0547",
+    "RUSTSEC-2026-0548",
+]

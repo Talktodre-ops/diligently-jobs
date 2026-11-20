@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cover letter</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 8px; padding: 12px 12px 4px;">
+    <a href="Workspace.dc.html" aria-label="Back to application" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; min-width: 0;">
+      <div style="font-size: 13px; color: #6B4E62;">Halcyon Health</div>
+      <div style="font-size: 16px; font-weight: 600;">Cover letter</div>
+    </div>
+    <div style="font-size: 13px; color: #6B4E62; margin-right: 12px;">{{ words }} words</div>
+  </header>
+
+  <div style="padding: 8px 20px 12px; display: flex; align-items: center; gap: 8px;">
+    <span style="font-size: 13px; font-weight: 600; margin-right: 4px;">Tone</span>
+    <sc-for list="{{ tones }}" as="t" hint-placeholder-count="3">
+      <button type="button" aria-pressed="{{ t.on }}" onClick="{{ t.pick }}" style="height: 38px; padding: 0 14px; border-radius: 999px; border: 1.5px solid {{ t.border }}; background: {{ t.bg }}; color: {{ t.fg }}; font: 600 13px Inter, sans-serif; cursor: pointer;">{{ t.label }}</button>
+    </sc-for>
+  </div>
+
+  <main style="flex: 1; overflow-y: auto; padding: 0 16px 16px;">
+    <article style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 20px; font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.6; color: #1A1A1A; display: flex; flex-direction: column; gap: 14px;">
+      <p style="margin: 0;">Dear Halcyon Health hiring team,</p>
+      <p style="margin: 0; background: #FBF1C7; border-radius: 6px; padding: 2px 4px; margin-left: -4px; margin-right: -4px;">{{ opening }}</p>
+      <p style="margin: 0;">At Northfold I owned the payments service on Kafka. I cut p95 latency from 900ms to 240ms and kept a 99.95% SLO through peak season. I also ran the on-call rotation for six engineers and wrote the incident review process we still use.</p>
+      <p style="margin: 0;">Your post on moving claims onto Kafka described problems I have solved before. I have not worked under HIPAA yet, and I would want to learn your audit practices in my first weeks.</p>
+      <p style="margin: 0;">I would be glad to talk.</p>
+      <p style="margin: 0;">Ada Okafor</p>
+    </article>
+    <p style="margin: 12px 4px 0; font-size: 13px; color: #6B4E62; line-height: 1.45;">The highlighted paragraph changes with the tone you pick. In the app, tap any paragraph to edit it.</p>
+  </main>
+
+  <sc-if value="{{ copied }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: #3B1C32; color: #F6E7A6; font-size: 14px; font-weight: 600; white-space: nowrap;">Copied to clipboard</div>
+  </sc-if>
+
+  <footer style="padding: 12px 16px 32px; border-top: 1px solid #EADFC2; display: flex; gap: 10px;">
+    <button type="button" onClick="{{ copy }}" style="height: 52px; padding: 0 18px; border-radius: 999px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 15px Inter, sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+      Copy
+    </button>
+    <a href="Workspace.dc.html" style="flex: 1; height: 52px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 15px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Use this letter</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentWillUnmount() { clearTimeout(this.t); }
+  renderVals() {
+    const s = this.state || {};
+    const tone = s.tone || 'Direct';
+    const openings = {
+      Direct: 'I am applying for the Senior Backend Engineer role. I build payment systems that stay up, and your claims platform is that kind of system.',
+      Warm: 'I have followed Halcyon since your Series B, and the Senior Backend Engineer role is the one I have been hoping you would post.',
+      Formal: 'Please accept my application for the position of Senior Backend Engineer. I bring eight years of experience building reliable payment and data systems.'
+    };
+    const look = (on) => on ? { bg: '#3B1C32', fg: '#F6E7A6', border: '#3B1C32' } : { bg: '#FFFFFF', fg: '#3B1C32', border: '#D9CCAE' };
+    const words = { Direct: 248, Warm: 252, Formal: 255 };
+    return {
+      tones: ['Direct', 'Warm', 'Formal'].map((l) => Object.assign({ label: l, on: tone === l, pick: () => this.setState({ tone: l }) }, look(tone === l))),
+      opening: openings[tone],
+      words: words[tone],
+      copied: !!s.copied,
+      copy: () => { this.setState({ copied: true }); clearTimeout(this.t); this.t = setTimeout(() => this.setState({ copied: false }), 1600); }
+    };
+  }
+}
+</script>
+</body>
+</html>

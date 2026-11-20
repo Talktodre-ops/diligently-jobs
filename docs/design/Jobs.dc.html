@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jobs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="padding: 20px 20px 12px; display: flex; align-items: center; justify-content: space-between;">
+    <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 30px; letter-spacing: -0.015em;">Jobs</h1>
+    <button type="button" aria-label="Search jobs" style="width: 44px; height: 44px; border-radius: 999px; border: 1px solid #EADFC2; background: #FFFFFF; color: #3B1C32; display: inline-flex; align-items: center; justify-content: center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+    </button>
+  </header>
+
+  <div role="tablist" aria-label="Stages" style="display: flex; gap: 8px; padding: 0 20px 16px; overflow-x: auto;">
+    <sc-for list="{{ stages }}" as="sg" hint-placeholder-count="5">
+      <button type="button" role="tab" aria-selected="{{ sg.on }}" onClick="{{ sg.pick }}" style="flex: none; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid {{ sg.border }}; background: {{ sg.bg }}; color: {{ sg.fg }}; font: 600 14px Inter, sans-serif; white-space: nowrap; cursor: pointer;">{{ sg.label }} <span style="font-weight: 500; opacity: 0.75;">{{ sg.count }}</span></button>
+    </sc-for>
+  </div>
+
+  <main style="flex: 1; overflow-y: auto; padding: 0 20px 96px; display: flex; flex-direction: column; gap: 10px;">
+    <sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+      <a href="Workspace.dc.html" style="text-decoration: none; color: #3B1C32; background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #EFE7F0; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex: none;">{{ c.mono }}</div>
+          <div style="flex: 1; min-width: 0;"><div style="font-size: 15px; font-weight: 600;">{{ c.company }}</div><div style="font-size: 13px; color: #6B4E62;">{{ c.role }}</div></div>
+          <div style="text-align: right;"><div style="font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 600; line-height: 1;">{{ c.score }}</div><div style="font-size: 11px; color: #6B4E62; margin-top: 2px;">match</div></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px;">
+          <span style="color: #6B4E62;">{{ c.when }}</span>
+          <sc-if value="{{ c.hasNext }}" hint-placeholder-val="{{ false }}">
+            <span style="padding: 4px 10px; border-radius: 999px; background: #F6E7A6; font-weight: 600;">{{ c.next }}</span>
+          </sc-if>
+        </div>
+      </a>
+    </sc-for>
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 32px 16px; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center;">
+        <div style="font-family: Fraunces, Georgia, serif; font-size: 22px;">No offers yet</div>
+        <div style="font-size: 14px; color: #6B4E62; max-width: 260px; line-height: 1.5;">When one lands, move it here and we will help you compare.</div>
+      </div>
+    </sc-if>
+  </main>
+
+  <a href="NewJob.dc.html" aria-label="New application" style="position: absolute; right: 20px; bottom: 104px; height: 56px; padding: 0 20px 0 16px; border-radius: 999px; background: #C2471F; color: #FFFFFF; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; box-shadow: 0 6px 18px rgba(194,71,31,0.35);">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    New job
+  </a>
+
+  <dc-import name="TabBar" active="jobs" hint-size="390px,84px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const stage = (this.state && this.state.stage) || 'Applied';
+    const data = {
+      Drafting: [
+        { mono: 'LL', company: 'Ledgerline', role: 'Product Engineer', score: 77, when: 'Started Sunday', next: '3 rewrites to review' },
+        { mono: 'OS', company: 'Oakshore', role: 'Platform Engineer', score: 69, when: 'Started Friday', next: 'Finish gaps' }
+      ],
+      Applied: [
+        { mono: 'HH', company: 'Halcyon Health', role: 'Senior Backend Engineer', score: 86, when: 'Sent 7 days ago', next: 'Follow up today' },
+        { mono: 'NF', company: 'Northfold', role: 'Staff Engineer, Payments', score: 81, when: 'Sent Monday' },
+        { mono: 'QL', company: 'Quarry Labs', role: 'Backend Engineer, Data', score: 74, when: 'Sent Sunday' },
+        { mono: 'FB', company: 'Fernbank', role: 'Rust Engineer', score: 79, when: 'Sent last week' }
+      ],
+      Interview: [
+        { mono: 'BW', company: 'Brightwater', role: 'Platform Engineer', score: 83, when: 'Invited yesterday', next: 'Prepare' }
+      ],
+      Offer: [],
+      Closed: [
+        { mono: 'KW', company: 'Kingswell', role: 'Backend Engineer', score: 64, when: 'Not moving forward' }
+      ]
+    };
+    const stages = Object.keys(data).map((k) => ({
+      label: k, count: data[k].length, on: k === stage,
+      pick: () => this.setState({ stage: k }),
+      bg: k === stage ? '#3B1C32' : '#FFFFFF', fg: k === stage ? '#F6E7A6' : '#3B1C32', border: k === stage ? '#3B1C32' : '#EADFC2'
+    }));
+    const cards = data[stage].map((c) => Object.assign({}, c, { hasNext: !!c.next }));
+    return { stages: stages, cards: cards, empty: cards.length === 0 };
+  }
+}
+</script>
+</body>
+</html>

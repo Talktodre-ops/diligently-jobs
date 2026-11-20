@@ -1,0 +1,377 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "CoverLetter.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Cover letter",
+      "w": 390,
+      "x": 3290,
+      "y": 6196
+    },
+    "CvPreview.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "CV preview",
+      "w": 390,
+      "x": 3760,
+      "y": 6196
+    },
+    "DesktopHome.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "Desktop · Home",
+      "w": 1440,
+      "x": 0,
+      "y": 8724
+    },
+    "DesktopWorkspace.dc.html": {
+      "expand": "fill",
+      "h": 900,
+      "is_interactive": true,
+      "title": "Desktop · Workspace",
+      "w": 1440,
+      "x": 1520,
+      "y": 8724
+    },
+    "Documents.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Documents",
+      "w": 390,
+      "x": 940,
+      "y": 7460
+    },
+    "FollowUp.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Follow-up",
+      "w": 390,
+      "x": 470,
+      "y": 7460
+    },
+    "Gaps.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Gaps",
+      "w": 390,
+      "x": 2350,
+      "y": 6196
+    },
+    "Home.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Home",
+      "w": 390,
+      "x": 0,
+      "y": 6196
+    },
+    "HomeBoard.dc.html": {
+      "h": 844,
+      "title": "Home B · Pipeline board",
+      "w": 390,
+      "x": 470,
+      "y": 2404
+    },
+    "HomeComposer.dc.html": {
+      "h": 844,
+      "title": "Home C · Composer first",
+      "w": 390,
+      "x": 940,
+      "y": 2404
+    },
+    "HomeInbox.dc.html": {
+      "h": 844,
+      "title": "Home A · Action inbox",
+      "w": 390,
+      "x": 0,
+      "y": 2404
+    },
+    "Jobs.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Jobs",
+      "w": 390,
+      "x": 0,
+      "y": 7460
+    },
+    "Main.dc.html": {
+      "h": 720,
+      "title": "Foundations",
+      "w": 1280,
+      "x": 0,
+      "y": 0
+    },
+    "NewJob.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "New job",
+      "w": 390,
+      "x": 470,
+      "y": 6196
+    },
+    "OnboardCheck.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding 2 · Check",
+      "w": 390,
+      "x": 2350,
+      "y": 4932
+    },
+    "OnboardTargets.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding 3 · Targets",
+      "w": 390,
+      "x": 2820,
+      "y": 4932
+    },
+    "OnboardUpload.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Onboarding 1 · Upload CV",
+      "w": 390,
+      "x": 1880,
+      "y": 4932
+    },
+    "Profile.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Profile",
+      "w": 390,
+      "x": 1410,
+      "y": 7460
+    },
+    "Research.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Research",
+      "w": 390,
+      "x": 2820,
+      "y": 6196
+    },
+    "Review.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Review rewrites",
+      "w": 390,
+      "x": 1880,
+      "y": 6196
+    },
+    "Running.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Working on it",
+      "w": 390,
+      "x": 940,
+      "y": 6196
+    },
+    "Send.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Send",
+      "w": 390,
+      "x": 4230,
+      "y": 6196
+    },
+    "Settings.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Settings",
+      "w": 390,
+      "x": 1880,
+      "y": 7460
+    },
+    "SignIn.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Sign in",
+      "w": 390,
+      "x": 1410,
+      "y": 4932
+    },
+    "SignUp.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Create account",
+      "w": 390,
+      "x": 470,
+      "y": 4932
+    },
+    "TabBar.dc.html": {
+      "h": 84,
+      "is_interactive": true,
+      "title": "Component · Tab bar",
+      "w": 390,
+      "x": 2350,
+      "y": 7460
+    },
+    "VerifyEmail.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Verify email",
+      "w": 390,
+      "x": 940,
+      "y": 4932
+    },
+    "Welcome.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Welcome",
+      "w": 390,
+      "x": 0,
+      "y": 4932
+    },
+    "Workspace.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "Workspace",
+      "w": 390,
+      "x": 1410,
+      "y": 6196
+    },
+    "WorkspaceBrief.dc.html": {
+      "h": 844,
+      "title": "Workspace B · Result brief",
+      "w": 390,
+      "x": 470,
+      "y": 1140
+    },
+    "WorkspaceDocument.dc.html": {
+      "h": 844,
+      "title": "Workspace C · Document first",
+      "w": 390,
+      "x": 940,
+      "y": 1140
+    },
+    "WorkspaceGuided.dc.html": {
+      "h": 844,
+      "title": "Workspace A · Guided steps",
+      "w": 390,
+      "x": 0,
+      "y": 1140
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-12T10:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "foundations",
+    "workspace",
+    "home",
+    "rowauth",
+    "rowapply",
+    "rowtrack",
+    "rowdesktop",
+    "starthere"
+  ],
+  "notes": {
+    "foundations": {
+      "kind": "title1",
+      "maxW": 1280,
+      "text": "Foundations",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "home": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Home: three structures",
+      "w": 240,
+      "x": 0,
+      "y": 2104
+    },
+    "rowapply": {
+      "kind": "title1",
+      "maxW": 4620,
+      "text": "Applying for a job",
+      "w": 240,
+      "x": 0,
+      "y": 5896
+    },
+    "rowauth": {
+      "kind": "title1",
+      "maxW": 3210,
+      "text": "Sign in and onboarding",
+      "w": 240,
+      "x": 0,
+      "y": 4632
+    },
+    "rowdesktop": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Desktop",
+      "w": 240,
+      "x": 0,
+      "y": 8424
+    },
+    "rowtrack": {
+      "kind": "title1",
+      "maxW": 2740,
+      "text": "Tracking and account",
+      "w": 240,
+      "x": 0,
+      "y": 7160
+    },
+    "starthere": {
+      "fill": "orange",
+      "size": 24,
+      "text": "Start here. Press Play on Welcome and walk the whole flow: create an account, onboard, start a new job, review the rewrites, preview the CV and send it. Every screen links on from there.",
+      "w": 320,
+      "x": -400,
+      "y": 4932
+    },
+    "workspace": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Job workspace: three structures",
+      "w": 240,
+      "x": 0,
+      "y": 840
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "WorkspaceGuided.dc.html",
+    "WorkspaceBrief.dc.html",
+    "WorkspaceDocument.dc.html",
+    "HomeInbox.dc.html",
+    "HomeBoard.dc.html",
+    "HomeComposer.dc.html",
+    "Welcome.dc.html",
+    "SignUp.dc.html",
+    "VerifyEmail.dc.html",
+    "SignIn.dc.html",
+    "OnboardUpload.dc.html",
+    "OnboardCheck.dc.html",
+    "OnboardTargets.dc.html",
+    "Home.dc.html",
+    "NewJob.dc.html",
+    "Running.dc.html",
+    "Workspace.dc.html",
+    "Review.dc.html",
+    "Gaps.dc.html",
+    "Research.dc.html",
+    "CoverLetter.dc.html",
+    "CvPreview.dc.html",
+    "Send.dc.html",
+    "Jobs.dc.html",
+    "FollowUp.dc.html",
+    "Documents.dc.html",
+    "Profile.dc.html",
+    "Settings.dc.html",
+    "TabBar.dc.html",
+    "DesktopHome.dc.html",
+    "DesktopWorkspace.dc.html"
+  ],
+  "pages": [],
+  "title": "Diligently UI explorations"
+}

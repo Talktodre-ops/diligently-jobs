@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Check and strengthen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;family=Source+Serif+4:wght@400;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline:2px solid #C2471F;outline-offset:1px}
+button:focus-visible,a:focus-visible{outline:2px solid #C2471F;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 16px 24px 0 12px; display: flex; gap: 4px; align-items: center;">
+    <a href="Upload.dc.html" aria-label="Back" style="flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px;">
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 13px; color: #6B4E62;"><span>Check</span><span>About 2 minutes left</span></div>
+    </div>
+  </div>
+
+  <main style="flex: 1; min-height: 0; overflow: auto; padding: 16px 24px 16px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 32px; line-height: 1.05; letter-spacing: -0.02em;">Two quick things</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">One fix, then a chance to make every tailored CV stronger.</p>
+    </div>
+
+    <section aria-labelledby="fix-h" style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 id="fix-h" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B4E62;">Needs fixing</h2>
+      <sc-if value="{{ datesOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="background: #FBE3D8; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 15px; font-weight: 600; line-height: 1.4;">When did you work at Kestrel Systems?</div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;"><label for="k-start" style="font-size: 13px; font-weight: 600;">Started</label><input id="k-start" placeholder="Jan 2016" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px;"><label for="k-end" style="font-size: 13px; font-weight: 600;">Ended</label><input id="k-end" placeholder="Jun 2018" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;"></div>
+          </div>
+          <button type="button" onClick="{{ saveDates }}" style="align-self: flex-start; height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 14px Inter, sans-serif; cursor: pointer;">Save dates</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ datesDone }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 14px 16px; display: flex; gap: 10px; align-items: center; font-size: 14px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C2471F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+          Kestrel Systems, Jan 2016 to Jun 2018
+        </div>
+      </sc-if>
+    </section>
+
+    <section aria-labelledby="str-h" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h2 id="str-h" style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #6B4E62;">Make it stronger</h2>
+        <span style="font-size: 13px; color: #6B4E62;">{{ progress }}</span>
+      </div>
+      <sc-if value="{{ hasQ }}" hint-placeholder-val="{{ true }}">
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 13px; color: #6B4E62;">{{ q.where }}</div>
+          <blockquote style="margin: 0; padding-left: 12px; border-left: 3px solid #F6E7A6; font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.45;">{{ q.bullet }}</blockquote>
+          <label for="q-ans" style="font-size: 15px; font-weight: 600; line-height: 1.4;">{{ q.ask }}</label>
+          <input id="q-ans" placeholder="{{ q.hint }}" style="height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; padding: 0 12px; font: 16px Inter, sans-serif; color: #3B1C32;">
+          <div style="display: flex; gap: 8px;">
+            <button type="button" onClick="{{ next }}" style="height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 14px Inter, sans-serif; cursor: pointer;">Add it</button>
+            <button type="button" onClick="{{ next }}" style="height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; color: #5E4456; font: 600 14px Inter, sans-serif; cursor: pointer;">I do not know</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noQ }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="background: #3B1C32; color: #F6E7A6; border-radius: 18px; padding: 16px; font-size: 15px; line-height: 1.5;">Done. Three bullets now carry numbers we can use when we tailor.</div>
+      </sc-if>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #6B4E62;">We never add numbers you did not give us. Anything you add here can be used in every tailored CV.</p>
+    </section>
+
+    <a href="#full" style="font-size: 14px; font-weight: 600;">See your whole CV</a>
+  </main>
+
+  <footer style="padding: 12px 24px 32px; border-top: 1px solid #EADFC2; display: flex; flex-direction: column; gap: 6px;">
+    <a href="Targets.dc.html" style="height: 54px; border-radius: 999px; background: {{ ctaBg }}; color: {{ ctaFg }}; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">{{ cta }}</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const i = s.i || 0;
+    const qs = [
+      { where: 'Larkspur Payments, Senior Backend Engineer', bullet: 'Led the migration of the settlement service to Rust.', ask: 'What changed after the migration?', hint: 'For example, p99 latency down 40%' },
+      { where: 'Quarry Labs, Backend Engineer', bullet: 'Built the billing API used by merchant integrations.', ask: 'Roughly how many merchants used it?', hint: 'For example, 30 merchants' },
+      { where: 'Kestrel Systems, Software Engineer', bullet: 'Mentored junior engineers on the payments team.', ask: 'How many people did you mentor?', hint: 'For example, 4 engineers' }
+    ];
+    const hasQ = i < qs.length;
+    const fixed = !!s.dates;
+    return {
+      datesOpen: !fixed,
+      datesDone: fixed,
+      hasQ,
+      noQ: !hasQ,
+      q: qs[Math.min(i, qs.length - 1)],
+      progress: hasQ ? (i + 1) + ' of ' + qs.length + ', optional' : 'Done',
+      cta: fixed ? 'Continue' : 'Fix the dates to continue',
+      ctaBg: fixed ? '#C2471F' : '#EFE6CC',
+      ctaFg: fixed ? '#FFFFFF' : '#5E4456',
+      saveDates: () => this.setState({ dates: true }),
+      next: () => this.setState({ i: i + 1 })
+    };
+  }
+}
+</script>
+</body>
+</html>

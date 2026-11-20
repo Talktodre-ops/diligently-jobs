@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New application</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+textarea:focus,input:focus{outline: 2px solid #E8603C; outline-offset: 1px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 4px 20px;">
+    <div style="font-size: 16px; font-weight: 600;">New application</div>
+    <a href="Home.dc.html" aria-label="Close" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+  </header>
+
+  <main style="flex: 1; overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 18px;">
+    <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: -0.02em;">Found a job?</h1>
+
+    <div role="tablist" aria-label="How to add the job" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 14px; background: #EADFC2;">
+      <button type="button" role="tab" aria-selected="{{ isText }}" onClick="{{ toText }}" style="height: 40px; border: 0; border-radius: 10px; background: {{ textBg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Paste text</button>
+      <button type="button" role="tab" aria-selected="{{ isLink }}" onClick="{{ toLink }}" style="height: 40px; border: 0; border-radius: 10px; background: {{ linkBg }}; color: #3B1C32; font: 600 14px Inter, sans-serif; cursor: pointer;">Job link</button>
+    </div>
+
+    <sc-if value="{{ isText }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label for="jd" style="font-size: 13px; font-weight: 600;">Job description</label>
+        <textarea id="jd" rows="9" placeholder="Paste the whole description. More detail means a better match." value="{{ jd }}" onInput="{{ onJd }}" style="resize: none; box-sizing: border-box; width: 100%; border: 1.5px solid #D9CCAE; border-radius: 14px; background: #FFFFFF; padding: 12px 14px; font: 15px/1.5 Inter, sans-serif; color: #3B1C32;"></textarea>
+        <button type="button" onClick="{{ pasteSample }}" style="align-self: flex-start; height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 14px Inter, sans-serif; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>
+          Paste from clipboard
+        </button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLink }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label for="url" style="font-size: 13px; font-weight: 600;">Link to the job</label>
+        <input id="url" type="url" inputmode="url" placeholder="https://" value="https://halcyon.example/careers/senior-backend" style="height: 52px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 12px; background: #FFFFFF; padding: 0 14px; font: 16px Inter, sans-serif; color: #3B1C32;">
+        <div style="font-size: 13px; line-height: 1.45; color: #6B4E62;">We read the page for you. If a site blocks us, we will ask you to paste the text.</div>
+      </div>
+    </sc-if>
+
+    <section aria-label="What we will do" style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 4px 16px;">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-bottom: 1px solid #EADFC2;">
+        <span style="flex: 1; font-size: 15px;">Tailor CV and score it</span>
+        <span style="font-size: 13px; color: #6B4E62;">Always</span>
+      </div>
+      <label style="display: flex; align-items: center; gap: 12px; min-height: 56px; border-bottom: 1px solid #EADFC2; cursor: pointer;">
+        <span style="flex: 1; font-size: 15px;">Research the company</span>
+        <button type="button" role="switch" aria-checked="{{ research }}" aria-label="Research the company" onClick="{{ tResearch }}" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: {{ rTrack }}; position: relative; cursor: pointer; padding: 0;"><span style="position: absolute; top: 4px; left: {{ rKnob }}; width: 24px; height: 24px; border-radius: 999px; background: #FFFFFF; transition: left 150ms;"></span></button>
+      </label>
+      <label style="display: flex; align-items: center; gap: 12px; min-height: 56px; cursor: pointer;">
+        <span style="flex: 1; font-size: 15px;">Draft a cover letter</span>
+        <button type="button" role="switch" aria-checked="{{ letter }}" aria-label="Draft a cover letter" onClick="{{ tLetter }}" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: {{ lTrack }}; position: relative; cursor: pointer; padding: 0;"><span style="position: absolute; top: 4px; left: {{ lKnob }}; width: 24px; height: 24px; border-radius: 999px; background: #FFFFFF; transition: left 150ms;"></span></button>
+      </label>
+    </section>
+  </main>
+
+  <footer style="padding: 12px 20px 32px; border-top: 1px solid #EADFC2;">
+    <a href="Running.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      Tailor my CV
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const mode = s.mode || 'text';
+    const research = s.research !== false;
+    const letter = s.letter !== false;
+    const sample = 'Halcyon Health is hiring a Senior Backend Engineer to own our claims platform. You will build services in Go or Rust on Kafka and Postgres, hold reliability targets, and handle healthcare data under HIPAA. GraphQL experience is a plus.';
+    return {
+      isText: mode === 'text', isLink: mode === 'link',
+      toText: () => this.setState({ mode: 'text' }),
+      toLink: () => this.setState({ mode: 'link' }),
+      textBg: mode === 'text' ? '#FFFFFF' : 'transparent',
+      linkBg: mode === 'link' ? '#FFFFFF' : 'transparent',
+      jd: s.jd || '',
+      onJd: (e) => this.setState({ jd: e.target.value }),
+      pasteSample: () => this.setState({ jd: sample }),
+      research: research, letter: letter,
+      tResearch: (e) => { e.preventDefault(); this.setState({ research: !research }); },
+      tLetter: (e) => { e.preventDefault(); this.setState({ letter: !letter }); },
+      rTrack: research ? '#3B1C32' : '#D9CCAE', rKnob: research ? '24px' : '4px',
+      lTrack: letter ? '#3B1C32' : '#D9CCAE', lKnob: letter ? '24px' : '4px'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-13T17:40:00Z"
+  },
+  "title": "Application: one screen",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "AppTailoring.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Application \u00b7 tailoring shows in place",
+      "is_interactive": true
+    },
+    "AppCv.dc.html": {
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Application \u00b7 CV tab, changes on the page",
+      "is_interactive": true
+    },
+    "AppChange.dc.html": {
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Application \u00b7 tap a change",
+      "is_interactive": true
+    },
+    "AppLetter.dc.html": {
+      "x": 1410,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Application \u00b7 Letter tab",
+      "is_interactive": true
+    },
+    "AppCompany.dc.html": {
+      "x": 1880,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Application \u00b7 Company tab",
+      "is_interactive": true
+    },
+    "AppSend.dc.html": {
+      "x": 2350,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Application \u00b7 Send as a sheet",
+      "is_interactive": true
+    },
+    "AppDesktop.dc.html": {
+      "x": 2820,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Application \u00b7 desktop",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "AppTailoring.dc.html",
+    "AppCv.dc.html",
+    "AppChange.dc.html",
+    "AppLetter.dc.html",
+    "AppCompany.dc.html",
+    "AppSend.dc.html",
+    "AppDesktop.dc.html"
+  ],
+  "notes": {
+    "appRow": {
+      "x": 0,
+      "y": -250,
+      "text": "One application screen: CV, Letter and Company tabs; changes on the page; Send as a sheet",
+      "kind": "title1",
+      "maxW": 4260
+    }
+  },
+  "designSystems": []
+}

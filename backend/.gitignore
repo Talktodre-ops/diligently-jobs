@@ -20,3 +20,4 @@ target/
 # Docker images install Tectonic at build time; nothing in `tools/` belongs
 # in source control.
 tools/
+.outbox/

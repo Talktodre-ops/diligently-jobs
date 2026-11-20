@@ -1,12 +1,11 @@
-//! Read-only job status endpoint. The desktop polls this after enqueueing.
+//! Read-only job status endpoint, polled by the Running screen.
 
-use axum::{
-    extract::{Path, State},
-    Json,
-};
+use crate::extract::{Json, Path};
+use axum::extract::State;
 use serde::Serialize;
 use uuid::Uuid;
 
+use crate::auth::CurrentUser;
 use crate::error::AppError;
 use crate::jobs::{self, Job};
 use crate::AppState;
@@ -19,7 +18,8 @@ pub struct JobView {
     pub result: Option<serde_json::Value>,
     pub attempts: i32,
     pub max_attempts: i32,
-    pub last_error: Option<String>,
+    /// Steps of a multi-step job, each with a status.
+    pub progress: Option<serde_json::Value>,
 }
 
 impl From<Job> for JobView {
@@ -31,7 +31,9 @@ impl From<Job> for JobView {
             result: j.result,
             attempts: j.attempts,
             max_attempts: j.max_attempts,
-            last_error: j.last_error,
+            // last_error is internal detail (provider messages, SQL); the
+            // client gets status and per-step progress instead.
+            progress: j.progress,
         }
     }
 }
@@ -39,9 +41,10 @@ impl From<Job> for JobView {
 /// GET /v1/jobs/:id
 pub async fn get_one(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<JobView>, AppError> {
-    let job = jobs::get_by_id(&state.db, id)
+    let job = jobs::get_by_id(&state.db, user.id, id)
         .await?
         .ok_or(AppError::NotFound)?;
     Ok(Json(job.into()))

@@ -1,10 +1,9 @@
+use crate::auth::CurrentUser;
 use crate::error::AppError;
+use crate::extract::{Json, Path, Query};
 use crate::routes::events::Event;
 use crate::AppState;
-use axum::{
-    extract::{Path, Query, State},
-    Json,
-};
+use axum::extract::State;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -18,6 +17,7 @@ pub struct Application {
     pub jd_raw: String,
     pub requirements: Option<serde_json::Value>,
     pub status: String,
+    pub stage: String,
     pub submitted_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -40,6 +40,8 @@ pub struct CreateApplicationRequest {
 #[derive(Debug, Deserialize)]
 pub struct ListApplicationsQuery {
     pub status: Option<String>,
+    /// saved, applied, interviewing, offer or closed (the Jobs tabs).
+    pub stage: Option<String>,
     pub limit: Option<i64>,
 }
 
@@ -55,6 +57,7 @@ pub struct PatchApplicationRequest {
 /// POST /v1/applications
 pub async fn create(
     State(state): State<AppState>,
+    user: CurrentUser,
     Json(req): Json<CreateApplicationRequest>,
 ) -> Result<Json<Application>, AppError> {
     if req.jd_raw.trim().is_empty() {
@@ -62,12 +65,12 @@ pub async fn create(
     }
     let app = sqlx::query_as::<_, Application>(
         r#"
-        insert into applications (jd_raw, company, role, requirements, status)
-        values ($1, $2, $3, $4, coalesce($5, 'draft'))
+        insert into applications (jd_raw, company, role, requirements, status, user_id)
+        values ($1, $2, $3, $4, coalesce($5, 'draft'), $6)
         returning id, company, role, jd_raw, requirements, status,
                   submitted_at, created_at, updated_at,
                   latest_cv_version_id, latest_cv_pdf_key,
-                  latest_cv_docx_key, latest_cv_rendered_at
+                  latest_cv_docx_key, latest_cv_rendered_at, stage
         "#,
     )
     .bind(&req.jd_raw)
@@ -75,6 +78,7 @@ pub async fn create(
     .bind(&req.role)
     .bind(&req.requirements)
     .bind(&req.status)
+    .bind(user.id)
     .fetch_one(&state.db)
     .await?;
     Ok(Json(app))
@@ -83,23 +87,30 @@ pub async fn create(
 /// GET /v1/applications
 pub async fn list(
     State(state): State<AppState>,
+    user: CurrentUser,
     Query(q): Query<ListApplicationsQuery>,
 ) -> Result<Json<Vec<Application>>, AppError> {
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
+    if let Some(stage) = &q.stage {
+        crate::validate::one_of("stage", stage, crate::routes::tracking::STAGES)?;
+    }
     let apps = sqlx::query_as::<_, Application>(
         r#"
         select id, company, role, jd_raw, requirements, status,
                submitted_at, created_at, updated_at,
                latest_cv_version_id, latest_cv_pdf_key,
-               latest_cv_docx_key, latest_cv_rendered_at
+               latest_cv_docx_key, latest_cv_rendered_at, stage
         from applications
-        where ($1::text is null or status = $1)
+        where user_id = $3 and ($1::text is null or status = $1)
+          and ($4::text is null or stage = $4)
         order by updated_at desc
         limit $2
         "#,
     )
     .bind(q.status.as_deref())
     .bind(limit)
+    .bind(user.id)
+    .bind(q.stage.as_deref())
     .fetch_all(&state.db)
     .await?;
     Ok(Json(apps))
@@ -108,6 +119,7 @@ pub async fn list(
 /// GET /v1/applications/:id
 pub async fn get_one(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Application>, AppError> {
     let app = sqlx::query_as::<_, Application>(
@@ -115,12 +127,13 @@ pub async fn get_one(
         select id, company, role, jd_raw, requirements, status,
                submitted_at, created_at, updated_at,
                latest_cv_version_id, latest_cv_pdf_key,
-               latest_cv_docx_key, latest_cv_rendered_at
+               latest_cv_docx_key, latest_cv_rendered_at, stage
         from applications
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;
@@ -133,6 +146,7 @@ pub async fn get_one(
 /// existing value via the `coalesce($n, column)` pattern.
 pub async fn patch(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
     Json(req): Json<PatchApplicationRequest>,
 ) -> Result<Json<Application>, AppError> {
@@ -144,11 +158,11 @@ pub async fn patch(
             requirements  = coalesce($4, requirements),
             status        = coalesce($5, status),
             submitted_at  = coalesce($6, submitted_at)
-        where id = $1
+        where id = $1 and user_id = $7
         returning id, company, role, jd_raw, requirements, status,
                   submitted_at, created_at, updated_at,
                   latest_cv_version_id, latest_cv_pdf_key,
-                  latest_cv_docx_key, latest_cv_rendered_at
+                  latest_cv_docx_key, latest_cv_rendered_at, stage
         "#,
     )
     .bind(id)
@@ -157,6 +171,7 @@ pub async fn patch(
     .bind(&req.requirements)
     .bind(&req.status)
     .bind(req.submitted_at)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;
@@ -169,18 +184,21 @@ pub async fn patch(
 /// "History" UI in the desktop app — one application's full audit trail.
 pub async fn timeline(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<Event>>, AppError> {
+    super::ensure_application(&state.db, user.id, id).await?;
     let events = sqlx::query_as::<_, Event>(
         r#"
         select id, kind, payload, application_id, device_id, created_at
         from events
-        where application_id = $1
+        where application_id = $1 and user_id = $2
         order by created_at desc
         limit 1000
         "#,
     )
     .bind(id)
+    .bind(user.id)
     .fetch_all(&state.db)
     .await?;
     Ok(Json(events))

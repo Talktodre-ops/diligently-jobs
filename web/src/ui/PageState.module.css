@@ -1,0 +1,6 @@
+.wrap { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px 20px; text-align: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--persimmon); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; transform: scale(0.7); } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+.title { font-size: 17px; font-weight: 600; }
+.body { font-size: 15px; color: var(--ink-2); max-width: 34ch; margin: 0; }

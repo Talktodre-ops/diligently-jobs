@@ -1,0 +1,24 @@
+.wrap { display: flex; flex-direction: column; gap: 10px; }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.title { font-size: 16px; font-weight: 600; }
+.count { font-size: 13px; font-weight: 600; color: var(--persimmon-text); white-space: nowrap; }
+.quiet { margin: 0; font-size: 14px; color: var(--ink-2); }
+
+.items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.top { display: flex; justify-content: space-between; gap: 8px; }
+.where { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.status, .statusNew { font-size: 12px; text-align: right; }
+.status { color: var(--ink-2); }
+.statusNew { font-weight: 600; color: var(--persimmon-text); }
+.text, .struck, .inCv { margin: 0; font-size: 13px; line-height: 1.45; }
+.struck { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.inCv { background: var(--butter); color: var(--aubergine); border-radius: 8px; padding: 6px 8px; }
+.actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.link {
+  min-height: var(--tap); padding: 0; border: 0; background: transparent; color: var(--persimmon-text);
+  font-size: 13px; font-weight: 600; text-decoration: underline; cursor: pointer;
+}
+.link:hover:not(:disabled) { color: var(--ink); }
+.link:disabled { opacity: 0.55; cursor: not-allowed; }
+.error { margin: 0; font-size: 13px; color: var(--danger); font-weight: 500; }

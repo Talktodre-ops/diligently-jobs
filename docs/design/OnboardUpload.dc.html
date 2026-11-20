@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Upload your CV</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 24px 24px 0; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;">
+      <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+      <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+      <div style="height: 4px; border-radius: 2px; background: #EADFC2;"></div>
+    </div>
+    <div style="font-size: 13px; color: #6B4E62;">Step 1 of 3</div>
+  </div>
+
+  <main style="flex: 1; padding: 16px 24px 0; display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em;">Start with your CV</h1>
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">This becomes your master CV. Every application is tailored from it, and nothing on it is invented.</p>
+    </div>
+
+    <sc-if value="{{ isIdle }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <button type="button" onClick="{{ upload }}" style="border: 2px dashed #D9CCAE; border-radius: 20px; background: #FFFFFF; padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; color: #3B1C32; font-family: Inter, sans-serif;">
+          <span style="width: 56px; height: 56px; border-radius: 16px; background: #F6E7A6; display: inline-flex; align-items: center; justify-content: center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
+          </span>
+          <span style="font-size: 16px; font-weight: 600;">Upload PDF or DOCX</span>
+          <span style="font-size: 13px; color: #6B4E62;">Up to 10 MB. Your LinkedIn PDF works too.</span>
+        </button>
+        <button type="button" onClick="{{ upload }}" style="height: 52px; border-radius: 999px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 15px Inter, sans-serif; cursor: pointer;">Paste the text instead</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReading }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="width: 44px; height: 44px; border-radius: 12px; background: #FBE3D8; display: inline-flex; align-items: center; justify-content: center; color: #B5401C; font-size: 12px; font-weight: 600;">PDF</span>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 15px; font-weight: 600;">Ada_Okafor_CV.pdf</div>
+            <div style="font-size: 13px; color: #6B4E62;">{{ readingLabel }}</div>
+          </div>
+        </div>
+        <div style="height: 6px; border-radius: 999px; background: #EADFC2; overflow: hidden;"><div style="height: 6px; width: {{ pct }}; background: #3B1C32; border-radius: 999px; transition: width 300ms ease;"></div></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="width: 44px; height: 44px; border-radius: 12px; background: #3B1C32; display: inline-flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F6E7A6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+          </span>
+          <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 600;">Ada_Okafor_CV.pdf</div>
+            <div style="font-size: 13px; color: #6B4E62;">Read in full</div>
+          </div>
+          <button type="button" onClick="{{ reset }}" style="height: 44px; padding: 0 8px; border: 0; background: transparent; color: #B5401C; font: 600 13px Inter, sans-serif; cursor: pointer;">Replace</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+          <div style="background: #FCF8EC; border-radius: 12px; padding: 12px; text-align: center;"><div style="font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 600;">3</div><div style="font-size: 12px; color: #6B4E62;">roles</div></div>
+          <div style="background: #FCF8EC; border-radius: 12px; padding: 12px; text-align: center;"><div style="font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 600;">14</div><div style="font-size: 12px; color: #6B4E62;">bullets</div></div>
+          <div style="background: #FCF8EC; border-radius: 12px; padding: 12px; text-align: center;"><div style="font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 600;">18</div><div style="font-size: 12px; color: #6B4E62;">skills</div></div>
+        </div>
+        <div style="font-size: 13px; color: #B5401C; font-weight: 600;">1 thing to check on the next screen</div>
+      </div>
+    </sc-if>
+  </main>
+
+  <footer style="padding: 12px 24px 32px;">
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <a href="OnboardCheck.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Continue</a>
+    </sc-if>
+    <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align: center; font-size: 13px; color: #6B4E62; line-height: 1.5;">Your CV stays private to your account. You can delete it any time.</div>
+    </sc-if>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    const s = this.state || {};
+    const phase = s.phase || 'idle';
+    const p = s.p || 0;
+    const labels = ['Reading the file', 'Finding your roles', 'Pulling out bullets and skills', 'Checking dates'];
+    return {
+      isIdle: phase === 'idle',
+      isReading: phase === 'reading',
+      isDone: phase === 'done',
+      notDone: phase !== 'done',
+      pct: p + '%',
+      readingLabel: labels[Math.min(3, Math.floor(p / 25))],
+      upload: () => {
+        clearInterval(this.timer);
+        this.setState({ phase: 'reading', p: 0 });
+        this.timer = setInterval(() => {
+          const cur = (this.state && this.state.p) || 0;
+          if (cur >= 100) { clearInterval(this.timer); this.setState({ phase: 'done' }); }
+          else this.setState({ p: cur + 10 });
+        }, 220);
+      },
+      reset: () => { clearInterval(this.timer); this.setState({ phase: 'idle', p: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

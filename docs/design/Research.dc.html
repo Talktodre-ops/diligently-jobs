@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Company research</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="display: flex; align-items: center; gap: 8px; padding: 12px 12px 4px;">
+    <a href="Workspace.dc.html" aria-label="Back to application" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; min-width: 0;">
+      <div style="font-size: 13px; color: #6B4E62;">Research</div>
+      <div style="font-size: 16px; font-weight: 600;">Halcyon Health</div>
+    </div>
+  </header>
+
+  <div style="padding: 8px 20px 0; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 28px; line-height: 1.1; letter-spacing: -0.015em;">Health claims, paid on time.</h1>
+      <p style="margin: 0; font-size: 14px; color: #6B4E62;">Their own words, from the company site.</p>
+    </div>
+    <div role="tablist" aria-label="Research sections" style="display: flex; gap: 6px; border-bottom: 1px solid #EADFC2;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" style="height: 44px; padding: 0 12px; border: 0; border-bottom: 3px solid {{ t.line }}; background: transparent; color: {{ t.fg }}; font: 600 14px Inter, sans-serif; cursor: pointer; margin-bottom: -1px;">{{ t.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <main style="flex: 1; overflow-y: auto; padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 16px;">
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px;"><div style="font-size: 12px; color: #6B4E62;">Stage</div><div style="font-size: 16px; font-weight: 600;">Series B</div></div>
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px;"><div style="font-size: 12px; color: #6B4E62;">Team</div><div style="font-size: 16px; font-weight: 600;">About 140</div></div>
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px;"><div style="font-size: 12px; color: #6B4E62;">Founded</div><div style="font-size: 16px; font-weight: 600;">2019</div></div>
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px;"><div style="font-size: 12px; color: #6B4E62;">Offices</div><div style="font-size: 16px; font-weight: 600;">Lagos, London</div></div>
+      </div>
+      <section style="display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">What they care about</h2>
+        <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 4px 16px;">
+          <div style="padding: 12px 0; border-bottom: 1px solid #EADFC2;"><div style="font-size: 15px; font-weight: 600;">Reliability over speed</div><div style="font-size: 14px; color: #5E4456; line-height: 1.5;">Their engineering blog leads with uptime and incident reviews.</div></div>
+          <div style="padding: 12px 0; border-bottom: 1px solid #EADFC2;"><div style="font-size: 15px; font-weight: 600;">Patient data done right</div><div style="font-size: 14px; color: #5E4456; line-height: 1.5;">HIPAA and audit trails come up in three of their posts.</div></div>
+          <div style="padding: 12px 0;"><div style="font-size: 15px; font-weight: 600;">Small teams, real ownership</div><div style="font-size: 14px; color: #5E4456; line-height: 1.5;">Engineers own services end to end, on-call included.</div></div>
+        </div>
+      </section>
+      <section style="display: flex; flex-direction: column; gap: 10px;">
+        <h2 style="margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6B4E62;">Recent</h2>
+        <a href="#" style="text-decoration: none; color: #3B1C32; background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px;"><div style="font-size: 15px; font-weight: 600; line-height: 1.4;">Raised a Series B to expand claims processing</div><div style="font-size: 13px; color: #6B4E62; margin-top: 2px;">halcyon.example · September</div></a>
+        <a href="#" style="text-decoration: none; color: #3B1C32; background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 12px 14px;"><div style="font-size: 15px; font-weight: 600; line-height: 1.4;">How we moved claims onto Kafka</div><div style="font-size: 13px; color: #6B4E62; margin-top: 2px;">Engineering blog · August</div></a>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isPitch }}" hint-placeholder-val="{{ false }}">
+      <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5E4456;">Three things from your CV that line up with what Halcyon cares about. Use them in your letter and in the interview.</p>
+      <sc-for list="{{ points }}" as="p" hint-placeholder-count="3">
+        <section style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 10px; align-items: baseline;"><span style="font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 600; color: #B5401C;">{{ p.n }}</span><span style="font-size: 16px; font-weight: 600;">{{ p.title }}</span></div>
+          <div style="font-size: 14px; line-height: 1.5; color: #5E4456;">{{ p.body }}</div>
+          <div style="font-size: 13px; color: #6B4E62;">From your CV: {{ p.from }}</div>
+        </section>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ isSources }}" hint-placeholder-val="{{ false }}">
+      <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5E4456;">Everything above comes from these pages. Tap one to check it yourself.</p>
+      <div style="background: #FFFFFF; border: 1px solid #EADFC2; border-radius: 14px; padding: 4px 16px;">
+        <sc-for list="{{ sources }}" as="src" hint-placeholder-count="5">
+          <a href="#" style="display: flex; align-items: center; gap: 12px; min-height: 56px; text-decoration: none; color: #3B1C32; border-bottom: 1px solid {{ src.line }};">
+            <span style="flex: 1; min-width: 0;"><span style="display: block; font-size: 15px; font-weight: 600;">{{ src.title }}</span><span style="display: block; font-size: 13px; color: #6B4E62;">{{ src.host }}</span></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B4E62" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"></path></svg>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tab = (this.state && this.state.tab) || 'overview';
+    const defs = [{ id: 'overview', label: 'Overview' }, { id: 'pitch', label: 'Talking points' }, { id: 'sources', label: 'Sources' }];
+    const sources = [
+      { title: 'About Halcyon', host: 'halcyon.example/about' },
+      { title: 'Careers: Senior Backend Engineer', host: 'halcyon.example/careers' },
+      { title: 'How we moved claims onto Kafka', host: 'halcyon.example/blog' },
+      { title: 'Our incident review template', host: 'halcyon.example/blog' },
+      { title: 'Series B announcement', host: 'halcyon.example/news' }
+    ];
+    return {
+      tabs: defs.map((d) => ({ label: d.label, on: tab === d.id, pick: () => this.setState({ tab: d.id }), line: tab === d.id ? '#E8603C' : 'transparent', fg: tab === d.id ? '#3B1C32' : '#6B4E62' })),
+      isOverview: tab === 'overview', isPitch: tab === 'pitch', isSources: tab === 'sources',
+      points: [
+        { n: '1', title: 'You keep payments up', body: 'They lead with reliability. You held a 99.95% SLO through peak season.', from: 'Northfold, payments service' },
+        { n: '2', title: 'You already run incident reviews', body: 'They publish theirs. You wrote the process at Northfold.', from: 'Northfold, on-call rotation' },
+        { n: '3', title: 'You know their stack', body: 'Kafka and Postgres, both on your CV with real numbers behind them.', from: 'Northfold and Quarry Labs' }
+      ],
+      sources: sources.map((s, i) => Object.assign({}, s, { line: i === sources.length - 1 ? 'transparent' : '#EADFC2' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

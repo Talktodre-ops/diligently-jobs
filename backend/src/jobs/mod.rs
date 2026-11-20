@@ -19,13 +19,19 @@ use uuid::Uuid;
 
 use crate::error::AppError;
 
-/// Stuck-job recovery window. Anything in `running` longer than this on boot
-/// gets reset to `queued` so a previous crash doesn't strand work.
-pub const STUCK_RUNNING_AFTER: ChronoDuration = ChronoDuration::minutes(5);
+/// A running job whose heartbeat is older than this has lost its worker and is
+/// re-queued by the sweep. Several heartbeats fit in the window, so a slow
+/// database write never re-queues live work.
+pub const STUCK_RUNNING_AFTER: ChronoDuration = ChronoDuration::seconds(90);
+
+/// How often a worker stamps the job it is running.
+pub const HEARTBEAT_EVERY: std::time::Duration = std::time::Duration::from_secs(20);
 
 #[derive(Debug, Serialize, FromRow)]
 pub struct Job {
     pub id: Uuid,
+    /// Owner. Handlers scope every read and write, and storage keys, to it.
+    pub user_id: Uuid,
     pub kind: String,
     pub payload: serde_json::Value,
     pub status: String,
@@ -38,44 +44,63 @@ pub struct Job {
     pub completed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Step-by-step progress for multi-step jobs (the application pipeline).
+    pub progress: Option<serde_json::Value>,
 }
 
 /// Enqueue a job. Returns the persisted row so the caller can hand the id to
 /// the client for status polling.
 pub async fn enqueue(
     pool: &PgPool,
+    user_id: Uuid,
     kind: &str,
     payload: serde_json::Value,
     max_attempts: i32,
 ) -> Result<Job, AppError> {
+    enqueue_with_progress(pool, user_id, kind, payload, max_attempts, None).await
+}
+
+/// Enqueue with initial step progress, so the first poll already lists the
+/// steps the Running screen shows.
+pub async fn enqueue_with_progress(
+    pool: &PgPool,
+    user_id: Uuid,
+    kind: &str,
+    payload: serde_json::Value,
+    max_attempts: i32,
+    progress: Option<serde_json::Value>,
+) -> Result<Job, AppError> {
     let job = sqlx::query_as::<_, Job>(
         r#"
-        insert into jobs (kind, payload, max_attempts)
-        values ($1, $2, $3)
+        insert into jobs (kind, payload, max_attempts, user_id, progress)
+        values ($1, $2, $3, $4, $5)
         returning
-            id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         "#,
     )
     .bind(kind)
     .bind(&payload)
     .bind(max_attempts)
+    .bind(user_id)
+    .bind(progress)
     .fetch_one(pool)
     .await?;
     Ok(job)
 }
 
-pub async fn get_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Job>, AppError> {
+pub async fn get_by_id(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Option<Job>, AppError> {
     let job = sqlx::query_as::<_, Job>(
         r#"
         select
-            id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         from jobs
-        where id = $1
+        where id = $1 and user_id = $2
         "#,
     )
     .bind(id)
+    .bind(user_id)
     .fetch_optional(pool)
     .await?;
     Ok(job)
@@ -90,8 +115,8 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
     let candidate: Option<Job> = sqlx::query_as::<_, Job>(
         r#"
         select
-            id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         from jobs
         where status = 'queued' and scheduled_at <= now()
         order by scheduled_at asc
@@ -112,11 +137,12 @@ pub async fn claim_next(pool: &PgPool) -> Result<Option<Job>, sqlx::Error> {
         update jobs
         set status = 'running',
             attempts = attempts + 1,
-            started_at = coalesce(started_at, now())
+            started_at = coalesce(started_at, now()),
+            heartbeat_at = now()
         where id = $1
         returning
-            id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         "#,
     )
     .bind(job.id)
@@ -189,8 +215,20 @@ pub async fn mark_failed(pool: &PgPool, job: &Job, error: &str) -> Result<(), sq
     Ok(())
 }
 
-/// On boot: any row stuck in 'running' for > STUCK_RUNNING_AFTER must be from a
-/// previous crash. Reset to 'queued' so the worker picks them up.
+/// Stamp a running job so the sweep knows its worker is alive.
+pub async fn heartbeat(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query("update jobs set heartbeat_at = now() where id = $1 and status = 'running'")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Re-queue running jobs whose worker went away: no heartbeat for
+/// STUCK_RUNNING_AFTER (rows from before heartbeats existed fall back to
+/// started_at). Runs at boot and periodically, so work cut off by a restart
+/// resumes within about two minutes. Handlers are idempotent per step, so a
+/// re-run continues rather than duplicating.
 pub async fn recover_stuck(pool: &PgPool) -> Result<u64, sqlx::Error> {
     let res = sqlx::query(
         r#"
@@ -198,7 +236,7 @@ pub async fn recover_stuck(pool: &PgPool) -> Result<u64, sqlx::Error> {
         set status = 'queued',
             scheduled_at = now()
         where status = 'running'
-          and started_at < now() - $1::interval
+          and coalesce(heartbeat_at, started_at) < now() - $1::interval
         "#,
     )
     .bind(format!("{} seconds", STUCK_RUNNING_AFTER.num_seconds()))
@@ -212,16 +250,18 @@ pub async fn recover_stuck(pool: &PgPool) -> Result<u64, sqlx::Error> {
 /// `payload_match` is already queued or running.
 pub async fn find_active(
     pool: &PgPool,
+    user_id: Uuid,
     kind: &str,
     payload_match: &serde_json::Value,
 ) -> Result<Option<Job>, sqlx::Error> {
     sqlx::query_as::<_, Job>(
         r#"
         select
-            id, kind, payload, status, result, attempts, max_attempts,
-            last_error, scheduled_at, started_at, completed_at, created_at, updated_at
+            id, user_id, kind, payload, status, result, attempts, max_attempts,
+            last_error, scheduled_at, started_at, completed_at, created_at, updated_at, progress
         from jobs
         where kind = $1
+          and user_id = $3
           and status in ('queued', 'running')
           and payload @> $2
         order by created_at desc
@@ -230,6 +270,7 @@ pub async fn find_active(
     )
     .bind(kind)
     .bind(payload_match)
+    .bind(user_id)
     .fetch_optional(pool)
     .await
 }

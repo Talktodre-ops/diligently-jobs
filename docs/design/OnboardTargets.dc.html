@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What are you looking for</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline: 2px solid #E8603C; outline-offset: 1px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <div style="padding: 12px 12px 0 12px; display: flex; align-items: center; gap: 8px;">
+    <a href="OnboardCheck.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding-right: 12px;">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;">
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #3B1C32;"></div>
+        <div style="height: 4px; border-radius: 2px; background: #E8603C;"></div>
+      </div>
+      <div style="font-size: 13px; color: #6B4E62;">Step 3 of 3</div>
+    </div>
+  </div>
+
+  <main style="flex: 1; overflow-y: auto; padding: 12px 24px 16px; display: flex; flex-direction: column; gap: 22px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: -0.02em;">What are you looking for?</h1>
+      <p style="margin: 0; font-size: 15px; color: #5E4456;">This shapes how we tailor and what we flag. Change it any time.</p>
+    </div>
+
+    <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <legend style="font-size: 13px; font-weight: 600; padding: 0 0 10px;">Roles <span style="font-weight: 400; color: #6B4E62;">· pick any</span></legend>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <sc-for list="{{ roles }}" as="r" hint-placeholder-count="6">
+          <button type="button" aria-pressed="{{ r.on }}" onClick="{{ r.pick }}" style="height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid {{ r.border }}; background: {{ r.bg }}; color: {{ r.fg }}; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ r.label }}</button>
+        </sc-for>
+      </div>
+    </fieldset>
+
+    <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <legend style="font-size: 13px; font-weight: 600; padding: 0 0 10px;">Work setting</legend>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+        <sc-for list="{{ settings }}" as="w" hint-placeholder-count="3">
+          <button type="button" aria-pressed="{{ w.on }}" onClick="{{ w.pick }}" style="height: 44px; border-radius: 12px; border: 1.5px solid {{ w.border }}; background: {{ w.bg }}; color: {{ w.fg }}; font: 600 14px Inter, sans-serif; cursor: pointer;">{{ w.label }}</button>
+        </sc-for>
+      </div>
+    </fieldset>
+
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <label for="loc" style="font-size: 13px; font-weight: 600;">Where you are</label>
+      <input id="loc" type="text" value="Lagos, Nigeria" style="height: 52px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 12px; background: #FFFFFF; padding: 0 14px; font: 16px Inter, sans-serif; color: #3B1C32;">
+    </div>
+
+    <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <legend style="font-size: 13px; font-weight: 600; padding: 0 0 10px;">Paper size for your CV</legend>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+        <sc-for list="{{ papers }}" as="p" hint-placeholder-count="2">
+          <button type="button" aria-pressed="{{ p.on }}" onClick="{{ p.pick }}" style="min-height: 60px; border-radius: 12px; border: 1.5px solid {{ p.border }}; background: {{ p.bg }}; color: {{ p.fg }}; font-family: Inter, sans-serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">{{ p.label }}</span><span style="font-size: 12px; opacity: 0.8;">{{ p.note }}</span></button>
+        </sc-for>
+      </div>
+    </fieldset>
+  </main>
+
+  <footer style="padding: 12px 24px 32px; border-top: 1px solid #EADFC2;">
+    <a href="Home.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Finish setup</a>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const roles = s.roles || { 'Backend Engineer': true, 'Platform Engineer': true };
+    const settings = s.settings || { Remote: true, Hybrid: true };
+    const paper = s.paper || 'A4';
+    const look = (on) => on
+      ? { bg: '#3B1C32', fg: '#F6E7A6', border: '#3B1C32' }
+      : { bg: '#FFFFFF', fg: '#3B1C32', border: '#D9CCAE' };
+    const toggle = (key, map, k) => () => this.setState({ [key]: Object.assign({}, map, { [k]: !map[k] }) });
+    return {
+      roles: ['Backend Engineer', 'Platform Engineer', 'Staff Engineer', 'Data Engineer', 'Site Reliability', 'Engineering Manager']
+        .map((l) => Object.assign({ label: l, on: !!roles[l], pick: toggle('roles', roles, l) }, look(!!roles[l]))),
+      settings: ['Remote', 'Hybrid', 'On-site']
+        .map((l) => Object.assign({ label: l, on: !!settings[l], pick: toggle('settings', settings, l) }, look(!!settings[l]))),
+      papers: [{ label: 'A4', note: 'Most of the world' }, { label: 'US Letter', note: 'US and Canada' }]
+        .map((p) => Object.assign({}, p, { on: paper === p.label, pick: () => this.setState({ paper: p.label }) }, look(paper === p.label)))
+    };
+  }
+}
+</script>
+</body>
+</html>

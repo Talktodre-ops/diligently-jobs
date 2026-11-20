@@ -1,6 +1,7 @@
 use crate::error::AppError;
+use crate::extract::Json;
 use crate::AppState;
-use axum::{extract::State, Json};
+use axum::extract::State;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -37,20 +38,34 @@ async fn ping_postgres(state: &AppState) -> ComponentStatus {
         .fetch_one(&state.db)
         .await
     {
-        Ok(_) => ComponentStatus { ok: true, detail: None },
-        Err(e) => ComponentStatus {
-            ok: false,
-            detail: Some(e.to_string()),
+        Ok(_) => ComponentStatus {
+            ok: true,
+            detail: None,
         },
+        Err(e) => {
+            // Detail goes to the log; this endpoint is public.
+            tracing::error!(error = %format!("{e:#}"), "health check failed");
+            ComponentStatus {
+                ok: false,
+                detail: Some("unavailable".to_string()),
+            }
+        }
     }
 }
 
 async fn ping_r2(state: &AppState) -> ComponentStatus {
     match state.r2.ping().await {
-        Ok(_) => ComponentStatus { ok: true, detail: None },
-        Err(e) => ComponentStatus {
-            ok: false,
-            detail: Some(e.to_string()),
+        Ok(_) => ComponentStatus {
+            ok: true,
+            detail: None,
         },
+        Err(e) => {
+            // Detail goes to the log; this endpoint is public.
+            tracing::error!(error = %format!("{e:#}"), "health check failed");
+            ComponentStatus {
+                ok: false,
+                detail: Some("unavailable".to_string()),
+            }
+        }
     }
 }

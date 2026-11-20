@@ -1,0 +1,13 @@
+.card { background: var(--persimmon-tint); border-radius: var(--radius-md); padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 8px; color: var(--aubergine); }
+.card .link { color: var(--aubergine); }
+.done { display: flex; flex-direction: column; gap: 10px; }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.title { font-size: 15px; font-weight: 600; }
+.titleQuiet { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.lede { margin: 0; font-size: 13px; color: var(--aubergine-2); }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.quiet { margin: 0; font-size: 14px; color: var(--ink-2); }
+.link {
+  min-height: var(--tap); padding: 0; border: 0; background: transparent; color: var(--ink);
+  font-size: 13px; font-weight: 600; text-decoration: underline; cursor: pointer; white-space: nowrap;
+}

@@ -4,15 +4,12 @@
 //! enqueues it and serves the latest stored score back, mirroring the
 //! cv-render / cover-letter enqueue pattern.
 
+use crate::auth::CurrentUser;
 use crate::error::AppError;
+use crate::extract::{Json, Path};
 use crate::jobs::{self, handlers::KIND_ATS_SCORE};
 use crate::AppState;
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::json;
@@ -36,11 +33,13 @@ pub struct AtsScore {
 /// on (application_id, kind): an in-flight job is reused.
 pub async fn enqueue(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(application_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     let exists: Option<(Uuid,)> =
-        sqlx::query_as("select id from applications where id = $1")
+        sqlx::query_as("select id from applications where id = $1 and user_id = $2")
             .bind(application_id)
+            .bind(user.id)
             .fetch_optional(&state.db)
             .await?;
     if exists.is_none() {
@@ -49,7 +48,7 @@ pub async fn enqueue(
 
     let payload_match = json!({ "application_id": application_id });
 
-    if let Some(existing) = jobs::find_active(&state.db, KIND_ATS_SCORE, &payload_match)
+    if let Some(existing) = jobs::find_active(&state.db, user.id, KIND_ATS_SCORE, &payload_match)
         .await
         .map_err(AppError::Db)?
     {
@@ -59,7 +58,7 @@ pub async fn enqueue(
         ));
     }
 
-    let job = jobs::enqueue(&state.db, KIND_ATS_SCORE, payload_match, 2).await?;
+    let job = jobs::enqueue(&state.db, user.id, KIND_ATS_SCORE, payload_match, 2).await?;
     Ok((
         StatusCode::ACCEPTED,
         Json(json!({ "job_id": job.id, "status": job.status, "deduped": false })),
@@ -69,18 +68,20 @@ pub async fn enqueue(
 /// GET /v1/applications/:id/ats-score — the latest score, or 404 when none yet.
 pub async fn get_latest(
     State(state): State<AppState>,
+    user: CurrentUser,
     Path(application_id): Path<Uuid>,
 ) -> Result<Json<AtsScore>, AppError> {
     let row = sqlx::query_as::<_, AtsScore>(
         r#"
         select id, application_id, cv_version_id, score, base_score, breakdown, created_at
         from ats_scores
-        where application_id = $1
+        where application_id = $1 and user_id = $2
         order by created_at desc
         limit 1
         "#,
     )
     .bind(application_id)
+    .bind(user.id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::NotFound)?;

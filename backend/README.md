@@ -1,18 +1,21 @@
 # Diligently — backend
 
-Rust + Axum + sqlx + Postgres (Neon) + R2. Single-user audit-log service that the
-desktop client and any companion devices write to. Bearer-token auth, presigned
-R2 URLs for blobs, append-only `events` table as the spine.
+Rust (Axum) API for the hosted Diligently web app: accounts and sessions,
+per-user data in Postgres, rendered CVs and letters in S3-compatible storage
+(Cloudflare R2), and an in-process job worker for rendering and AI work.
 
 ## Quickstart
 
 ```bash
 # 1. Set up .env from the template
 cp .env.example .env
-# (fill in DATABASE_URL, R2_*, generate BEARER_TOKEN)
+# (fill in DATABASE_URL and R2_*)
 
-# 2. Run with Docker (recommended for dev — hot reload via cargo-watch)
-docker compose up
+# 2. Run with Docker from the repository root (recommended for dev).
+#    The source is bind-mounted and cargo-watch rebuilds on save, so code
+#    changes never need a new container. API on http://127.0.0.1:8790.
+docker compose up -d
+docker compose logs -f api
 
 # 3. Or run locally without Docker
 cargo install cargo-watch        # one-time
@@ -26,38 +29,54 @@ curl http://localhost:8787/health
 # {"status":"ok","postgres":{"ok":true,...},"r2":{"ok":true,...}}
 ```
 
-## Smoke test
+## Tests
 
 ```bash
-# Server must be running
-just smoke
-# or: cargo test -- --ignored --nocapture
+scripts/test.sh            # starts local test services if needed, runs cargo test
+scripts/test.sh auth       # filter, same as cargo test
+scripts/test-services.sh down
 ```
+
+To try the whole product by hand, run the API against the same local services
+with your AI keys and walk every screen's endpoints (41 checks, a few cents of
+AI per run):
+
+```bash
+DEV_RESET=1 scripts/dev-local.sh > /tmp/diligently-dev.log 2>&1 &
+DEV_SERVER_LOG=/tmp/diligently-dev.log python3 scripts/walkthrough.py
+```
+
+The suite runs only against a throwaway Postgres on 127.0.0.1:55432 and a
+SeaweedFS S3 emulator on 127.0.0.1:59000, both in Docker with tmpfs storage.
+Each test gets its own migrated database. The harness refuses any database or
+storage URL that is not localhost, so it can never reach the database or bucket
+in `.env`. See `docs/decisions/2026-11-12-tests-run-on-local-services-only.md`.
 
 ## Project layout
 
 ```
 backend/
 ├── Cargo.toml              # deps + [[bin]] name
-├── Dockerfile              # multi-stage prod image (~80MB)
 ├── Dockerfile.dev          # dev image with rust toolchain + cargo-watch
-├── docker-compose.yml      # dev stack (volume-mounted hot reload)
 ├── justfile                # task runner (just <target>)
 ├── .env.example            # template
 ├── .env                    # YOUR creds (gitignored)
 ├── migrations/             # sqlx migrations live here (NNNN_<name>.sql)
 ├── src/
-│   ├── main.rs             # axum router + startup
+│   ├── lib.rs              # AppState + router (used by main and tests)
+│   ├── main.rs             # startup, worker, graceful shutdown
 │   ├── config.rs           # env loading + validation
 │   ├── db.rs               # sqlx Postgres pool init + migrate
 │   ├── r2.rs               # Cloudflare R2 client (S3-compatible)
-│   ├── auth.rs             # bearer-token Tower middleware
+│   ├── auth/               # passwords, sessions, CSRF, /v1/auth routes
 │   ├── error.rs            # AppError + IntoResponse
 │   └── routes/
 │       ├── mod.rs
 │       └── health.rs       # GET /health (public — pings PG + R2)
+├── scripts/                # test.sh, test-services.sh
 └── tests/
-    └── health_test.rs      # #[ignore]-marked integration tests
+    ├── common/mod.rs       # per-test database + real router harness
+    └── health_test.rs
 ```
 
 ## Environment variables
@@ -65,7 +84,6 @@ backend/
 | Var | Purpose | Required |
 |---|---|---|
 | `BIND_ADDR` | host:port to listen on | yes |
-| `BEARER_TOKEN` | shared secret with the desktop app | yes |
 | `DATABASE_URL` | Postgres connection string (Neon pooler endpoint) | yes |
 | `R2_ENDPOINT` | `https://<account>.r2.cloudflarestorage.com` | yes |
 | `R2_REGION` | always `auto` for R2 | optional (default `auto`) |
@@ -76,26 +94,43 @@ backend/
 
 ## Auth model
 
-Single user, single shared secret. Every request to a protected route must carry:
+Email and password accounts (argon2id). A successful sign-in sets an HttpOnly,
+SameSite=Lax session cookie holding a random token; only its SHA-256 is stored
+in `sessions`, so signing out or resetting a password ends sessions immediately.
+State-changing requests must come from an origin in `ALLOWED_ORIGINS`. Every
+resource is owned by one user and every query is scoped to the signed-in user;
+`tests/isolation_test.rs` guards that. `/health` is public.
 
+Data from the single-user desktop era belongs to a placeholder owner after the
+tenancy migration. Move it to your account once you have signed up:
+
+```bash
+cargo run -- claim-legacy --email you@example.com
 ```
-Authorization: Bearer <BEARER_TOKEN>
+
+See `docs/decisions/` for why sessions are cookies rather than JWTs.
+
+## Funnel
+
+`funnel` prints how many accounts that signed up in each recent week reached
+each step: verified, added a CV, started, tailored, downloaded, sent, followed
+up, came back a week later. It reads data the features already keep plus one
+`files_downloaded` event from the Send screen, leaves out `@example.com` and
+`@diligently.local` accounts, and never writes, so it is safe against the live
+database.
+
+```bash
+cargo run -- funnel --weeks 8
 ```
-
-Compared in constant time (`subtle::ConstantTimeEq`) to avoid timing-leak side-channels.
-`/health` is public — deployment platforms (Tailscale, Fly, k8s) can probe it without
-holding the secret.
-
-To rotate: regenerate `BEARER_TOKEN`, redeploy backend, rebuild the desktop app
-with the matching value, reinstall.
 
 ## Deployment options
 
 | Target | When | How |
 |---|---|---|
-| Local Docker | dev iteration | `docker compose up` |
+| Railway | production | Railway builds the root `Dockerfile` from GitHub on each push: one service serving the API and the web build on one origin. It listens on `PORT`; set the variables from `.env.example`. |
+| Local Docker | dev iteration | `docker compose up -d` at the repository root |
 | Tailscale-only VPS (recommended) | personal use | Hetzner/Fly box, bind to `100.x.x.x:8787`, only your tailnet sees it |
-| Public + bearer | quick & dirty | Bind `0.0.0.0`, rely on bearer + TLS terminator (Caddy/nginx). Higher attack surface. |
+| Public | standard | Bind `0.0.0.0` behind a TLS terminator (Caddy/nginx), set `TRUST_PROXY=true` and `COOKIE_SECURE=true`. |
 | Localhost | air-gapped | API + desktop both on same machine, bind `127.0.0.1:8787` |
 
 ## Migrations
@@ -107,9 +142,10 @@ just migrate                        # apply
 just migrate-revert                 # roll back the latest
 ```
 
-Migrations run automatically at startup (`db::migrate` in `main.rs`). For schema
-changes that need backfill / non-trivial coordination, run them manually with
-`sqlx migrate run` against the Neon dev branch first.
+Migrations run automatically at startup (`db::migrate` in `main.rs`). To apply
+them without starting the server, run `cargo run --release -- migrate` (or
+`just docker-migrate` inside the dev container). For changes that touch existing
+data, back up first and rehearse on a restored copy before the real database.
 
 ## What's next
 

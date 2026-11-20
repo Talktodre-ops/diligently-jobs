@@ -1,43 +1,22 @@
-mod auth;
-mod config;
-mod db;
-mod error;
-mod jobs;
-mod llm;
-mod r2;
-mod render;
-mod routes;
-
 use anyhow::Result;
-use axum::{
-    http::{header, HeaderValue, Method},
-    middleware,
-    routing::{get, post},
-    Router,
-};
-use sqlx::PgPool;
 use std::sync::Arc;
-use tower_http::cors::{AllowOrigin, CorsLayer};
-use tower_http::trace::TraceLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-use crate::config::Config;
-use crate::r2::R2;
-
-/// Shared application state. Cheap to clone (Arcs underneath) so we hand it to
-/// every route via `State(AppState)`.
-#[derive(Clone)]
-pub struct AppState {
-    pub config: Arc<Config>,
-    pub db: PgPool,
-    pub r2: R2,
-}
+use diligently_api::config::Config;
+use diligently_api::r2::R2;
+use diligently_api::{build_router, db, jobs, render, AppState};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     init_tracing();
 
     let config = Config::from_env()?;
+
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if !args.is_empty() {
+        return run_command(&config, &args).await;
+    }
+
     let bind_addr = config.bind_addr;
     tracing::info!(%bind_addr, "starting diligently-api");
 
@@ -55,13 +34,21 @@ async fn main() -> Result<()> {
     // exponential backoff and the user sees a clear error in the UI.
     match render::latex::probe_tectonic().await {
         Ok(version) => tracing::info!(%version, "tectonic ready"),
-        Err(err) => tracing::warn!(error = %err, "tectonic probe failed — cv_render jobs will fail until this is fixed"),
+        Err(err) => {
+            tracing::warn!(error = %err, "tectonic probe failed — cv_render jobs will fail until this is fixed")
+        }
     }
+
+    let mailer = diligently_api::mail::from_env()?;
 
     let state = AppState {
         config: Arc::new(config),
         db,
         r2,
+        mailer,
+        limiter: Arc::new(diligently_api::rate_limit::RateLimiter::from_env()?),
+        ai: diligently_api::ai::from_env()?,
+        web: diligently_api::web::from_env()?,
     };
 
     // Spawn the in-process job worker. It picks up cv_render (and future
@@ -73,9 +60,12 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
     tracing::info!(%bind_addr, "listening");
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
     tracing::info!("shut down cleanly");
     Ok(())
 }
@@ -108,6 +98,64 @@ async fn shutdown_signal() {
     tracing::info!("shutdown signal received — draining");
 }
 
+/// One-off admin commands. They run migrations first so they work against a
+/// database the new server has not started on yet.
+async fn run_command(config: &Config, args: &[String]) -> Result<()> {
+    match args {
+        [cmd] if cmd == "migrate" => {
+            let db = db::init_pool(&config.database_url).await?;
+            db::migrate(&db).await?;
+            println!("migrations applied");
+            Ok(())
+        }
+        [cmd, f1, email, f2, password]
+            if cmd == "dev-seed" && f1 == "--email" && f2 == "--password" =>
+        {
+            diligently_api::devseed::ensure_local_database(&config.database_url)?;
+            let db = db::init_pool(&config.database_url).await?;
+            db::migrate(&db).await?;
+            let id = diligently_api::devseed::seed(&db, email, password, "Ada Okafor").await?;
+            println!("seeded {email} ({id}): verified, onboarded, sample master CV");
+            Ok(())
+        }
+        [cmd] if cmd == "funnel" => funnel(config, 8).await,
+        [cmd, flag, weeks] if cmd == "funnel" && flag == "--weeks" => {
+            let weeks: i32 = weeks
+                .parse()
+                .ok()
+                .filter(|w| (1..=104).contains(w))
+                .ok_or_else(|| anyhow::anyhow!("--weeks takes a number from 1 to 104"))?;
+            funnel(config, weeks).await
+        }
+        [cmd, flag, email] if cmd == "claim-legacy" && flag == "--email" => {
+            let db = db::init_pool(&config.database_url).await?;
+            db::migrate(&db).await?;
+            let report = diligently_api::legacy::claim(&db, email).await?;
+            if report.total() == 0 {
+                println!("nothing to claim: no legacy owner or no legacy rows");
+            } else {
+                for (table, n) in &report.moved {
+                    println!("{table}: {n}");
+                }
+                println!("moved {} rows to {email}", report.total());
+            }
+            Ok(())
+        }
+        _ => {
+            anyhow::bail!("usage: diligently-api [migrate | funnel [--weeks <n>] | claim-legacy --email <account email> | dev-seed --email <e> --password <p>]")
+        }
+    }
+}
+
+/// Print the funnel. Read-only: it does not run migrations, so it is safe to
+/// point at the live database.
+async fn funnel(config: &Config, weeks: i32) -> Result<()> {
+    let db = db::init_pool(&config.database_url).await?;
+    let report = diligently_api::funnel::report(&db, weeks).await?;
+    print!("{}", diligently_api::funnel::render(&report));
+    Ok(())
+}
+
 fn init_tracing() {
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("diligently_api=info,tower_http=info,sqlx=error"));
@@ -115,141 +163,4 @@ fn init_tracing() {
         .with(filter)
         .with(fmt::layer().with_target(false))
         .init();
-}
-
-fn build_router(state: AppState) -> Router {
-    // Public routes — no bearer required.
-    let public = Router::new().route("/health", get(routes::health::health));
-
-    // Protected routes — every request must carry a valid Bearer token.
-    // `route_layer` only applies to routes added BEFORE the call, so routes go first.
-    let protected = Router::new()
-        // Bearer check ping
-        .route("/v1/me", get(routes::me::me))
-        // Events spine
-        .route(
-            "/v1/events",
-            post(routes::events::append).get(routes::events::list),
-        )
-        // Applications — central projection
-        .route(
-            "/v1/applications",
-            post(routes::applications::create).get(routes::applications::list),
-        )
-        .route(
-            "/v1/applications/{id}",
-            get(routes::applications::get_one).patch(routes::applications::patch),
-        )
-        .route(
-            "/v1/applications/{id}/timeline",
-            get(routes::applications::timeline),
-        )
-        // Company research — web-sourced briefs (synthesized on the desktop)
-        .route(
-            "/v1/applications/{id}/research",
-            post(routes::research::create).get(routes::research::get_latest),
-        )
-        // Cover letters — AIDA letters; render reuses the job worker
-        .route(
-            "/v1/applications/{id}/cover-letters",
-            post(routes::cover_letters::create).get(routes::cover_letters::get_latest),
-        )
-        .route(
-            "/v1/cover-letters/{id}/render",
-            post(routes::cover_letters::enqueue_render),
-        )
-        // Upwork proposals — AIDA proposals (no render; copy-paste artifact)
-        .route(
-            "/v1/applications/{id}/proposals",
-            post(routes::proposals::create).get(routes::proposals::get_latest),
-        )
-        // ATS scores — async LLM scoring of a CV vs the JD
-        .route(
-            "/v1/applications/{id}/ats-score",
-            post(routes::ats_scores::enqueue).get(routes::ats_scores::get_latest),
-        )
-        // CV versions — immutable snapshots
-        .route(
-            "/v1/cv-versions",
-            post(routes::cv_versions::create).get(routes::cv_versions::list),
-        )
-        .route(
-            "/v1/cv-versions/{id}",
-            get(routes::cv_versions::get_one),
-        )
-        .route(
-            "/v1/cv-versions/{id}/render",
-            post(routes::cv_versions::enqueue_render),
-        )
-        // Async job status (used by the desktop to poll render progress)
-        .route("/v1/jobs/{id}", get(routes::jobs::get_one))
-        // Interviews — capture sessions
-        .route(
-            "/v1/interviews",
-            post(routes::interviews::start).get(routes::interviews::list),
-        )
-        .route(
-            "/v1/interviews/{id}",
-            get(routes::interviews::get_one).patch(routes::interviews::patch),
-        )
-        // R2 blob presigning
-        .route("/v1/blobs/presign-upload", post(routes::blobs::presign_upload))
-        .route(
-            "/v1/blobs/presign-download",
-            post(routes::blobs::presign_download),
-        )
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth::require_bearer,
-        ));
-
-    Router::new()
-        .merge(public)
-        .merge(protected)
-        .with_state(state)
-        .layer(cors_layer())
-        .layer(TraceLayer::new_for_http())
-}
-
-/// CORS for the desktop in `npm run dev` mode (Vite at localhost:1420) and
-/// for packaged Tauri webview origins (tauri://localhost on macOS/Linux,
-/// https://tauri.localhost on Windows).
-///
-/// We don't allow `Any` because that would forbid the `Authorization` header
-/// echo browsers need for the bearer flow. Listing concrete origins keeps the
-/// preflight clean. Override via the `CORS_ALLOWED_ORIGINS` env var
-/// (comma-separated) if you add a new origin (e.g. a future web dashboard).
-fn cors_layer() -> CorsLayer {
-    let defaults: Vec<HeaderValue> = [
-        "http://localhost:1420",
-        "http://localhost:1421",
-        "http://tauri.localhost",
-        "https://tauri.localhost",
-        "tauri://localhost",
-    ]
-    .into_iter()
-    .filter_map(|s| s.parse().ok())
-    .collect();
-
-    let origins: Vec<HeaderValue> = match std::env::var("CORS_ALLOWED_ORIGINS") {
-        Ok(env) if !env.trim().is_empty() => env
-            .split(',')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .filter_map(|s| s.parse().ok())
-            .collect(),
-        _ => defaults,
-    };
-
-    CorsLayer::new()
-        .allow_origin(AllowOrigin::list(origins))
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
-        .max_age(std::time::Duration::from_secs(600))
 }

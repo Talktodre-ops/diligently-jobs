@@ -1,0 +1,8 @@
+.google {
+  height: var(--button-h); border-radius: var(--radius-pill); border: 1.5px solid var(--line-strong); background: var(--surface);
+  color: var(--ink); font-size: 15px; font-weight: 600; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.google:hover { border-color: var(--ink); color: var(--ink); }
+.or { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-2); }
+.rule { flex: 1; height: 1px; background: var(--line); }

@@ -1,0 +1,65 @@
+.words { font-size: 13px; color: var(--ink-2); margin-right: 8px; white-space: nowrap; }
+.emptyWrap { display: flex; flex-direction: column; gap: 12px; max-width: 560px; width: 100%; }
+
+.firstDraft { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.tones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toneLabel { font-size: 13px; font-weight: 600; margin-right: 4px; }
+.tone {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--tap); padding: 0 14px; border-radius: var(--radius-pill);
+  border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.tone:hover:not(:disabled) { border-color: var(--ink); }
+.tone[aria-pressed='true'] { background: var(--aubergine); color: var(--butter); border-color: var(--aubergine); }
+.tone:disabled { opacity: 0.55; cursor: not-allowed; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+
+.status:empty { display: none; }
+.status { font-size: 14px; color: var(--ink-2); padding: 0 4px; }
+
+/* The letter is a document: white paper and document ink in both themes. */
+.letter {
+  background: var(--doc-paper); color: var(--doc-ink); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 20px; font-family: var(--font-doc); font-size: 16px; line-height: 1.6;
+  display: flex; flex-direction: column; gap: 14px; transition: opacity 150ms;
+}
+.dimmed { opacity: 0.5; }
+.fixed { margin: 0; }
+.para {
+  display: block; width: 100%; text-align: left; margin: 0 -6px; width: calc(100% + 12px); padding: 2px 6px;
+  border: 0; border-radius: 6px; background: transparent; color: inherit;
+  font-family: inherit; font-size: inherit; line-height: inherit; cursor: text;
+}
+.para:hover:not(:disabled) { background: var(--butter-soft); }
+.para:focus-visible { background: var(--butter-soft); }
+.para:disabled { cursor: default; }
+
+.editor { display: flex; flex-direction: column; gap: 8px; margin: 0 -8px; padding: 10px 8px; border-radius: 10px; background: var(--butter-soft); }
+.editLabel { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--aubergine); }
+.editArea {
+  width: 100%; border-radius: 10px; border: 1.5px solid var(--aubergine-2); background: var(--doc-paper); color: var(--doc-ink);
+  font-family: var(--font-doc); font-size: 16px; line-height: 1.55; padding: 10px 12px; resize: vertical;
+}
+.editArea:focus { outline: none; border-color: var(--persimmon); box-shadow: 0 0 0 3px var(--persimmon-tint); }
+.editError { font-family: var(--font-ui); font-size: 13px; color: var(--danger); font-weight: 500; }
+.editActions { display: flex; gap: 8px; flex-wrap: wrap; font-family: var(--font-ui); }
+/* The editor sits on butter in both themes, so its quiet button keeps light-theme ink. */
+.editActions button:not([type='submit']) { color: var(--aubergine); }
+
+.hint { margin: 0 4px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%); z-index: 30;
+  padding: 10px 16px; border-radius: var(--radius-pill); background: var(--aubergine); color: var(--butter);
+  font-size: 14px; font-weight: 600; max-width: calc(100vw - 32px); text-align: center;
+}
+
+.panel { display: flex; flex-direction: column; gap: 12px; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.actions { display: flex; gap: 10px; }
+@media (min-width: 834px) {
+  .letter { padding: 40px 48px; font-size: 17px; box-shadow: var(--shadow-page); border: 0; border-radius: 4px; }
+}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&amp;family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#B5401C}a:hover{color:#3B1C32}
+input:focus{outline: 2px solid #E8603C; outline-offset: 1px; border-color: #3B1C32}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; position: relative; overflow: hidden; background: #FCF8EC; color: #3B1C32; font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column;">
+
+  <header style="padding: 12px 12px 0;">
+    <a href="Welcome.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: #3B1C32;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+  </header>
+
+  <sc-if value="{{ isSignIn }}" hint-placeholder-val="{{ true }}">
+    <main style="flex: 1; padding: 8px 24px 32px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em;">Welcome back</h1>
+        <p style="margin: 0; font-size: 15px; color: #6B4E62;">Pick up where you left off.</p>
+      </div>
+
+      <a href="Home.dc.html" style="height: 52px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid #D9CCAE; background: #FFFFFF; color: #3B1C32; font-size: 15px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;">Continue with Google</a>
+
+      <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: #6B4E62;">
+        <span style="flex: 1; height: 1px; background: #EADFC2;"></span>or<span style="flex: 1; height: 1px; background: #EADFC2;"></span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="si-email" style="font-size: 13px; font-weight: 600;">Email</label>
+        <input id="si-email" type="email" autocomplete="email" value="ada@example.com" style="height: 52px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 12px; background: #FFFFFF; padding: 0 14px; font: 16px Inter, sans-serif; color: #3B1C32;">
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <label for="si-pw" style="font-size: 13px; font-weight: 600;">Password</label>
+          <button type="button" onClick="{{ toForgot }}" style="border: 0; background: transparent; padding: 6px 0; color: #B5401C; font: 600 13px Inter, sans-serif; cursor: pointer;">Forgot password?</button>
+        </div>
+        <input id="si-pw" type="password" autocomplete="current-password" value="correcthorsebattery" style="height: 52px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 12px; background: #FFFFFF; padding: 0 14px; font: 16px Inter, sans-serif; color: #3B1C32;">
+      </div>
+
+      <a href="Home.dc.html" style="height: 54px; border-radius: 999px; background: #C2471F; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center; margin-top: 4px;">Sign in</a>
+
+      <p style="margin: 0; text-align: center; font-size: 14px; color: #6B4E62;">New here? <a href="SignUp.dc.html" style="font-weight: 600;">Create an account</a></p>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ isForgot }}" hint-placeholder-val="{{ false }}">
+    <main style="flex: 1; padding: 8px 24px 32px; display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em;">Reset your password</h1>
+        <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #6B4E62;">We will email you a link. It works once and expires in an hour.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="fp-email" style="font-size: 13px; font-weight: 600;">Email</label>
+        <input id="fp-email" type="email" autocomplete="email" value="ada@example.com" style="height: 52px; box-sizing: border-box; border: 1.5px solid #D9CCAE; border-radius: 12px; background: #FFFFFF; padding: 0 14px; font: 16px Inter, sans-serif; color: #3B1C32;">
+      </div>
+      <button type="button" onClick="{{ toSent }}" style="height: 54px; border-radius: 999px; border: 0; background: #3B1C32; color: #F6E7A6; font: 600 16px Inter, sans-serif; cursor: pointer;">Send reset link</button>
+      <button type="button" onClick="{{ toSignIn }}" style="height: 44px; border: 0; background: transparent; color: #B5401C; font: 600 14px Inter, sans-serif; cursor: pointer;">Back to sign in</button>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ isSent }}" hint-placeholder-val="{{ false }}">
+    <main style="flex: 1; padding: 8px 24px 32px; display: flex; flex-direction: column; gap: 18px;">
+      <div aria-hidden="true" style="width: 72px; height: 72px; border-radius: 20px; background: #F6E7A6; display: flex; align-items: center; justify-content: center;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3B1C32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+      </div>
+      <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em;">Link sent</h1>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #5E4456;">If an account exists for ada@example.com, the reset link is on its way.</p>
+      <button type="button" onClick="{{ toSignIn }}" style="height: 54px; border-radius: 999px; border: 1.5px solid #3B1C32; background: transparent; color: #3B1C32; font: 600 16px Inter, sans-serif; cursor: pointer;">Back to sign in</button>
+    </main>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const m = (this.state && this.state.mode) || 'signin';
+    return {
+      isSignIn: m === 'signin',
+      isForgot: m === 'forgot',
+      isSent: m === 'sent',
+      toForgot: () => this.setState({ mode: 'forgot' }),
+      toSent: () => this.setState({ mode: 'sent' }),
+      toSignIn: () => this.setState({ mode: 'signin' })
+    };
+  }
+}
+</script>
+</body>
+</html>
