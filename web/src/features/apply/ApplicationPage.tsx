@@ -16,6 +16,7 @@ import { ChangesList } from './ChangesList'
 import { CvTab } from './CvTab'
 import { plural } from './format'
 import { Progress } from './Progress'
+import { LegacyApplication } from './LegacyApplication'
 import { Questions } from './Questions'
 import { reviewItems } from './reviewItems'
 import { ScoreStrip } from './ScoreStrip'
@@ -63,7 +64,7 @@ export default function ApplicationPage() {
 
   const running = status === 'queued' || status === 'running'
   const failed = status === 'failed'
-  const rewrites = useRewrites(id, !running && brief.isSuccess)
+  const rewrites = useRewrites(id, !running && brief.isSuccess && !brief.data.application.legacy)
   const items = rewrites.data ? reviewItems(rewrites.data) : []
 
   const tabParam = params.get('tab')
@@ -92,6 +93,7 @@ export default function ApplicationPage() {
   }
 
   const b = brief.data
+  if (b.application.legacy) return <LegacyApplication brief={b} desktop={desktop} />
   const company = companyName(b.application.company)
   const role = b.application.role ?? 'New application'
   const linkFailed = failed && !!b.application.source_url && steps.some((x) => x.key === 'read_job' && x.status === 'failed')

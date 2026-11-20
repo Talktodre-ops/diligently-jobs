@@ -309,6 +309,13 @@ describe('Send sheet', () => {
     expect(screen.queryByRole('button', { name: 'Look them over' })).not.toBeInTheDocument()
   })
 
+  it('names the employer only when the posting did', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) =>
+      u === `/v1/applications/${APP}/brief` ? { ...brief, application: { ...brief.application, company: null } } : u.endsWith('/files') ? files() : base(u, m, b))
+    expect(await screen.findByRole('dialog', { name: 'Send your application' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: /New job/ })).not.toBeInTheDocument()
+  })
+
   it('sends the CV alone when there is no letter', async () => {
     setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => (u.endsWith('/files') ? files({ letter: false }) : base(u, m, b)))
     expect(await screen.findByText(/No cover letter for this job yet/)).toBeInTheDocument()

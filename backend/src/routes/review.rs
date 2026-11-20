@@ -31,13 +31,16 @@ struct AppHead {
     summary_status: String,
     pipeline_job_id: Option<Uuid>,
     created_at: DateTime<Utc>,
+    base_cv_version_id: Option<Uuid>,
+    retailored_to: Option<Uuid>,
 }
 
 async fn head(state: &AppState, uid: Uuid, app_id: Uuid) -> Result<AppHead, AppError> {
     sqlx::query_as::<_, AppHead>(
         r#"
         select id, company, role, status, source_url, jd_analysis, tailored_summary, summary_status,
-               pipeline_job_id, created_at
+               pipeline_job_id, created_at, base_cv_version_id,
+               (options->>'retailored_to')::uuid as retailored_to
         from applications where id = $1 and user_id = $2
         "#,
     )
@@ -113,6 +116,9 @@ pub async fn brief(
             "id": h.id, "company": h.company, "role": h.role, "status": h.status,
             "source_url": h.source_url, "created_at": h.created_at,
             "location": analysis.get("location"), "summary": analysis.get("summary"),
+            // Desktop-era rows have no base CV, so nothing can be tailored
+            // from them until they are tailored again.
+            "legacy": h.base_cv_version_id.is_none(), "retailored_to": h.retailored_to,
         },
         "pipeline": job.map(|j| json!({ "job_id": j.id, "status": j.status, "progress": j.progress })),
         "score": score,

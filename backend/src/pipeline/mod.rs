@@ -85,6 +85,15 @@ async fn load_app(db: &PgPool, uid: Uuid, app_id: Uuid) -> anyhow::Result<AppRow
     .ok_or_else(|| anyhow!("application {app_id} not found"))
 }
 
+/// The answer for an application carried over from the desktop app: it has
+/// no base CV, so there is no tailored CV, file or change list to show.
+pub fn legacy_application() -> AppError {
+    AppError::conflict(
+        "legacy_application",
+        "This job came from the desktop app. Tailor it again to see your CV for it.",
+    )
+}
+
 /// The master CV version an application started from.
 pub async fn base_doc(db: &PgPool, uid: Uuid, cv_id: Option<Uuid>) -> anyhow::Result<ResumeDoc> {
     let cv_id = cv_id.ok_or_else(|| anyhow!("application has no base CV"))?;
@@ -446,6 +455,9 @@ pub async fn decided_doc(
     .fetch_optional(db)
     .await?
     .ok_or(AppError::NotFound)?;
+    if base_id.is_none() {
+        return Err(legacy_application());
+    }
     let base = base_doc(db, uid, base_id)
         .await
         .map_err(AppError::Internal)?;

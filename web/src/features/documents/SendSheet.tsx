@@ -85,6 +85,8 @@ export function SendSheet({ id, onClose, onReview, onWriteLetter }: Props) {
   }, [shareable, ready, selectionKey])
 
   const company = companyName(brief.data?.application.company)
+  // A posting without a company name: "Send to New job" reads wrong.
+  const named = !!brief.data?.application.company?.trim()
 
   if (phase === 'done' && brief.data) {
     return (
@@ -119,7 +121,7 @@ export function SendSheet({ id, onClose, onReview, onWriteLetter }: Props) {
     )
   }
 
-  const title = `${company} application`
+  const title = named ? `${company} application` : 'Job application'
   const share = async () => {
     setSharing(true)
     setShareError(null)
@@ -143,7 +145,7 @@ export function SendSheet({ id, onClose, onReview, onWriteLetter }: Props) {
   const shareLabel = shareable ? 'Share' : expected > 1 ? 'Download files' : 'Download file'
 
   return (
-    <Dialog title={`Send to ${company}`} onClose={onClose}>
+    <Dialog title={named ? `Send to ${company}` : 'Send your application'} onClose={onClose}>
       {brief.isError && <Notice tone="error">{brief.error.message}</Notice>}
       {brief.data && <ChangesNote inCv={brief.data.score.decided} notSeen={brief.data.score.pending} onReview={onReview} />}
 

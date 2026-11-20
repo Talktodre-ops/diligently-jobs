@@ -477,3 +477,43 @@ describe('addresses from before the one screen', () => {
     expect((await screen.findByTestId('where')).textContent).toBe('/applications/a1 {"jobId":"j1"}')
   })
 })
+
+describe('applications from the desktop app', () => {
+  const legacy = (over: Partial<ReturnType<typeof brief>['application']> = {}) =>
+    brief({ application: { ...brief().application, company: 'Euphoric', role: 'Software Engineer', legacy: true, retailored_to: null, ...over }, pipeline: null })
+
+  it('explains itself instead of loading a CV it does not have, and tailors again', async () => {
+    const calls = open((c) => {
+      if (is(c, 'GET', `/v1/applications/${APP}/brief`)) return json(legacy())
+      if (is(c, 'POST', `/v1/applications/${APP}/tailor-again`)) return json({ application_id: 'a2', job_id: 'j2', progress: [] }, 202)
+      return undefined
+    })
+    expect(await screen.findByRole('heading', { name: 'Saved from the desktop app' })).toBeInTheDocument()
+    expect(screen.getByText(/has no changes, match score or files yet/)).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(calls.some((c) => /\/(cv|files|rewrites)$/.test(c.url))).toBe(false)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tailor again' }))
+    await waitFor(() => expect(where()).toBe('/applications/a2'))
+    expect(calls.filter((c) => is(c, 'POST', `/v1/applications/${APP}/tailor-again`))).toHaveLength(1)
+  })
+
+  it('points to the new version once tailored again', async () => {
+    open((c) => (is(c, 'GET', `/v1/applications/${APP}/brief`) ? json(legacy({ retailored_to: 'a2' })) : undefined))
+    expect(await screen.findByRole('heading', { name: 'Tailored again with your current CV' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open the tailored version' })).toHaveAttribute('href', '/applications/a2')
+    expect(screen.queryByRole('button', { name: 'Tailor again' })).not.toBeInTheDocument()
+  })
+
+  it('says what to do when there is no CV to tailor from', async () => {
+    open((c) => {
+      if (is(c, 'GET', `/v1/applications/${APP}/brief`)) return json(legacy())
+      if (is(c, 'POST', `/v1/applications/${APP}/tailor-again`)) return apiError(422, 'no_master_cv', 'Upload your CV first.')
+      return undefined
+    })
+    await userEvent.click(await screen.findByRole('button', { name: 'Tailor again' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Add your CV first.')
+    expect(within(alert).getByRole('link', { name: 'Add your CV' })).toBeInTheDocument()
+  })
+})

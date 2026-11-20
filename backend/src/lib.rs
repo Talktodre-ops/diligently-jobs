@@ -168,6 +168,10 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/v1/cv/uploads/{id}", get(uploads::get_upload))
         .route("/v1/applications/start", post(workspace::start))
+        .route(
+            "/v1/applications/{id}/tailor-again",
+            post(workspace::tailor_again),
+        )
         .route("/v1/applications/{id}/brief", get(review::brief))
         .route("/v1/applications/{id}/rewrites", get(review::list_rewrites))
         .route(
