@@ -7,6 +7,7 @@ import { TextArea, TextField } from '../../ui/TextField'
 import { useStartApplication } from './api'
 import { SheetHeader } from './SheetHeader'
 import { clearJobDraft, loadJobDraft, saveJobDraft } from './jobDraft'
+import { sharedJob } from './sharedJob'
 import { isApiError } from '../../api/client'
 import { looksLikeUrl, MIN_JD_CHARS, startProblem } from './startErrors'
 import { Switch } from '../../ui/Switch'
@@ -20,8 +21,9 @@ const modes: { mode: Mode; label: string }[] = [
 
 export default function NewJobPage() {
   const [params] = useSearchParams()
-  // A job pasted before there was a CV comes back here after the upload.
-  const [draft] = useState(() => loadJobDraft())
+  // A job shared from another app, or one pasted before there was a CV
+  // that comes back here after the upload.
+  const [draft] = useState(() => sharedJob(params) ?? loadJobDraft())
   const draftIsUrl = !!draft && looksLikeUrl(draft)
   const [mode, setMode] = useState<Mode>(draftIsUrl || params.get('mode') === 'link' ? 'link' : 'text')
   const [jd, setJd] = useState(draft && !draftIsUrl ? draft : '')

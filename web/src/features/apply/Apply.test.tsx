@@ -74,6 +74,20 @@ describe('NewJobPage', () => {
     expect(screen.getByLabelText('Link to the job')).toHaveValue('https://jobs.example.com/7')
   })
 
+  it('opens a job shared from another app on the link tab', () => {
+    renderRoute(<NewJobPage />, {
+      path: `/new?title=Senior%20Engineer&text=${encodeURIComponent('Check out this job: https://www.linkedin.com/jobs/view/42.')}`,
+      pattern: '/new', api: () => undefined,
+    })
+    expect(screen.getByRole('tab', { name: 'Job link' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('Link to the job')).toHaveValue('https://www.linkedin.com/jobs/view/42')
+  })
+
+  it('takes shared text without a link as the description', () => {
+    renderRoute(<NewJobPage />, { path: `/new?text=${encodeURIComponent(JD)}`, pattern: '/new', api: () => undefined })
+    expect(screen.getByLabelText('Job description')).toHaveValue(JD.trim())
+  })
+
   it('offers the text box when a link cannot be read', async () => {
     open((c) => (is(c, 'POST', '/v1/applications/start') ? apiError(422, 'link_unreadable', 'We could not read that link.') : undefined))
     const u = userEvent.setup()
