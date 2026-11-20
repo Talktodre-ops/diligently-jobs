@@ -12,6 +12,7 @@ pub mod docx_text;
 pub mod error;
 pub mod extract;
 pub mod followups;
+pub mod funnel;
 pub mod jobs;
 pub mod legacy;
 pub mod mail;

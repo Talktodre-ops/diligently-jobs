@@ -111,6 +111,19 @@ cargo run -- claim-legacy --email you@example.com
 
 See `docs/decisions/` for why sessions are cookies rather than JWTs.
 
+## Funnel
+
+`funnel` prints how many accounts that signed up in each recent week reached
+each step: verified, added a CV, started, tailored, downloaded, sent, followed
+up, came back a week later. It reads data the features already keep plus one
+`files_downloaded` event from the Send screen, leaves out `@example.com` and
+`@diligently.local` accounts, and never writes, so it is safe against the live
+database.
+
+```bash
+cargo run -- funnel --weeks 8
+```
+
 ## Deployment options
 
 | Target | When | How |

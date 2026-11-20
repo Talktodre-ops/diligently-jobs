@@ -118,6 +118,15 @@ async fn run_command(config: &Config, args: &[String]) -> Result<()> {
             println!("seeded {email} ({id}): verified, onboarded, sample master CV");
             Ok(())
         }
+        [cmd] if cmd == "funnel" => funnel(config, 8).await,
+        [cmd, flag, weeks] if cmd == "funnel" && flag == "--weeks" => {
+            let weeks: i32 = weeks
+                .parse()
+                .ok()
+                .filter(|w| (1..=104).contains(w))
+                .ok_or_else(|| anyhow::anyhow!("--weeks takes a number from 1 to 104"))?;
+            funnel(config, weeks).await
+        }
         [cmd, flag, email] if cmd == "claim-legacy" && flag == "--email" => {
             let db = db::init_pool(&config.database_url).await?;
             db::migrate(&db).await?;
@@ -133,9 +142,18 @@ async fn run_command(config: &Config, args: &[String]) -> Result<()> {
             Ok(())
         }
         _ => {
-            anyhow::bail!("usage: diligently-api [migrate | claim-legacy --email <account email> | dev-seed --email <e> --password <p>]")
+            anyhow::bail!("usage: diligently-api [migrate | funnel [--weeks <n>] | claim-legacy --email <account email> | dev-seed --email <e> --password <p>]")
         }
     }
+}
+
+/// Print the funnel. Read-only: it does not run migrations, so it is safe to
+/// point at the live database.
+async fn funnel(config: &Config, weeks: i32) -> Result<()> {
+    let db = db::init_pool(&config.database_url).await?;
+    let report = diligently_api::funnel::report(&db, weeks).await?;
+    print!("{}", diligently_api::funnel::render(&report));
+    Ok(())
 }
 
 fn init_tracing() {
