@@ -16,7 +16,7 @@ export default function WelcomePage() {
       </div>
       <div className={s.copy}>
         <h1 className={s.title}>Apply from anywhere.</h1>
-        <p className={s.lede}>Paste a job. Get a tailored CV, a match score and a cover letter, ready to send from your phone.</p>
+        <p className={s.lede}>Paste a job. Get a tailored CV, a match score and a cover letter, set in type and ready to download on your phone.</p>
       </div>
       <div className={s.actions}>
         <ButtonLink to="/signup" state={state} block>Create an account</ButtonLink>

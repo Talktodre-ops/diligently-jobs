@@ -1,3 +1,4 @@
+.forWhom { margin: -6px 0 0; font-size: 14px; color: var(--ink-2); }
 .changes { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
 .inlineLink { padding: 0; border: 0; background: transparent; color: var(--persimmon-text); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
 .inlineLink:hover { color: var(--ink); }
@@ -23,18 +24,22 @@
 .optionLabel { display: block; font-size: 15px; font-weight: 600; }
 .optionNote { display: block; font-size: 13px; color: var(--ink-2); }
 
-.letterRow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .noLetter { margin: 0; max-width: 70ch; font-size: 14px; color: var(--ink-3); line-height: 1.5; }
 
 .files { display: flex; flex-direction: column; gap: 8px; }
 .filesTitle { font-size: 13px; font-weight: 600; }
 .fileList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.fileRow { display: flex; align-items: center; gap: 10px; font-size: 14px; min-width: 0; }
+.fileRow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; min-width: 0; }
+.fileText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fileWhat { font-size: 15px; font-weight: 600; }
 .ext { padding: 4px 8px; border-radius: 6px; background: var(--persimmon-tint); color: var(--aubergine); font-size: 12px; font-weight: 600; flex: none; }
-.fileName { overflow-wrap: anywhere; }
+.fileName { overflow-wrap: anywhere; font-size: 13px; color: var(--ink-2); }
 .preparing { margin: 0; font-size: 14px; color: var(--ink-2); }
 .renderError { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 
+.ask { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 14px; background: var(--persimmon-tint); }
+.askTitle { margin: 0; font-size: 17px; font-weight: 600; }
+.askActions { display: flex; flex-wrap: wrap; gap: 10px; }
 .dialogText { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
 
 /* Done: the dark celebration screen. Its colours are fixed, like the board. */

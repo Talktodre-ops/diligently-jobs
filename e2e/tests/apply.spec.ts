@@ -151,7 +151,7 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
   const steps = page.getByRole('list', { name: 'Progress' })
   await expect(steps.getByRole('listitem')).toHaveCount(5)
   await expect(page.getByRole('heading', { name: 'Tailoring your CV' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Download', exact: true })).toBeDisabled()
   await bothSizes(page, 'running')
   await page.reload()
   const score = page.getByRole('region', { name: 'Match score' })

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { createReadyAccount } from '../support/account'
 
-// The application screen's CV, Letter and Company tabs, the Send sheet and
+// The application screen's CV, Letter and Company tabs, the Download sheet and
 // Documents, driven the way a person would after a real pipeline has finished.
 //
 // The pipeline makes real AI and web-search calls, so one finished
@@ -153,10 +153,19 @@ test.describe.serial('documents', () => {
     await expect(page).toHaveURL(new RegExp(`/applications/${f.applicationId}$`))
   })
 
-  test('letter tab: switch tone, edit a paragraph, copy', async ({ page, context }, info) => {
-    test.setTimeout(120_000)
+  test('letter tab: the letter as LaTeX set it, then tone, a paragraph, copy', async ({ page, context }, info) => {
+    test.setTimeout(180_000)
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.goto(`/applications/${f.applicationId}?tab=letter`)
+    // Page first: the file that gets downloaded.
+    const pages = page.getByTestId('pdf-pages')
+    await expect(pages).toHaveAttribute('data-status', 'ready', { timeout: 90_000 })
+    await expect(page.getByRole('img', { name: /Cover letter page 1 of \d+, as rendered/ })).toBeVisible()
+    await shot(page, info, 'letter-page')
+
+    const views = page.getByRole('group', { name: 'How to show your letter' })
+    await views.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page).toHaveURL(/[?&]view=edit/)
     const letter = page.getByRole('article', { name: 'Your cover letter' })
     await expect(letter).toBeVisible()
     await expect(page.getByText(/^\d+ words$/)).toBeVisible()
@@ -187,6 +196,11 @@ test.describe.serial('documents', () => {
     const copied = await page.evaluate(() => navigator.clipboard.readText())
     expect(copied).toContain(added)
     await shot(page, info, 'letter')
+
+    // The edit is set in type again before the page shows.
+    await views.getByRole('button', { name: 'Page', exact: true }).click()
+    await expect(pages).toHaveAttribute('data-status', 'ready', { timeout: 90_000 })
+    await expect(page.getByRole('img', { name: /Cover letter page 1 of \d+, as rendered/ })).toBeVisible()
   })
 
   test('cv tab: the page as LaTeX set it, its changes, and the text view', async ({ page }, info) => {
@@ -218,7 +232,7 @@ test.describe.serial('documents', () => {
     await shot(page, info, 'cv-read')
   })
 
-  test('send: choose files, hand them over, mark as applied', async ({ page, baseURL }, info) => {
+  test('download: both files or one, then mark as applied', async ({ page, baseURL }, info) => {
     test.setTimeout(120_000)
     // The reminder starts at the number of days chosen in Settings.
     const setDays = async (days: number) => {
@@ -227,38 +241,48 @@ test.describe.serial('documents', () => {
     }
     await setDays(14)
     await page.goto(`/applications/${f.applicationId}`)
-    await page.getByRole('button', { name: 'Send', exact: true }).click()
-    await expect(page).toHaveURL(new RegExp(`/applications/${f.applicationId}\\?send=1$`))
-    const sheet = page.getByRole('dialog', { name: `Send to ${f.company}` })
+    await page.getByRole('button', { name: 'Download', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/applications/${f.applicationId}\\?download=1$`))
+    const sheet = page.getByRole('dialog', { name: 'Download your files' })
     await expect(sheet).toBeVisible()
-    await expect(sheet.getByText(/Your CV (has \d+ changes? for this job|goes out as you wrote it)/)).toBeVisible()
+    await expect(sheet.getByText(new RegExp(`^For ${f.company}, `))).toBeVisible()
+    await expect(sheet.getByText(/Your CV (has \d+ changes? for this job|is as you wrote it)/)).toBeVisible()
     await expect(sheet.getByRole('radio', { name: /PDF/ })).toBeChecked()
-    await expect(sheet.getByRole('switch', { name: 'Include cover letter' })).toHaveAttribute('aria-checked', 'true')
     const files = sheet.getByRole('list', { name: 'Files' })
     await expect(files.getByRole('listitem')).toHaveCount(2, { timeout: 60_000 })
     await expect(files).toContainText(/ CV\.pdf/)
     await expect(files).toContainText(/ Cover letter\.pdf/)
-    await shot(page, info, 'send')
+    await shot(page, info, 'download')
 
     await sheet.getByRole('radio', { name: /DOCX/ }).check()
     await expect(files).toContainText(/ CV\.docx/)
     await sheet.getByRole('radio', { name: /PDF/ }).check()
 
-    const handOver = sheet.getByRole('button', { name: /^(Share|Download files)$/ })
-    await expect(handOver).toBeEnabled()
     const downloads: { name: string; path: Promise<string> }[] = []
     page.on('download', (d) => downloads.push({ name: d.suggestedFilename(), path: d.path() }))
-    await handOver.click()
-    const dialog = page.getByRole('dialog', { name: 'Did you send it?' })
-    await expect(dialog).toBeVisible()
+    // One file on its own.
+    await sheet.getByRole('button', { name: 'Download the cover letter as PDF' }).click()
+    await expect.poll(() => downloads.length).toBe(1)
+    expect(downloads[0]!.name).toMatch(/ Cover letter\.pdf$/)
+    const ask = sheet.getByRole('region', { name: 'Did you apply?' })
+    await expect(ask).toBeVisible()
+    await ask.getByRole('button', { name: 'Not yet' }).click()
+    await expect(ask).toBeHidden()
+
+    // Both together.
+    downloads.length = 0
+    const both = sheet.getByRole('button', { name: 'Download both' })
+    await expect(both).toBeEnabled()
+    await both.click()
+    await expect(ask).toBeVisible()
     await expect.poll(() => downloads.length).toBe(2)
     const cvPdf = downloads.find((d) => / CV\.pdf$/.test(d.name))
     expect(cvPdf).toBeTruthy()
     expect(downloads.some((d) => / Cover letter\.pdf$/.test(d.name))).toBe(true)
     expect((await readFile(await cvPdf!.path)).subarray(0, 5).toString('latin1')).toBe('%PDF-')
-    await shot(page, info, 'send-confirm')
+    await shot(page, info, 'download-ask')
 
-    await dialog.getByRole('button', { name: 'Yes, mark as applied' }).click()
+    await ask.getByRole('button', { name: 'Yes, I applied' }).click()
     await expect(page.getByRole('heading', { name: 'Applied.' })).toBeVisible()
     await expect(page.getByRole('button', { name: '14 days' })).toHaveAttribute('aria-pressed', 'true')
     await setDays(7)
@@ -266,7 +290,7 @@ test.describe.serial('documents', () => {
     await page.getByRole('button', { name: '10 days' }).click()
     await expect(page.getByRole('button', { name: '10 days' })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByText(/We will nudge you on/)).not.toHaveText(before ?? '')
-    await shot(page, info, 'send-done')
+    await shot(page, info, 'applied')
     await expect(page.getByRole('link', { name: 'Back home' })).toHaveAttribute('href', '/')
     await page.getByRole('button', { name: 'Back to this application' }).click()
     await expect(page.getByRole('heading', { name: 'Applied.' })).toBeHidden()
@@ -292,7 +316,7 @@ test.describe.serial('documents', () => {
 
     const [file] = await Promise.all([
       page.waitForEvent('download', { timeout: 60_000 }),
-      page.getByRole('button', { name: `Share CV · ${f.company}` }).click(),
+      page.getByRole('button', { name: `Download CV · ${f.company}` }).click(),
     ])
     expect(file.suggestedFilename()).toMatch(/ CV\.pdf$/)
 

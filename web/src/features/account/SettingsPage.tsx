@@ -309,7 +309,7 @@ export default function SettingsPage() {
               <Row label="Follow-up reminders" note="An email with a follow-up already drafted">
                 <Switch label="Follow-up reminders" checked={p.notifications.follow_ups} onChange={(v) => change({ notifications: { follow_ups: v } })} />
               </Row>
-              <Field id="f-days" label="Follow up after" hint="Picked for you on the Send screen. You can still change it per job.">
+              <Field id="f-days" label="Follow up after" hint="Set when you mark a job as applied. You can still change it per job.">
                 <Choice labelledBy="f-days" value={p.reminders.follow_up_days} options={DAYS} onPick={(v) => change({ reminders: { follow_up_days: v } })} />
               </Field>
               <Field

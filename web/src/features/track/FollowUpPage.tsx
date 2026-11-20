@@ -124,7 +124,7 @@ export default function FollowUpPage() {
       <main className={s.main}>
         <div>
           <h2 className={s.h}>
-            {app.data.submitted_at ? `Sent ${ago(app.data.submitted_at)}` : 'Time for a nudge'}
+            {app.data.submitted_at ? `Applied ${ago(app.data.submitted_at)}` : 'Time for a nudge'}
           </h2>
           <p className={s.lede}>A short, specific nudge works best. Here is one to start from.</p>
         </div>

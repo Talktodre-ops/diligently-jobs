@@ -182,7 +182,7 @@ async fn build_weekly(
     .fetch_all(db)
     .await?;
 
-    // Tailored (the pipeline finished) but not sent yet.
+    // Tailored (the pipeline finished) but not applied to yet.
     let ready = sqlx::query_as::<_, AppRow>(
         r#"
         select a.company, a.role
@@ -244,7 +244,10 @@ async fn build_weekly(
             format!("{} is due on {}.", company(&d.company), d.day_long)
         }
     } else if let Some(a) = ready.first() {
-        format!("Your {} application is ready to send.", company(&a.company))
+        format!(
+            "Your {} application is ready to download.",
+            company(&a.company)
+        )
     } else {
         let q = &quiet[0];
         format!(
@@ -274,8 +277,8 @@ async fn build_weekly(
     for a in &ready {
         rows.push(Row {
             label: "Any day".into(),
-            title: format!("Send your {} application", company(&a.company)),
-            detail: format!("{}. Tailored and ready, not sent yet.", role(&a.role)),
+            title: format!("Apply to {}", company(&a.company)),
+            detail: format!("{}. Tailored and ready to download.", role(&a.role)),
             accent: true,
         });
     }

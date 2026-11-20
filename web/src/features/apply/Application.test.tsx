@@ -114,15 +114,15 @@ describe('tailoring in place', () => {
       return undefined
     })
 
-  it('shows the live steps above the tabs and holds Send until the CV is ready', async () => {
+  it('shows the live steps above the tabs and holds Download until the CV is ready', async () => {
     const calls = running({ id: 'j1', status: 'running', progress: steps(['done', 'running', 'pending', 'pending', 'skipped']) })
     expect(await screen.findByRole('heading', { name: 'Tailoring your CV' })).toBeInTheDocument()
     const list = screen.getByRole('list', { name: 'Progress' })
     expect(await within(list).findAllByRole('listitem')).toHaveLength(5)
     expect(within(list).getByText('Comparing it with your CV')).toBeInTheDocument()
     expect(screen.getByText(/as soon as the rewrites are ready/)).toBeInTheDocument()
-    expect(screen.getByText('Send opens when your CV is ready.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(screen.getByText('Download opens when your CV is ready.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled()
     expect(screen.queryByRole('region', { name: 'Match score' })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('tab', { name: 'Letter' }))
@@ -144,7 +144,7 @@ describe('tailoring in place', () => {
     }))
     expect(await screen.findByTestId('pdf')).toHaveAttribute('data-url', 'http://s3.test/cv.pdf')
     expect(screen.queryByRole('heading', { name: 'Tailoring your CV' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled()
     expect(where()).toBe(`/applications/${APP}`)
   })
 
@@ -288,7 +288,7 @@ describe('the CV tab', () => {
     await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ action: 'accept' }))
   })
 
-  it('opens the first change not looked at from beside Send', async () => {
+  it('opens the first change not looked at from beside Download', async () => {
     open(server())
     await userEvent.click(await screen.findByRole('button', { name: '2 not looked at yet' }))
     expect(await screen.findByRole('dialog', { name: 'Summary' })).toBeInTheDocument()
@@ -333,7 +333,7 @@ describe('the page as LaTeX sets it', () => {
       },
     }))
     expect(await screen.findByText('Your CV did not set in type.')).toBeInTheDocument()
-    expect(screen.getByText(/Nothing has been sent, and Send waits until it works/)).toBeInTheDocument()
+    expect(screen.getByText(/Download waits until it works/)).toBeInTheDocument()
     expect(screen.queryByTestId('pdf')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(renders).toBe(2))
@@ -409,11 +409,11 @@ describe('tabs', () => {
     await waitFor(() => expect(where()).toBe(`/applications/${APP}`))
   })
 
-  it('opens Send from the footer', async () => {
+  it('opens Download from the footer', async () => {
     open(server({ extra: (c) => (c.url.endsWith('/cover-letters') ? apiError(404, 'not_found', 'Not found') : undefined) }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Send' }))
-    await waitFor(() => expect(where()).toBe(`/applications/${APP}?send=1`))
-    expect(await screen.findByRole('dialog', { name: 'Send to Cobalt Harbor' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: 'Download' }))
+    await waitFor(() => expect(where()).toBe(`/applications/${APP}?download=1`))
+    expect(await screen.findByRole('dialog', { name: 'Download your files' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Write one' }))
     await waitFor(() => expect(where()).toBe(`/applications/${APP}?tab=letter`))
   })
@@ -464,7 +464,7 @@ describe('addresses from before the one screen', () => {
     ['/applications/a1/cv', '/applications/a1'],
     ['/applications/a1/letter', '/applications/a1?tab=letter'],
     ['/applications/a1/research', '/applications/a1?tab=company'],
-    ['/applications/a1/send', '/applications/a1?send=1'],
+    ['/applications/a1/send', '/applications/a1?download=1'],
     ['/applications/a1/review', '/applications/a1?change=next'],
     ['/applications/a1/review?item=r2', '/applications/a1?change=r2'],
   ])('%s lands on %s', async (from, to) => {
