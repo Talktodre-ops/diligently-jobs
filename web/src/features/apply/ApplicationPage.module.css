@@ -53,3 +53,11 @@
 .deskMain { min-width: 0; max-width: 880px; }
 .desk .tabs { gap: 24px; }
 .desk .tab { flex: none; padding: 0 2px; }
+
+/* An application from the desktop app: no CV to show, one way forward. */
+.legacy { max-width: 560px; padding: 22px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+.legacyTitle { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.2; }
+.legacyText { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+.legacyActions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.legacyOpen { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 22px; border-radius: 999px; background: var(--persimmon-deep); color: var(--paper); font-weight: 600; text-decoration: none; }
+.legacyOpen:hover { background: var(--ink); }

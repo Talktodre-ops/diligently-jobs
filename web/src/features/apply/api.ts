@@ -27,6 +27,10 @@ export type Brief = {
     location: string | null
     summary: string | null
     created_at: string
+    /** Carried over from the desktop app: no base CV, nothing tailored. */
+    legacy?: boolean
+    /** The application it was tailored again into, if it was. */
+    retailored_to?: string | null
   }
   pipeline: { job_id: string; status: Job['status']; progress: Step[] | null } | null
   score: Score
@@ -118,6 +122,20 @@ export function useStartApplication() {
   return useMutation({
     mutationFn: (input: StartInput) => api.post<Started>('/v1/applications/start', input),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['home'] })
+      qc.invalidateQueries({ queryKey: ['usage'] })
+      qc.invalidateQueries({ queryKey: ['applications'] })
+    },
+  })
+}
+
+/** Start a new application from a desktop-era one's saved posting. */
+export function useTailorAgain(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<{ application_id: string }>(`/v1/applications/${id}/tailor-again`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.brief(id) })
       qc.invalidateQueries({ queryKey: ['home'] })
       qc.invalidateQueries({ queryKey: ['usage'] })
       qc.invalidateQueries({ queryKey: ['applications'] })
