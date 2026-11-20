@@ -145,67 +145,58 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
   await bothSizes(page, 'newjob-filled')
   await page.getByRole('button', { name: 'Tailor my CV' }).click()
 
-  // Running: a live step list that survives a reload.
-  await expect(page).toHaveURL(/\/applications\/[0-9a-f-]+\/running$/)
-  const appUrl = page.url().replace(/\/running$/, '')
+  // Tailoring shows in place on the application, and survives a reload.
+  await expect(page).toHaveURL(/\/applications\/[0-9a-f-]+$/)
+  const appUrl = page.url()
   const steps = page.getByRole('list', { name: 'Progress' })
   await expect(steps.getByRole('listitem')).toHaveCount(5)
-  await expect(page.getByRole('heading', { name: 'Working on it' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tailoring your CV' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled()
   await bothSizes(page, 'running')
   await page.reload()
-  await expect(page.getByRole('heading', { name: /Working on it|Ready\./ })).toBeVisible()
-  await expect(steps.getByRole('listitem')).toHaveCount(5)
+  const cv = page.getByRole('article', { name: 'Your tailored CV' })
+  await expect(steps.or(cv)).toBeVisible()
 
-  await expect(page.getByRole('heading', { name: 'Ready.' })).toBeVisible({ timeout: 6 * 60_000 })
+  // When it finishes, the CV takes its place with each change marked.
+  await expect(cv).toBeVisible({ timeout: 6 * 60_000 })
+  await expect(page.getByRole('heading', { name: 'Tailoring your CV' })).toBeHidden()
   await expect(page.getByText('Cobalt Harbor', { exact: false }).first()).toBeVisible()
-  await bothSizes(page, 'running-done')
-  await page.getByRole('link', { name: 'See your application' }).click()
-
-  // Workspace: score before and now, and what is waiting.
-  await expect(page).toHaveURL(appUrl)
   const score = page.getByRole('region', { name: 'Match score' })
-  await expect(score.getByText('Before')).toBeVisible()
+  await expect(score).toBeVisible()
   const nowBefore = Number(await score.getByRole('status').textContent())
-  const cvRow = page.getByRole('link', { name: /CV tailored/ })
-  await expect(cvRow).toContainText(/(\d+) to look over/)
-  const waitingBefore = Number((await cvRow.textContent())!.match(/(\d+) to look over/)![1])
+  const notSeen = page.getByRole('button', { name: /^\d+ not looked at yet$/ })
+  await expect(notSeen).toBeVisible()
+  const waitingBefore = Number((await notSeen.textContent())!.match(/^(\d+)/)![1])
   expect(waitingBefore).toBeGreaterThan(1)
   await bothSizes(page, 'workspace')
 
-  // Review: use one rewrite, edit the next, and the count goes down by two.
-  await cvRow.click()
-  await expect(page).toHaveURL(`${appUrl}/review`)
-  await expect(page.getByRole('heading', { name: `${waitingBefore} to look over` })).toBeVisible()
+  // Look over: keep one as suggested, edit the next; two fewer not looked at.
+  await notSeen.click()
+  await expect(page).toHaveURL(`${appUrl}?change=next`)
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByText('In your CV for this job')).toBeVisible()
   await bothSizes(page, 'review')
-  await page.getByRole('button', { name: 'Use rewrite' }).click()
-  await expect(page.getByRole('heading', { name: `${waitingBefore - 1} to look over` })).toBeVisible()
-
-  await page.getByRole('button', { name: 'Edit', exact: true }).click()
-  const edit = page.getByRole('textbox', { name: 'Edit the rewrite' })
+  await sheet.getByRole('button', { name: 'Looks good' }).click()
+  await sheet.getByRole('button', { name: 'Edit', exact: true }).click()
+  const edit = sheet.getByRole('textbox', { name: 'Edit the line' })
   await edit.fill('Owned Go services for payment reconciliation, matching ledger entries against bank files every day.')
   await bothSizes(page, 'review-edit')
-  await page.getByRole('button', { name: 'Save and use' }).click()
-  await expect(page.getByRole('heading', { name: `${waitingBefore - 2} to look over` })).toBeVisible()
-
-  // Back on the workspace the brief reflects both decisions. Both were in the
-  // CV already, so the score holds.
-  await page.getByRole('link', { name: 'Back to application' }).click()
-  await expect(page.getByRole('link', { name: /CV tailored/ })).toContainText(`${waitingBefore - 2} to look over`)
+  await sheet.getByRole('button', { name: 'Save and use' }).click()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  const left = waitingBefore - 2
+  if (left > 0) await expect(page.getByRole('button', { name: `${left} not looked at yet` })).toBeVisible()
+  else await expect(page.getByRole('button', { name: /not looked at yet/ })).toBeHidden()
+  await expect(cv).toContainText('Owned Go services for payment reconciliation')
+  // Both were in the CV already, so the score holds.
   const nowAfter = Number(await score.getByRole('status').textContent())
   expect(nowAfter).toBeGreaterThanOrEqual(nowBefore)
 
-  // Gaps: answer one with "I have this" (a real AI call), add the bullet, mark another "I don't".
-  const gapsRow = page.getByRole('link', { name: /gaps? to address|No gaps found|Gaps answered/ })
-  const gapsText = (await gapsRow.textContent()) ?? ''
-  await gapsRow.click()
-  await expect(page).toHaveURL(`${appUrl}/gaps`)
-  if (!/No gaps found/.test(gapsText)) {
+  // Questions above the CV: answer one with "I have this" (a real AI call), add the bullet, then "I don't".
+  const questions = page.getByRole('heading', { name: /questions? would make this stronger/ })
+  if (await questions.isVisible()) {
     await bothSizes(page, 'gaps')
-    const heading = page.getByRole('heading', { name: /gaps? to look at|All gaps handled/ })
-    const firstCount = await heading.textContent()
-
-    const first = page.getByRole('button', { name: 'I have this' }).first()
-    await first.click()
+    await page.getByRole('button', { name: 'I have this' }).click()
     await page.getByLabel('Where did you use it?').fill(
       'At Northfold I wrote a design doc for every ledger change and ran zero-downtime Postgres migrations with expand and contract steps.',
     )
@@ -216,25 +207,21 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
     if (await suggestion.isVisible()) {
       await bothSizes(page, 'gaps-suggested')
       await page.getByRole('button', { name: 'Add to this CV' }).click()
-      await expect(page.getByText('Added to this CV')).toBeVisible()
+      await expect(suggestion).toBeHidden()
     }
-
-    const dont = page.getByRole('button', { name: "I don't" }).first()
+    const dont = page.getByRole('button', { name: "I don't" })
     if (await dont.isVisible()) {
       await dont.click()
-      await expect(page.getByText(/Left out of your CV/).first()).toBeVisible()
+      await expect(page.getByRole('button', { name: "I don't" }).or(page.getByRole('heading', { name: /You answered/ })).first()).toBeVisible()
     }
-    await expect(heading).not.toHaveText(firstCount ?? '')
     await bothSizes(page, 'gaps-answered')
-    await page.getByRole('link', { name: /Decide later|Done/ }).click()
-    await expect(page).toHaveURL(appUrl)
   }
 
-  // Desktop workspace: rewrites inline beside the rendered CV.
+  // Desktop: every change listed beside the rendered CV.
   await page.setViewportSize(DESKTOP)
-  await expect(page.getByRole('heading', { name: /rewrites? needs? you|All rewrites reviewed/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /changes? in your CV|No changes suggested/ })).toBeVisible()
   await expect(page.getByRole('switch', { name: 'Show changes' })).toBeVisible()
-  await expect(page.locator('article')).toContainText('Owned Go services for payment reconciliation')
+  await expect(cv).toContainText('Owned Go services for payment reconciliation')
   await shot(page, 'workspace-after', 'desktop')
   await page.setViewportSize(MOBILE)
   await shot(page, 'workspace-after', 'mobile')

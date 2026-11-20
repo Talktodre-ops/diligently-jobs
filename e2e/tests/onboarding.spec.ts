@@ -294,9 +294,9 @@ test('pasted text is read, a fix can wait, and the first job starts tailoring', 
   await page.getByLabel('Job link or description').fill(JOB)
   await shot(page, info, 'first-job')
   await page.getByRole('button', { name: 'Tailor my CV' }).click()
-  await expect(page).toHaveURL(/\/applications\/[0-9a-f-]+\/running$/, { timeout: 30_000 })
+  await expect(page).toHaveURL(/\/applications\/[0-9a-f-]+$/, { timeout: 30_000 })
   expect((await profile(page)).onboarding_step).toBe('done')
-  await expect(page.getByRole('heading', { name: 'Working on it' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tailoring your CV' })).toBeVisible()
   await shot(page, info, 'first-job-running')
 })
 
