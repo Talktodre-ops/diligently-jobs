@@ -57,7 +57,6 @@ in `.env`. See `docs/decisions/2026-11-12-tests-run-on-local-services-only.md`.
 ```
 backend/
 ├── Cargo.toml              # deps + [[bin]] name
-├── Dockerfile              # multi-stage prod image (~80MB)
 ├── Dockerfile.dev          # dev image with rust toolchain + cargo-watch
 ├── justfile                # task runner (just <target>)
 ├── .env.example            # template
@@ -128,6 +127,7 @@ cargo run -- funnel --weeks 8
 
 | Target | When | How |
 |---|---|---|
+| Railway | production | Railway builds the root `Dockerfile` from GitHub on each push: one service serving the API and the web build on one origin. It listens on `PORT`; set the variables from `.env.example`. |
 | Local Docker | dev iteration | `docker compose up -d` at the repository root |
 | Tailscale-only VPS (recommended) | personal use | Hetzner/Fly box, bind to `100.x.x.x:8787`, only your tailnet sees it |
 | Public | standard | Bind `0.0.0.0` behind a TLS terminator (Caddy/nginx), set `TRUST_PROXY=true` and `COOKIE_SECURE=true`. |
