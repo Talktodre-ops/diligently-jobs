@@ -14,6 +14,7 @@ import { useFreshFiles, useLetter, useMarkApplied, type Applied, type FileLinks 
 import { canShareFiles, fetchAsFiles, MIME, shareOrDownload, type ShareFile, type ShareOutcome } from './download'
 import { fileNameFromUrl, shownScore } from './format'
 import { plural } from '../apply/format'
+import { track } from '../../api/track'
 import { SendDone } from './SendDone'
 import { useRenderedFiles } from './useRenderedFiles'
 import s from './Send.module.css'
@@ -103,6 +104,7 @@ export default function SendPage() {
       const list = ahead ? selected : pick(await fresh(id), format, includeLetter)
       const result = await shareOrDownload(list, ahead, title)
       if (result !== 'cancelled') {
+        track('files_downloaded', id, { format, with_letter: includeLetter, via: result })
         setOutcome(result)
         setPhase('confirm')
       }

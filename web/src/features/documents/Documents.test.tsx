@@ -294,6 +294,9 @@ describe('SendPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Download files' }))
     const dialog = await screen.findByRole('dialog', { name: 'Did you send it?' })
     await waitFor(() => expect(clicked).toHaveLength(2))
+    expect(calls.find((c) => c.url === '/v1/events')?.body).toEqual({
+      kind: 'files_downloaded', application_id: APP, payload: { format: 'pdf', with_letter: true, via: 'downloaded' },
+    })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Yes, mark as applied' }))
     expect(await screen.findByRole('heading', { name: 'Applied.' })).toBeInTheDocument()
     expect(screen.getByText(/sent with a match of 78/)).toBeInTheDocument()
