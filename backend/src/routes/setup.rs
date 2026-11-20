@@ -29,8 +29,11 @@ pub struct Setup {
     pub show: bool,
 }
 
+/// cv, check, targets, first application, hidden until.
+type SetupRow = (bool, bool, bool, bool, Option<DateTime<Utc>>);
+
 pub async fn status(db: &PgPool, user_id: Uuid) -> Result<Setup, AppError> {
-    let row: Option<(bool, bool, bool, bool, Option<DateTime<Utc>>)> = sqlx::query_as(
+    let row: Option<SetupRow> = sqlx::query_as(
         r#"
         select p.master_cv_version_id is not null,
                p.cv_checked_at is not null,

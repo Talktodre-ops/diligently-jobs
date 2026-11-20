@@ -429,8 +429,10 @@ async fn fully_tailored(
     Ok(compose(base, &changes, summary.as_deref(), &[]))
 }
 
-/// The tailored CV with only the user's decisions applied: accepted or
-/// edited rewrites, an accepted summary and accepted gap bullets.
+/// The tailored CV as it would go out. Suggestions count as accepted until
+/// the user keeps their original, so a CV sent without a review is still the
+/// tailored one: pending, accepted and edited rewrites, a pending or accepted
+/// summary, and gap bullets the user chose to add.
 pub async fn decided_doc(
     db: &PgPool,
     uid: Uuid,
@@ -450,7 +452,7 @@ pub async fn decided_doc(
     let rows: Vec<(String, String)> = sqlx::query_as(
         r#"
         select bullet_id, coalesce(final_text, rewrite) from tailored_bullets
-        where application_id = $1 and user_id = $2 and bullet_id is not null and status in ('accepted', 'edited')
+        where application_id = $1 and user_id = $2 and bullet_id is not null and status in ('pending', 'accepted', 'edited')
         "#,
     )
     .bind(app_id)
@@ -458,7 +460,7 @@ pub async fn decided_doc(
     .fetch_all(db)
     .await?;
     let summary: Option<String> = sqlx::query_scalar(
-        "select case when summary_status = 'accepted' then tailored_summary end from applications where id = $1 and user_id = $2",
+        "select case when summary_status in ('pending', 'accepted') then tailored_summary end from applications where id = $1 and user_id = $2",
     )
     .bind(app_id)
     .bind(uid)
@@ -705,7 +707,9 @@ pub struct ScoreView {
     pub current: Option<i64>,
     /// The newest real score of a tailored version, if one was requested.
     pub rescored: Option<i64>,
+    /// Suggestions in the CV: accepted, edited, or not yet looked at.
     pub decided: i64,
+    /// Suggestions in the CV the user has not looked at yet.
     pub pending: i64,
 }
 
@@ -727,8 +731,8 @@ pub async fn score_view(db: &PgPool, uid: Uuid, app_id: Uuid) -> Result<ScoreVie
     let (accepted, pending, total): (i64, i64, i64) = sqlx::query_as(
         r#"
         select
-            (select count(*) from tailored_bullets where application_id = $1 and user_id = $2 and status in ('accepted', 'edited'))
-              + (select count(*) from applications where id = $1 and user_id = $2 and tailored_summary is not null and summary_status = 'accepted'),
+            (select count(*) from tailored_bullets where application_id = $1 and user_id = $2 and status in ('pending', 'accepted', 'edited'))
+              + (select count(*) from applications where id = $1 and user_id = $2 and tailored_summary is not null and summary_status in ('pending', 'accepted')),
             (select count(*) from tailored_bullets where application_id = $1 and user_id = $2 and status = 'pending')
               + (select count(*) from applications where id = $1 and user_id = $2 and tailored_summary is not null and summary_status = 'pending'),
             (select count(*) from tailored_bullets where application_id = $1 and user_id = $2)

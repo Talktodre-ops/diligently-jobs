@@ -29,8 +29,15 @@ async fn brief_summarises_the_workspace() {
     assert_eq!(b["application"]["company"], "Halcyon Health");
     assert_eq!(b["pipeline"]["status"], "done");
     assert_eq!(b["score"]["before"], 72);
-    assert_eq!(b["score"]["current"], 72, "nothing accepted yet");
-    assert_eq!(b["score"]["pending"], 3, "two rewrites and the summary");
+    assert_eq!(
+        b["score"]["current"], b["score"]["projected"],
+        "suggestions are in the CV until the user keeps an original"
+    );
+    assert_eq!(
+        b["score"]["decided"], 3,
+        "two rewrites and the summary are in"
+    );
+    assert_eq!(b["score"]["pending"], 3, "none looked at yet");
     assert_eq!(b["rewrites"]["total"], 2);
     assert_eq!(b["gaps"]["missing"], 2);
     assert_eq!(b["gaps"]["top"][0], "GraphQL API design");
@@ -64,7 +71,11 @@ async fn decisions_shape_the_tailored_cv_and_the_score() {
         )
         .await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.body);
-    assert_eq!(r.body["score"]["current"], 78, "72 + 18 * 1/3");
+    assert_eq!(
+        r.body["score"]["current"], 90,
+        "all three suggestions are still in"
+    );
+    assert_eq!(r.body["score"]["pending"], 2);
     let r = c
         .patch(&format!("/v1/rewrites/{}", ids[1]), json!({ "action": "edit", "text": "Designed Postgres partitioning for 400M rows, p95 queries under 50ms" }))
         .await;
@@ -114,6 +125,27 @@ async fn decisions_shape_the_tailored_cv_and_the_score() {
     assert_eq!(
         master["cv"]["doc"]["experience"][0]["bullets"][1],
         "Designed Postgres partitioning for 400M rows"
+    );
+}
+
+#[tokio::test]
+async fn a_cv_sent_without_a_review_is_the_tailored_one() {
+    let app = TestApp::spawn().await;
+    let c = ready_user(&app, "ada@example.com").await;
+    let id = started(&app, &c).await;
+    let list = c.get(&format!("/v1/applications/{id}/rewrites")).await.body;
+    let proposed = list["summary"]["proposed"].clone();
+    let first = list["rewrites"][0]["rewrite"].clone();
+    assert_eq!(list["rewrites"][0]["status"], "pending");
+
+    let cv = c.get(&format!("/v1/applications/{id}/cv")).await.body;
+    assert_eq!(
+        cv["doc"]["summary"], proposed,
+        "the suggested summary is in"
+    );
+    assert_eq!(
+        cv["doc"]["experience"][0]["bullets"][0], first,
+        "a rewrite nobody looked at is in"
     );
 }
 

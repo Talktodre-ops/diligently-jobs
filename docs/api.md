@@ -200,8 +200,13 @@ pipeline retries once on its own; after that `POST /v1/applications/{id}/pipelin
   "letter": { "id": "...", "tone": "direct", "words": 240 } }
 ```
 
-`score.current` moves from `before` toward `projected` as proposals are
-accepted. `research` and `letter` are null until they exist.
+Suggestions are in the CV until the user keeps their original: a `pending`
+rewrite or summary has not been looked at yet but is applied to the CV, the
+files and the score. `score.decided` counts suggestions in the CV (pending,
+accepted or edited) and `score.pending` the ones not looked at yet.
+`score.current` moves from `before` toward `projected` as suggestions stay in
+and falls back as originals are kept. `research` and `letter` are null until
+they exist.
 
 ## Review
 

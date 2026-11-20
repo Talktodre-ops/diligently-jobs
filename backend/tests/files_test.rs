@@ -51,14 +51,19 @@ async fn render_then_download_real_files() {
         assert!(resp.bytes().await.unwrap().starts_with(magic));
     }
 
-    // A new decision makes the rendered CV stale until rendered again.
+    // Keeping an original makes the rendered CV stale until rendered again.
     let rw = c.get(&format!("/v1/applications/{id}/rewrites")).await.body;
     let rid = rw["rewrites"][0]["id"].as_str().unwrap().to_string();
+    // Accepting a suggestion that was already in the CV changes nothing.
     c.patch(
         &format!("/v1/rewrites/{rid}"),
         json!({ "action": "accept" }),
     )
     .await;
+    let f = c.get(&format!("/v1/applications/{id}/files")).await.body;
+    assert_eq!(f["cv"]["up_to_date"], true);
+    c.patch(&format!("/v1/rewrites/{rid}"), json!({ "action": "keep" }))
+        .await;
     let f = c.get(&format!("/v1/applications/{id}/files")).await.body;
     assert_eq!(f["cv"]["up_to_date"], false);
 
