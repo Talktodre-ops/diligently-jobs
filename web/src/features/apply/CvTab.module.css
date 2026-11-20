@@ -1,0 +1,19 @@
+.tab { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legend { margin: 0; display: flex; gap: 10px; font-size: 12px; color: var(--ink-2); }
+.legend span { padding: 0 6px; border-radius: 3px; color: var(--doc-ink); }
+.used { background: var(--butter); }
+.waiting { background: var(--persimmon-tint); outline: 1.5px dashed var(--persimmon-deep); outline-offset: -1px; }
+
+.preparing { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; color: var(--ink-2); }
+.dot { width: 10px; height: 10px; flex: none; border-radius: 50%; background: var(--persimmon); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+/* The last page stays in view while the next is set, dimmed so it reads as old. */
+.stale { opacity: 0.55; transition: opacity 150ms; }
+
+.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; border-radius: 14px; border: 1.5px solid var(--danger); background: var(--surface); }
+.failedTitle { margin: 0; font-size: 15px; font-weight: 600; color: var(--danger); }
+.failedText { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-3); }
+
+.caption { margin: 0; font-size: 12px; line-height: 1.45; color: var(--ink-3); }

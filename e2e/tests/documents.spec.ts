@@ -189,14 +189,19 @@ test.describe.serial('documents', () => {
     await shot(page, info, 'letter')
   })
 
-  test('cv tab: changes marked on the page open one at a time', async ({ page }, info) => {
+  test('cv tab: the page as LaTeX set it, its changes, and the text view', async ({ page }, info) => {
+    test.setTimeout(120_000)
     await page.goto(`/applications/${f.applicationId}`)
-    const doc = page.getByRole('article', { name: 'Your tailored CV' })
-    await expect(doc).toContainText('Ada Okafor')
-    const change = doc.getByRole('link').first()
-    await expect(change).toBeVisible()
+    const pages = page.getByTestId('pdf-pages')
+    await expect(pages).toHaveAttribute('data-status', 'ready', { timeout: 60_000 })
+    await expect(page.getByRole('img', { name: /CV page 1 of \d+, as rendered/ })).toBeVisible()
+    await expect(page.getByText(/Exactly what the recruiter gets/)).toBeVisible()
     await shot(page, info, 'cv-tab')
-    await change.click()
+
+    // A highlight on the page opens its change.
+    const highlight = pages.getByRole('button', { name: /^Open the change in / }).first()
+    await expect(highlight).toBeVisible()
+    await highlight.click()
     await expect(page).toHaveURL(/\?change=/)
     const sheet = page.getByRole('dialog')
     await expect(sheet.getByText('Your original')).toBeVisible()
@@ -204,6 +209,13 @@ test.describe.serial('documents', () => {
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
     await expect(page).toHaveURL(new RegExp(`/applications/${f.applicationId}$`))
+
+    // Read: the same CV as text, with the same marks.
+    await page.getByRole('button', { name: 'Read', exact: true }).click()
+    const doc = page.getByRole('article', { name: 'Your tailored CV' })
+    await expect(doc).toContainText('Ada Okafor')
+    await expect(doc.getByRole('link').first()).toBeVisible()
+    await shot(page, info, 'cv-read')
   })
 
   test('send: choose files, hand them over, mark as applied', async ({ page, baseURL }, info) => {

@@ -144,6 +144,8 @@ export function useRewrites(id: string, enabled = true) {
 function invalidateDecided(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: keys.brief(id) })
   qc.invalidateQueries({ queryKey: keys.cv(id) })
+  // The rendered page is stale now; the CV tab sets it in type again.
+  qc.invalidateQueries({ queryKey: ['application', id, 'files'] })
   qc.invalidateQueries({ queryKey: ['home'] })
 }
 

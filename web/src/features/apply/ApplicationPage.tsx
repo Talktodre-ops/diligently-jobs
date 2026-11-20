@@ -13,7 +13,7 @@ import { SendSheet } from '../documents/SendSheet'
 import { companyName, useBrief, usePipelineJob, useRewrites, type Brief, type Step } from './api'
 import { ChangeSheet } from './ChangeSheet'
 import { ChangesList } from './ChangesList'
-import { CvPaper } from './CvPaper'
+import { CvTab } from './CvTab'
 import { plural } from './format'
 import { Progress } from './Progress'
 import { Questions } from './Questions'
@@ -125,7 +125,7 @@ export default function ApplicationPage() {
     cv: running ? <Tailoring /> : (
       <div className={s.cvTab}>
         {!desktop && <Questions appId={id} />}
-        <CvPaper id={id} openable />
+        <CvTab id={id} onOpen={(itemId) => openChange(itemId)} />
       </div>
     ),
     letter: running
@@ -144,50 +144,54 @@ export default function ApplicationPage() {
   )
   const note = <SendNote brief={b} running={running} onReview={() => openChange('next')} />
 
-  // The sheet sits beside the layout, in the same place for both, so a
-  // window crossing the desktop width keeps it open where it was.
+  // One tree for both widths: the header, the left column and the footer
+  // change, while the tabs and the sheet keep their places, so a window or
+  // tablet crossing the desktop width keeps the drawn page and an open sheet.
   const where = [company, b.application.location].filter(Boolean).join(' · ')
-  const layout = desktop ? (
-    <div className={s.desk}>
-      <header className={s.deskHead}>
-        <div className={s.deskTitles}>
-          <Link to="/jobs" className={s.crumb}>All jobs</Link>
-          <h1 className={s.deskH1}>{role}</h1>
-          <div className={s.deskWhere}>{where}</div>
-        </div>
-        {!running && <ScoreStrip score={b.score} />}
-        <div className={s.deskSend}>
-          {sendButton}
-          {note}
-        </div>
-      </header>
-      <div className={s.deskCols}>
-        <aside className={s.deskLeft} aria-label="What to look at">
-          {progress}
-          {!running && <Questions appId={id} />}
-          {!running && rewrites.isSuccess && <ChangesList appId={id} items={items} onEdit={(itemId) => openChange(itemId, true)} />}
-        </aside>
-        <div className={s.deskMain}>{tabs}</div>
+  const header = desktop ? (
+    <header className={s.deskHead}>
+      <div className={s.deskTitles}>
+        <Link to="/jobs" className={s.crumb}>All jobs</Link>
+        <h1 className={s.deskH1}>{role}</h1>
+        <div className={s.deskWhere}>{where}</div>
       </div>
-    </div>
-  ) : (
-    <div className={s.page}>
-      <TopBar back="/" backLabel="Back to home" eyebrow={company} title={role} />
-      <div className={s.body}>
-        {progress}
-        {!running && <ScoreStrip score={b.score} />}
-        {tabs}
-      </div>
-      <footer className={s.footer}>
-        {note}
+      {!running && <ScoreStrip score={b.score} />}
+      <div className={s.deskSend}>
         {sendButton}
-      </footer>
+        {note}
+      </div>
+    </header>
+  ) : (
+    <TopBar back="/" backLabel="Back to home" eyebrow={company} title={role} />
+  )
+  const side = desktop ? (
+    <aside className={s.deskLeft} aria-label="What to look at">
+      {progress}
+      {!running && <Questions appId={id} />}
+      {!running && rewrites.isSuccess && <ChangesList appId={id} items={items} onEdit={(itemId) => openChange(itemId, true)} />}
+    </aside>
+  ) : (
+    <div className={s.top}>
+      {progress}
+      {!running && <ScoreStrip score={b.score} />}
     </div>
   )
 
   return (
     <>
-      {layout}
+      <div className={desktop ? s.desk : s.page}>
+        {header}
+        <div className={desktop ? s.deskCols : s.body}>
+          {side}
+          <div className={desktop ? s.deskMain : s.main}>{tabs}</div>
+        </div>
+        {!desktop && (
+          <footer className={s.footer}>
+            {note}
+            {sendButton}
+          </footer>
+        )}
+      </div>
       {sheet}
     </>
   )

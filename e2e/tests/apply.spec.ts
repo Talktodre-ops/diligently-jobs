@@ -154,15 +154,16 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled()
   await bothSizes(page, 'running')
   await page.reload()
-  const cv = page.getByRole('article', { name: 'Your tailored CV' })
-  await expect(steps.or(cv)).toBeVisible()
-
-  // When it finishes, the CV takes its place with each change marked.
-  await expect(cv).toBeVisible({ timeout: 6 * 60_000 })
-  await expect(page.getByRole('heading', { name: 'Tailoring your CV' })).toBeHidden()
-  await expect(page.getByText('Cobalt Harbor', { exact: false }).first()).toBeVisible()
   const score = page.getByRole('region', { name: 'Match score' })
-  await expect(score).toBeVisible()
+  await expect(steps.or(score)).toBeVisible()
+
+  // When it finishes, the page as LaTeX set it takes its place, each change highlighted.
+  await expect(score).toBeVisible({ timeout: 6 * 60_000 })
+  await expect(page.getByRole('heading', { name: 'Tailoring your CV' })).toBeHidden()
+  const pages = page.getByTestId('pdf-pages')
+  await expect(pages).toHaveAttribute('data-status', 'ready', { timeout: 90_000 })
+  await expect(pages.getByRole('button', { name: /^Open the change in / }).first()).toBeVisible()
+  await expect(page.getByText('Cobalt Harbor', { exact: false }).first()).toBeVisible()
   const nowBefore = Number(await score.getByRole('status').textContent())
   const notSeen = page.getByRole('button', { name: /^\d+ not looked at yet$/ })
   await expect(notSeen).toBeVisible()
@@ -187,6 +188,10 @@ test('apply end to end: paste a job, watch it run, review, answer a gap', async 
   const left = waitingBefore - 2
   if (left > 0) await expect(page.getByRole('button', { name: `${left} not looked at yet` })).toBeVisible()
   else await expect(page.getByRole('button', { name: /not looked at yet/ })).toBeHidden()
+  // The page is set in type again with the edit; Read shows the text.
+  await expect(pages).toHaveAttribute('data-status', 'ready', { timeout: 90_000 })
+  await page.getByRole('button', { name: 'Read', exact: true }).click()
+  const cv = page.getByRole('article', { name: 'Your tailored CV' })
   await expect(cv).toContainText('Owned Go services for payment reconciliation')
   // Both were in the CV already, so the score holds.
   const nowAfter = Number(await score.getByRole('status').textContent())

@@ -29,10 +29,10 @@ function marks(data: Rewrites | undefined) {
 /**
  * The tailored CV as it would go out, set like the page the recruiter gets.
  * Butter marks a suggestion in use; a dashed outline marks one in use but not
- * looked at yet. With `openable`, each marked line links to its suggestion
- * (`?change=`), and wraps like the text around it.
+ * looked at yet. With `changeSearch`, each marked line links to its
+ * suggestion at that address, and wraps like the text around it.
  */
-export function CvPaper({ id, openable = false }: { id: string; openable?: boolean }) {
+export function CvPaper({ id, changeSearch }: { id: string; changeSearch?: (itemId: string) => string }) {
   const cv = useTailoredCv(id)
   const rewrites = useRewrites(id)
   const [show, setShow] = useState(true)
@@ -43,9 +43,9 @@ export function CvPaper({ id, openable = false }: { id: string; openable?: boole
   const m = marks(rewrites.data)
   const marked = (mark: Mark, text: string) => {
     if (!show || !mark) return text
-    if (!openable) return <span className={s[mark.kind]}>{text}</span>
+    if (!changeSearch) return <span className={s[mark.kind]}>{text}</span>
     return (
-      <Link to={{ search: `?change=${encodeURIComponent(mark.id)}` }} replace className={`${s.markLink} ${s[mark.kind]}`}>
+      <Link to={{ search: changeSearch(mark.id) }} replace className={`${s.markLink} ${s[mark.kind]}`}>
         {text}
         <span className="visually-hidden">{mark.kind === 'waiting' ? ' (changed for this job, not looked at yet)' : ' (changed for this job)'}</span>
       </Link>

@@ -1,12 +1,27 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ApplicationPage from './ApplicationPage'
 import { OldApplicationRoute } from './OldApplicationRoute'
 import type { Gap, Rewrites, Step } from './api'
+import { changeName, type PageChange } from '../documents/PdfPages'
 import { APP, apiError, brief, gap, json, renderRoute, rewrites, type Call } from './testing'
+
+// PDF.js needs a canvas and a worker; the drawn page is covered in the Edge
+// e2e. The stand-in shows the link and one target per highlighted change.
+const drawn = vi.hoisted(() => ({ times: 0 }))
+vi.mock('../documents/PdfPages', async (real) => ({
+  ...(await real<typeof import('../documents/PdfPages')>()),
+  PdfPages: ({ url, changes, onOpen }: { url: string; changes: PageChange[]; onOpen: (id: string) => void }) => (
+    <div data-testid="pdf" data-url={url} ref={(el) => { if (el && !el.dataset.drawn) { el.dataset.drawn = '1'; drawn.times += 1 } }}>
+      {changes.map((c) => c.id && (
+        <button key={c.id} type="button" onClick={() => onOpen(c.id!)} aria-label={changeName(c)}>{c.text}</button>
+      ))}
+    </div>
+  ),
+}))
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -34,10 +49,17 @@ const cvDoc = {
   issues: [], paper_size: 'a4',
 }
 
-/** A fake API that remembers decisions, the way the server does. */
+const files = (upToDate = true) => ({
+  cv: { pdf_url: 'http://s3.test/cv.pdf', docx_url: 'http://s3.test/cv.docx', rendered_at: upToDate ? 'r2' : 'r1', up_to_date: upToDate },
+  letter: { pdf_url: null, docx_url: null },
+  expires_in_seconds: 600,
+})
+
+/** A fake API that remembers decisions, the way the server does. A decision makes the rendered page stale. */
 function server(opts: { rewrites?: Rewrites; gaps?: Gap[]; extra?: (c: Call) => Response | undefined } = {}) {
   let data = opts.rewrites ?? rewrites()
   let gaps = opts.gaps ?? [gap({ status: 'covered' })]
+  let rendered = true
   const status = (action: string) => (action === 'keep' ? 'kept' : action === 'edit' ? 'edited' : 'accepted')
   return (c: Call): Response | undefined => {
     const extra = opts.extra?.(c)
@@ -46,6 +68,10 @@ function server(opts: { rewrites?: Rewrites; gaps?: Gap[]; extra?: (c: Call) => 
     if (is(c, 'GET', `/v1/applications/${APP}/rewrites`)) return json(data)
     if (is(c, 'GET', `/v1/applications/${APP}/cv`)) return json(cvDoc)
     if (is(c, 'GET', `/v1/applications/${APP}/gaps`)) return json({ gaps })
+    if (is(c, 'GET', `/v1/applications/${APP}/files`)) return json(files(rendered))
+    if (is(c, 'POST', `/v1/applications/${APP}/render`)) { rendered = true; return json({ cv_version_id: 'v', cv_job_id: 'rj', letter_job_id: null }, 202) }
+    if (is(c, 'GET', '/v1/jobs/rj')) return json({ id: 'rj', kind: 'cv_render', status: 'done', result: null, attempts: 1, max_attempts: 3, progress: null })
+    if (c.method === 'PATCH') rendered = false
     if (c.method === 'PATCH' && c.url.startsWith('/v1/rewrites/')) {
       const id = c.url.split('/').pop()
       const body = c.body as { action: string; text?: string }
@@ -116,7 +142,7 @@ describe('tailoring in place', () => {
         if (is(c, 'GET', '/v1/jobs/j1')) return json({ id: 'j1', status: 'done', progress: steps(['done', 'done', 'done', 'done', 'done']) })
       },
     }))
-    expect(await screen.findByRole('article', { name: 'Your tailored CV' })).toBeInTheDocument()
+    expect(await screen.findByTestId('pdf')).toHaveAttribute('data-url', 'http://s3.test/cv.pdf')
     expect(screen.queryByRole('heading', { name: 'Tailoring your CV' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
     expect(where()).toBe(`/applications/${APP}`)
@@ -188,19 +214,31 @@ describe('the CV tab', () => {
     expect(within(score).getByRole('status')).toHaveTextContent('78')
     expect(within(score).getByText('Good match')).toBeInTheDocument()
 
+    // The page as LaTeX set it comes first, with a target on each change.
+    const pdf = await screen.findByTestId('pdf')
+    expect(within(pdf).getByRole('button', { name: 'Open the change in Northfold · Experience: Led a 4-person on-call rotation. (not looked at yet)' })).toBeInTheDocument()
+    expect(screen.getByText(/Exactly what the recruiter gets/)).toBeInTheDocument()
+    expect(screen.getByText(/1 change in your CV/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 not looked at yet' })).toBeInTheDocument()
+    expect(calls.filter((c) => c.method !== 'GET')).toHaveLength(0)
+
+    // Read shows the same CV as text, marked the same way.
+    await userEvent.click(screen.getByRole('button', { name: 'Read' }))
+    await waitFor(() => expect(where()).toBe(`/applications/${APP}?view=read`))
     const cv = await screen.findByRole('article', { name: 'Your tailored CV' })
     const mark = await within(cv).findByRole('link', { name: /Led a 4-person on-call rotation\..*not looked at yet/ })
     expect(mark).toHaveClass('waiting')
     expect(within(cv).getByText('Shipped the billing dashboard.').tagName).toBe('LI')
-    expect(screen.getByText(/1 change in your CV/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '2 not looked at yet' })).toBeInTheDocument()
-    expect(calls.filter((c) => c.method !== 'GET')).toHaveLength(0)
+    await userEvent.click(mark)
+    await waitFor(() => expect(where()).toBe(`/applications/${APP}?view=read&change=r1`))
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(where()).toBe(`/applications/${APP}?view=read`))
   })
 
   it('opens a change from the page, decides it, and moves to the next one not looked at', async () => {
     const calls = open(server())
     const u = userEvent.setup()
-    await u.click(await screen.findByRole('link', { name: /Led a 4-person on-call rotation/ }))
+    await u.click(await screen.findByRole('button', { name: /Open the change in Northfold · Experience: Led a 4-person/ }))
     await waitFor(() => expect(where()).toBe(`/applications/${APP}?change=r1`))
     let sheet = screen.getByRole('dialog', { name: 'Northfold · Experience' })
     expect(within(sheet).getByText('Ran on-call.')).toBeInTheDocument()
@@ -257,6 +295,52 @@ describe('the CV tab', () => {
   })
 })
 
+describe('the page as LaTeX sets it', () => {
+  it('sets the page in type again after a decision', async () => {
+    const calls = open(server(), '?change=r1')
+    const sheet = await screen.findByRole('dialog', { name: 'Northfold · Experience' })
+    expect(calls.some((c) => c.url.endsWith('/render'))).toBe(false)
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Keep original' }))
+    await waitFor(() => expect(calls.find((c) => c.url.endsWith('/render'))?.body).toEqual({ include_letter: false }))
+    await waitFor(() => expect(calls.filter((c) => c.url.endsWith('/files')).length).toBeGreaterThan(1))
+  })
+
+  it('keeps the drawn page when the window crosses the desktop width', async () => {
+    let wide = false
+    const listeners = new Set<() => void>()
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      get matches() { return wide }, media: q,
+      addEventListener: (_: string, f: () => void) => listeners.add(f),
+      removeEventListener: (_: string, f: () => void) => listeners.delete(f),
+    }))
+    open(server())
+    await screen.findByTestId('pdf')
+    const before = drawn.times
+    act(() => { wide = true; listeners.forEach((f) => f()) })
+    expect(await screen.findByRole('heading', { name: '3 changes in your CV' })).toBeInTheDocument()
+    act(() => { wide = false; listeners.forEach((f) => f()) })
+    expect(screen.getByTestId('pdf')).toBeInTheDocument()
+    expect(drawn.times).toBe(before)
+  })
+
+  it('says when LaTeX could not set the CV, and tries again', async () => {
+    let renders = 0
+    const calls = open(server({
+      extra: (c) => {
+        if (is(c, 'GET', `/v1/applications/${APP}/files`)) return json(files(false))
+        if (is(c, 'POST', `/v1/applications/${APP}/render`)) { renders += 1; return json({ cv_version_id: 'v', cv_job_id: 'bad', letter_job_id: null }, 202) }
+        if (is(c, 'GET', '/v1/jobs/bad')) return json({ id: 'bad', kind: 'cv_render', status: 'failed', result: null, attempts: 3, max_attempts: 3, progress: null })
+      },
+    }))
+    expect(await screen.findByText('Your CV did not set in type.')).toBeInTheDocument()
+    expect(screen.getByText(/Nothing has been sent, and Send waits until it works/)).toBeInTheDocument()
+    expect(screen.queryByTestId('pdf')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(renders).toBe(2))
+    expect(calls.filter((c) => c.url.endsWith('/render'))).toHaveLength(2)
+  })
+})
+
 describe('questions above the CV', () => {
   const twoRoles = [gap(), gap({ id: 'g2', requirement: 'Kafka', status: 'covered' })]
 
@@ -304,7 +388,7 @@ describe('questions above the CV', () => {
 
   it('stays out of the way when the CV covers everything', async () => {
     open(server({ gaps: [gap({ status: 'covered' })] }))
-    await screen.findByRole('article', { name: 'Your tailored CV' })
+    await screen.findByTestId('pdf')
     expect(screen.queryByRole('heading', { name: /question/ })).not.toBeInTheDocument()
   })
 })
