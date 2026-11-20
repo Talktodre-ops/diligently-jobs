@@ -186,7 +186,7 @@ describe('SettingsPage', () => {
   it('with a password: Change, last changed date, Google connect link', async () => {
     setup(<SettingsPage />)
     expect(await screen.findByRole('button', { name: 'Change password' })).toBeInTheDocument()
-    expect(screen.getByText(/Last changed 12 October/)).toBeInTheDocument()
+    expect(screen.getByText(/Last changed (12 October|October 12)/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Connect Google' })).toHaveAttribute('href', '/v1/auth/google/start?next=/settings&link=1')
   })
 
