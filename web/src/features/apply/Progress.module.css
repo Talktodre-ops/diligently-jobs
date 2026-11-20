@@ -1,0 +1,33 @@
+.card, .cardFailed {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.cardFailed { border-color: var(--persimmon-deep); }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.title { font-size: 16px; font-weight: 600; }
+.when { font-size: 13px; color: var(--ink-2); }
+.sub { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-3); }
+.note { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.step { display: flex; align-items: center; gap: 10px; min-height: 24px; flex-wrap: wrap; }
+.mark {
+  width: 20px; height: 20px; flex: none; border-radius: var(--radius-pill); box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--line-strong);
+}
+.label { font-size: 14px; color: var(--ink-2); }
+.stepNote { font-size: 12px; color: var(--ink-2); }
+
+.step[data-state='done'] .mark { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.step[data-state='done'] .label,
+.step[data-state='running'] .label,
+.step[data-state='failed'] .label { color: var(--ink); }
+.step[data-state='running'] .mark { border: 2.5px solid var(--line); border-top-color: var(--persimmon); animation: spin 0.9s linear infinite; }
+.step[data-state='failed'] .mark { background: var(--persimmon-tint); border-color: var(--persimmon-deep); color: var(--persimmon-deep); }
+.step[data-state='skipped'] .mark { border-style: dashed; }
+.step[data-state='skipped'] .label { text-decoration: line-through; text-decoration-thickness: 1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .step[data-state='running'] .mark { animation-duration: 3s; } }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.actions > :first-child:is(div) { flex-basis: 100%; }

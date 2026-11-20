@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { Button } from '../../ui/Button'
-import s from './CoverLetter.module.css'
+import s from './LetterPanel.module.css'
 
 type Props = {
   index: number

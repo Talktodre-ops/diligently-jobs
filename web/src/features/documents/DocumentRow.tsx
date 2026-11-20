@@ -19,7 +19,7 @@ function meta(d: DocumentItem) {
 
 export function DocumentRow({ doc, busy, disabled, onShare }: { doc: DocumentItem; busy: boolean; disabled: boolean; onShare: () => void }) {
   const title = documentTitle(doc)
-  const to = `/applications/${doc.application_id}/${doc.kind === 'cv' ? 'cv' : 'letter'}`
+  const to = `/applications/${doc.application_id}${doc.kind === 'cv' ? '' : '?tab=letter'}`
   return (
     <li className={s.row}>
       <span className={doc.kind === 'cv' ? s.iconCv : s.iconLetter} aria-hidden="true">

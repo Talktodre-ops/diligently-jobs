@@ -65,14 +65,6 @@ export function longDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-/** "2021 to Present", "2018", or "". */
-export function dateRange(start?: string | null, end?: string | null): string {
-  const a = start?.trim()
-  const b = end?.trim()
-  if (a && b) return `${a} to ${b}`
-  return a || b || ''
-}
-
 /** First sentence, used as the Research headline. */
 export function firstSentence(text: string): { head: string; rest: string } {
   const m = text.match(/^(.+?[.!?])\s+(?=[A-Z0-9"“])/)

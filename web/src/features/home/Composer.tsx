@@ -31,7 +31,7 @@ export function Composer({ title, line }: { title: string; line: string }) {
     }
     const input = isUrl ? { url: v, research: true, letter: true } : { jd_text: v, research: true, letter: true }
     start.mutate(input, {
-      onSuccess: (r) => navigate(`/applications/${r.application_id}/running`, { state: { jobId: r.job_id } }),
+      onSuccess: (r) => navigate(`/applications/${r.application_id}`, { state: { jobId: r.job_id } }),
       onError: (err) => {
         if (isApiError(err, 'no_master_cv')) saveJobDraft(v)
       },

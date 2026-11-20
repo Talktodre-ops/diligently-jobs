@@ -64,7 +64,7 @@ export default function FirstJobPage() {
     else input = { jd_text: value, research: true, letter: true }
     start.mutate(input, {
       onSuccess: (r) =>
-        void finishThen(() => navigate(`/applications/${r.application_id}/running`, { replace: true, state: { jobId: r.job_id } })),
+        void finishThen(() => navigate(`/applications/${r.application_id}`, { replace: true, state: { jobId: r.job_id } })),
     })
   }
 

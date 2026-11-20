@@ -1,19 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import CoverLetterPage from './CoverLetterPage'
-import CvPreviewPage from './CvPreviewPage'
+import { useLocation } from 'react-router'
+import ApplicationPage from '../apply/ApplicationPage'
 import DocumentsPage from './DocumentsPage'
-import ResearchPage from './ResearchPage'
-import SendPage from './SendPage'
-
-// PDF.js needs a canvas and a worker; the Page view is covered in the Edge e2e.
-vi.mock('./PdfPages', () => ({
-  PdfPages: ({ url }: { url: string }) => <div data-testid="pdf">{url}</div>,
-}))
 
 const APP = 'app-1'
 const link = (name: string) => `http://s3.test/f?response-content-disposition=${encodeURIComponent(`attachment; filename="${name}"`)}&sig=${Math.random()}`
@@ -79,6 +72,11 @@ const settingsProfile = (over: object) => ({
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status })
 const notFound = () => json({ error: { code: 'not_found', message: 'Not found' } }, 404)
 
+function Where() {
+  const l = useLocation()
+  return <div data-testid="where">{l.pathname + l.search}</div>
+}
+
 function setup(ui: ReactElement, path: string, handler: Handler) {
   const calls: Call[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
@@ -95,11 +93,7 @@ function setup(ui: ReactElement, path: string, handler: Handler) {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/applications/:id/research" element={ui} />
-          <Route path="/applications/:id/letter" element={ui} />
-          <Route path="/applications/:id/cv" element={ui} />
-          <Route path="/applications/:id/send" element={ui} />
-          <Route path="/applications/:id" element={<div>Workspace</div>} />
+          <Route path="/applications/:id" element={<>{ui}<Where /></>} />
           <Route path="/documents" element={ui} />
         </Routes>
       </MemoryRouter>
@@ -126,26 +120,22 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('ResearchPage', () => {
+describe('Company tab', () => {
   it('shows loading, then the overview, talking points and sources', async () => {
-    setup(<ResearchPage />, `/applications/${APP}/research`, (u, m, b) => base(u, m, b) ?? (u.endsWith('/research') ? research : undefined))
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    setup(<ApplicationPage />, `/applications/${APP}?tab=company`, (u, m, b) => base(u, m, b) ?? (u.endsWith('/research') ? research : undefined))
     expect(await screen.findByRole('heading', { name: 'Halcyon pays health claims on time.' })).toBeInTheDocument()
     expect(screen.getByText('It runs on Kafka and Postgres.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Raised a Series B/ })).toHaveAttribute('href', 'https://halcyon.example/news/b')
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Talking points' }))
+    expect(screen.getByRole('tab', { name: 'Company' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('They publish incident reviews')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Source: Incident review template/ })).toHaveAttribute('target', '_blank')
-
-    await userEvent.click(screen.getByRole('tab', { name: 'Sources' }))
-    const panel = screen.getByRole('tabpanel')
-    expect(within(panel).getAllByRole('link')).toHaveLength(2)
+    expect(within(screen.getByRole('region', { name: 'Sources' })).getAllByRole('link')).toHaveLength(2)
   })
 
   it('offers to research when there is none yet', async () => {
     let made = false
-    const calls = setup(<ResearchPage />, `/applications/${APP}/research`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=company`, (u, m, b) => {
       if (u.endsWith('/research/refresh') && m === 'POST') { made = true; return research }
       if (u.endsWith('/research')) return made ? research : notFound()
       return base(u, m, b)
@@ -156,17 +146,17 @@ describe('ResearchPage', () => {
   })
 
   it('shows the error with a retry', async () => {
-    setup(<ResearchPage />, `/applications/${APP}/research`, (u, m, b) =>
+    setup(<ApplicationPage />, `/applications/${APP}?tab=company`, (u, m, b) =>
       u.endsWith('/research') ? json({ error: { code: 'internal', message: 'Something broke.' } }, 500) : base(u, m, b))
     expect(await screen.findByRole('alert')).toHaveTextContent('Something broke.')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 })
 
-describe('CoverLetterPage', () => {
+describe('Letter tab', () => {
   it('rewrites in another tone through the API', async () => {
     let current = letter()
-    const calls = setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => {
       if (u.endsWith('/cover-letters/regenerate')) { current = letter((b as { tone: string }).tone, ['A warm opening.', 'A warm close.']); return current }
       if (u.endsWith('/cover-letters')) return current
       return base(u, m, b)
@@ -180,7 +170,7 @@ describe('CoverLetterPage', () => {
   })
 
   it('saves an edited paragraph with the others untouched', async () => {
-    const calls = setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => {
       if (u === '/v1/cover-letters/l1' && m === 'PATCH') return letter('direct', (b as { paragraphs: string[] }).paragraphs)
       if (u.endsWith('/cover-letters')) return letter()
       return base(u, m, b)
@@ -197,7 +187,7 @@ describe('CoverLetterPage', () => {
   it('copies the whole letter', async () => {
     const writeText = vi.fn(async () => {})
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
-    setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) => (u.endsWith('/cover-letters') ? letter() : base(u, m, b)))
+    setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => (u.endsWith('/cover-letters') ? letter() : base(u, m, b)))
     await userEvent.click(await screen.findByRole('button', { name: 'Copy' }))
     expect(await screen.findByText('Copied to clipboard')).toBeInTheDocument()
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Dear Hiring Team,\n\nI build payment systems that stay up.'))
@@ -205,13 +195,13 @@ describe('CoverLetterPage', () => {
   })
 
   it('offers to write one when there is no letter', async () => {
-    setup(<CoverLetterPage />, `/applications/${APP}/letter`, base)
+    setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, base)
     expect(await screen.findByText('No letter yet')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Write a letter' })).toBeInTheDocument()
   })
 
   it('starts the first letter in the tone chosen in Settings', async () => {
-    const calls = setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) =>
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) =>
       u === '/v1/profile' ? { profile: settingsProfile({ writing: { spelling: null, letter_tone: 'formal' } }) } : base(u, m, b))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Formal' })).toHaveAttribute('aria-pressed', 'true'))
     expect(screen.getByRole('button', { name: 'Direct' })).toHaveAttribute('aria-pressed', 'false')
@@ -220,7 +210,7 @@ describe('CoverLetterPage', () => {
   })
 
   it('lets the first letter start in another tone', async () => {
-    const calls = setup(<CoverLetterPage />, `/applications/${APP}/letter`, (u, m, b) =>
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) =>
       u === '/v1/profile' ? { profile: settingsProfile({ writing: { spelling: null, letter_tone: 'formal' } }) } : base(u, m, b))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Formal' })).toHaveAttribute('aria-pressed', 'true'))
     await userEvent.click(screen.getByRole('button', { name: 'Warm' }))
@@ -229,54 +219,9 @@ describe('CoverLetterPage', () => {
   })
 })
 
-describe('CvPreviewPage', () => {
-  it('shows the rendered page, the score, and downloads with a fresh link', async () => {
-    const calls = setup(<CvPreviewPage />, `/applications/${APP}/cv`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
-    expect(await screen.findByTestId('pdf')).toHaveTextContent('CV.pdf')
-    expect(screen.getByText('Good match · 78')).toBeInTheDocument()
-    expect(screen.getByText('1 change highlighted')).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Download PDF or DOCX' }))
-    const dialog = screen.getByRole('dialog', { name: 'Download your CV' })
-    expect(within(dialog).getByText('Ada Okafor Halcyon Health CV.docx')).toBeInTheDocument()
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Download PDF' }))
-    await waitFor(() => expect(clicked).toHaveLength(1))
-    expect(decodeURIComponent(clicked[0]!)).toContain('Halcyon Health CV.pdf')
-    expect(calls.filter((c) => c.url.endsWith('/files'))).toHaveLength(2)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it('marks changed text in the Read view', async () => {
-    setup(<CvPreviewPage />, `/applications/${APP}/cv`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
-    await userEvent.click(await screen.findByRole('button', { name: 'Read' }))
-    const doc = screen.getByRole('article', { name: 'Your tailored CV' })
-    expect(within(doc).getByText('Owned the payments service on Kafka.').tagName).toBe('MARK')
-    expect(within(doc).getByText('Mentored three engineers.').tagName).toBe('LI')
-    expect(within(doc).getByText('Senior Backend Engineer · 2021 to Present')).toBeInTheDocument()
-  })
-
-  it('renders first when the files are out of date', async () => {
-    let rendered = false
-    const calls = setup(<CvPreviewPage />, `/applications/${APP}/cv`, (u, m, b) => {
-      if (u.endsWith('/render')) { rendered = true; return { cv_version_id: 'v', cv_job_id: 'job-cv', letter_job_id: null } }
-      if (u === '/v1/jobs/job-cv') return { id: 'job-cv', kind: 'cv_render', status: 'done', result: null, attempts: 1, max_attempts: 3, progress: null }
-      if (u.endsWith('/files')) return files({ upToDate: rendered })
-      return base(u, m, b)
-    })
-    expect(await screen.findByTestId('pdf')).toBeInTheDocument()
-    expect(calls.find((c) => c.url.endsWith('/render'))?.body).toEqual({ include_letter: false })
-  })
-
-  it('shows the error when the CV does not load', async () => {
-    setup(<CvPreviewPage />, `/applications/${APP}/cv`, (u, m, b) =>
-      u.endsWith('/cv') ? json({ error: { code: 'internal', message: 'No CV here.' } }, 500) : u.endsWith('/files') ? files() : base(u, m, b))
-    expect(await screen.findByRole('alert')).toHaveTextContent('No CV here.')
-  })
-})
-
-describe('SendPage', () => {
+describe('Send sheet', () => {
   it('hands over both files, then marks applied and moves the reminder', async () => {
-    const calls = setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => {
       if (u.endsWith('/cover-letters')) return letter()
       if (u.endsWith('/files')) return files()
       if (u.endsWith('/applied')) return { application_id: APP, stage: 'applied', reminder: { id: 'rem', application_id: APP, due_at: '2026-11-20T09:00:00Z', status: 'scheduled', sent_at: null } }
@@ -307,8 +252,30 @@ describe('SendPage', () => {
     expect(calls.find((c) => c.url.endsWith('/snooze'))?.body).toEqual({ days: 10 })
   })
 
+  it('keeps its place when the window crosses the desktop width', async () => {
+    let wide = true
+    const listeners = new Set<() => void>()
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      get matches() { return wide }, media: q,
+      addEventListener: (_: string, f: () => void) => listeners.add(f),
+      removeEventListener: (_: string, f: () => void) => listeners.delete(f),
+    }))
+    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => {
+      if (u.endsWith('/cover-letters')) return letter()
+      if (u.endsWith('/files')) return files()
+      return base(u, m, b)
+    })
+    await screen.findByRole('list', { name: 'Files' })
+    await userEvent.click(screen.getByRole('button', { name: 'Download files' }))
+    await screen.findByRole('dialog', { name: 'Did you send it?' })
+    act(() => { wide = false; listeners.forEach((f) => f()) })
+    expect(screen.getByRole('dialog', { name: 'Did you send it?' })).toBeInTheDocument()
+    act(() => { wide = true; listeners.forEach((f) => f()) })
+    expect(screen.getByRole('dialog', { name: 'Did you send it?' })).toBeInTheDocument()
+  })
+
   it('preselects the follow-up days from Settings and offers 14', async () => {
-    const calls = setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => {
       if (u === '/v1/profile') return { profile: settingsProfile({ reminders: { follow_up_days: 14, send_hour: 9, time_zone: 'Africa/Lagos', skip_weekends: true } }) }
       if (u.endsWith('/cover-letters')) return letter()
       if (u.endsWith('/files')) return files()
@@ -328,20 +295,22 @@ describe('SendPage', () => {
   })
 
   it('says how many changes go out and links to the ones not looked at', async () => {
-    setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
+    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
     expect(await screen.findByText(/Your CV has 1 change for this job\. You have not looked at 2\./)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Look them over' })).toHaveAttribute('href', `/applications/${APP}/review`)
+    await userEvent.click(screen.getByRole('button', { name: 'Look them over' }))
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/applications/${APP}?change=next`))
   })
 
   it('says the CV goes out unchanged when every original was kept', async () => {
-    setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) =>
+    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) =>
       u === `/v1/applications/${APP}/brief` ? { ...brief, score: { ...brief.score, decided: 0, pending: 0 } } : u.endsWith('/files') ? files() : base(u, m, b))
-    expect(await screen.findByText('Your CV goes out as you wrote it.')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Look them over' })).not.toBeInTheDocument()
+    const sheet = await screen.findByRole('dialog', { name: 'Send to Halcyon Health' })
+    expect(within(sheet).getByText('Your CV goes out as you wrote it.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Look them over' })).not.toBeInTheDocument()
   })
 
   it('sends the CV alone when there is no letter', async () => {
-    setup(<SendPage />, `/applications/${APP}/send`, (u, m, b) => (u.endsWith('/files') ? files({ letter: false }) : base(u, m, b)))
+    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => (u.endsWith('/files') ? files({ letter: false }) : base(u, m, b)))
     expect(await screen.findByText(/No cover letter for this job yet/)).toBeInTheDocument()
     const list = await screen.findByRole('list', { name: 'Files' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
@@ -362,8 +331,8 @@ describe('DocumentsPage', () => {
       if (u === '/v1/documents?kind=letter') return { documents: [docs[1]] }
       return undefined
     })
-    expect(await screen.findByRole('link', { name: /CV · Halcyon Health.*match 86 · PDF, DOCX/ })).toHaveAttribute('href', `/applications/${APP}/cv`)
-    expect(screen.getByRole('link', { name: /Letter · Halcyon Health.*Direct tone · 248 words/ })).toHaveAttribute('href', `/applications/${APP}/letter`)
+    expect(await screen.findByRole('link', { name: /CV · Halcyon Health.*match 86 · PDF, DOCX/ })).toHaveAttribute('href', `/applications/${APP}`)
+    expect(screen.getByRole('link', { name: /Letter · Halcyon Health.*Direct tone · 248 words/ })).toHaveAttribute('href', `/applications/${APP}?tab=letter`)
     expect(await screen.findByRole('link', { name: /Master CV.*Ada Okafor/ })).toHaveAttribute('href', '/profile')
 
     await userEvent.click(screen.getByRole('tab', { name: 'Letters' }))

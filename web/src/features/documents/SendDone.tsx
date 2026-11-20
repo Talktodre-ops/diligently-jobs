@@ -6,10 +6,13 @@ import { useMoveReminder, type Reminder } from './api'
 import { shortDate } from './format'
 import s from './Send.module.css'
 
-type Props = { company: string; role: string | null; score: number | null; reminder: Reminder | null; initialDays: number }
+type Props = { company: string; role: string | null; score: number | null; reminder: Reminder | null; initialDays: number; onClose: () => void }
 
-/** "Applied." with the follow-up reminder, which the person can move to another of the Settings choices. */
-export function SendDone({ company, role, score, reminder: first, initialDays }: Props) {
+/**
+ * "Applied." over the whole screen, with the follow-up reminder, which the
+ * person can move to another of the Settings choices.
+ */
+export function SendDone({ company, role, score, reminder: first, initialDays, onClose }: Props) {
   const move = useMoveReminder()
   const [reminder, setReminder] = useState(first)
   const [days, setDays] = useState(initialDays)
@@ -26,10 +29,10 @@ export function SendDone({ company, role, score, reminder: first, initialDays }:
 
   const what = [company, role].filter(Boolean).join(', ')
   return (
-    <main className={s.done}>
+    <div className={s.done} role="dialog" aria-modal="true" aria-labelledby="applied-title">
       <div className={s.doneInner}>
         <div className={s.tick} aria-hidden="true"><Icon name="check" size={38} strokeWidth={2.4} /></div>
-        <h1 className={s.doneTitle}>Applied.</h1>
+        <h2 id="applied-title" className={s.doneTitle}>Applied.</h2>
         <p className={s.doneText}>{what}{score != null ? `, sent with a match of ${score}.` : ', marked as sent.'}</p>
         {reminder && (
           <div className={s.remind}>
@@ -53,8 +56,9 @@ export function SendDone({ company, role, score, reminder: first, initialDays }:
         <div className={s.doneLinks}>
           <Link to="/" className={s.homeLink}>Back home</Link>
           <Link to="/new" className={s.againLink}>Apply to another job</Link>
+          <button type="button" className={s.againLink} onClick={onClose}>Back to this application</button>
         </div>
       </div>
-    </main>
+    </div>
   )
 }

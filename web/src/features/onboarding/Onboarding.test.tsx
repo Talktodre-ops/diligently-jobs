@@ -81,7 +81,7 @@ function setup(ui: React.ReactElement, state: State, extra?: (url: string, init?
           <Route path="/onboarding/targets" element={<div>Targets route</div>} />
           <Route path="/onboarding/first-job" element={<div>First job route</div>} />
           <Route path="/new" element={<div>New job route</div>} />
-          <Route path="/applications/:id/running" element={<Where />} />
+          <Route path="/applications/:id" element={<Where />} />
           <Route path="/verify-email" element={<div>Verify route</div>} />
           <Route element={<RequireAccount />}>
             <Route path="/inside" element={<div>Inside the app</div>} />
@@ -527,7 +527,7 @@ describe('FirstJobPage', () => {
     await userEvent.click(await screen.findByLabelText('Job link or description'))
     await userEvent.paste(JD)
     await userEvent.click(screen.getByRole('button', { name: 'Tailor my CV' }))
-    expect(await screen.findByText(/At \/applications\/app1\/running/)).toHaveTextContent('"jobId":"job1"')
+    expect(await screen.findByText(/At \/applications\/app1 /)).toHaveTextContent('"jobId":"job1"')
     const start = calls.find((c) => c.url === '/v1/applications/start')!
     expect(JSON.parse(start.body as string)).toEqual({ jd_text: JD.trim(), research: true, letter: true })
     expect(patches(calls)).toEqual([{ onboarding_step: 'done' }])
@@ -538,7 +538,7 @@ describe('FirstJobPage', () => {
       url === '/v1/applications/start' ? json({ application_id: 'app1', job_id: 'job1', progress: [] }, 202) : undefined)
     await userEvent.type(await screen.findByLabelText('Job link or description'), 'https://jobs.example.com/123')
     await userEvent.click(screen.getByRole('button', { name: 'Tailor my CV' }))
-    await screen.findByText(/At \/applications\/app1\/running/)
+    await screen.findByText(/At \/applications\/app1 /)
     expect(JSON.parse(calls.find((c) => c.url === '/v1/applications/start')!.body as string)).toEqual({ url: 'https://jobs.example.com/123', research: true, letter: true })
   })
 

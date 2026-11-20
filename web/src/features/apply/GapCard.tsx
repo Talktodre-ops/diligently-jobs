@@ -1,81 +1,21 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
 import { isApiError } from '../../api/client'
-import { Button, ButtonLink } from '../../ui/Button'
-import { PageState } from '../../ui/PageState'
+import { Button } from '../../ui/Button'
 import { TextArea } from '../../ui/TextField'
-import { TopBar } from '../../ui/TopBar'
-import { companyName, useAnswerGap, useBrief, useDecideGapBullet, useGaps, useTailoredCv, type Gap } from './api'
-import { countWord } from './format'
+import { useAnswerGap, useDecideGapBullet, type Gap } from './api'
 import surface from './onSurface.module.css'
-import s from './GapsPage.module.css'
+import s from './GapCard.module.css'
 
 /** Handled means the user answered and, for "I have this", decided on the bullet. */
-function handled(g: Gap) {
+export function handled(g: Gap) {
   if (g.answer === 'dont') return true
   return g.answer === 'have' && (g.bullet_status === 'accepted' || g.bullet_status === 'discarded')
 }
 
-export default function GapsPage() {
-  const { id = '' } = useParams()
-  const brief = useBrief(id)
-  const gaps = useGaps(id)
-  const cv = useTailoredCv(id)
-  const back = `/applications/${id}`
-
-  const header = (
-    <TopBar back={back} backLabel="Back to application" eyebrow={companyName(brief.data?.application.company)} title="Gaps" />
-  )
-  if (gaps.isPending) return <PageState.Loading />
-  if (gaps.isError) return <div className={s.page}>{header}<PageState.Error error={gaps.error} onRetry={() => gaps.refetch()} /></div>
-
-  const open = gaps.data.gaps.filter((g) => g.status !== 'covered')
-  const left = open.filter((g) => !handled(g)).length
-  const roles = (cv.data?.doc.experience ?? []).map((e) => `${e.role} at ${e.company}`)
-
-  if (open.length === 0) {
-    return (
-      <div className={s.page}>
-        {header}
-        <PageState.Empty
-          title="No gaps"
-          body="Your CV already shows everything this job asks for."
-          action={<Link to={back}>Back to application</Link>}
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className={s.page}>
-      {header}
-      <div className={s.body}>
-        <div className={s.intro}>
-          <h2 className={s.h1} aria-live="polite">
-            {left === 0 ? 'All gaps handled' : `${countWord(left)} ${left === 1 ? 'gap' : 'gaps'} to look at`}
-          </h2>
-          <p className={s.lede}>The job asks for these and your CV does not fully show them. We only add what you tell us is true.</p>
-        </div>
-        <ul className={s.list}>
-          {open.map((g) => (
-            <li key={g.id}>
-              <GapCard appId={id} gap={g} roles={roles} />
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className={s.footer}>
-        <ButtonLink to={back} variant={left === 0 ? 'primary' : 'secondary'} block>
-          {left === 0 ? 'Done' : 'Decide later'}
-        </ButtonLink>
-      </div>
-    </div>
-  )
-}
-
 type Mode = 'auto' | 'choose' | 'write'
 
-function GapCard({ appId, gap, roles }: { appId: string; gap: Gap; roles: string[] }) {
+/** One requirement the CV does not fully show: answer it, and add the bullet we write from the answer. */
+export function GapCard({ appId, gap, roles }: { appId: string; gap: Gap; roles: string[] }) {
   const answer = useAnswerGap(appId)
   const decide = useDecideGapBullet(appId)
   const [mode, setMode] = useState<Mode>('auto')
@@ -121,7 +61,7 @@ function GapCard({ appId, gap, roles }: { appId: string; gap: Gap; roles: string
     <section aria-labelledby={`${fieldId}-name`} className={s.card}>
       <div className={s.top}>
         <div className={s.topText}>
-          <h2 id={`${fieldId}-name`} className={s.name}>{gap.requirement}</h2>
+          <h3 id={`${fieldId}-name`} className={s.name}>{gap.requirement}</h3>
           <div className={s.weight}>
             {required ? 'Required' : 'Nice to have'} · {gap.status === 'partial' ? 'partly shown on your CV' : 'not on your CV'}
           </div>

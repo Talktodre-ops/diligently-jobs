@@ -1,0 +1,32 @@
+.meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: -6px; }
+.status, .statusNew { font-size: 13px; font-weight: 600; }
+.status { color: var(--ink-2); }
+.statusNew { color: var(--persimmon-text); }
+.position { font-size: 13px; color: var(--ink-2); }
+
+.block { display: flex; flex-direction: column; gap: 4px; }
+.label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.text, .struck, .inCv { margin: 0; font-size: 15px; line-height: 1.5; }
+.struck { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+/* The line as it reads on the CV: butter in both themes, like the marks on the page. */
+.inCv { background: var(--butter); color: var(--aubergine); border-radius: 10px; padding: 8px 10px; }
+
+.why, .whyNumber { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.whyNumber { color: var(--ink); }
+.whyIcon { flex: none; margin-top: 1px; }
+
+.edit { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; justify-content: flex-end; gap: 8px; }
+
+.actions { display: flex; gap: 8px; }
+.actions > * { flex: 1 1 0; padding: 0 12px; }
+
+.nav { display: flex; justify-content: space-between; }
+.navButton {
+  display: inline-flex; align-items: center; gap: 4px; min-height: var(--tap); padding: 0 4px;
+  border: 0; background: transparent; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.navButton:hover:not(:disabled) { text-decoration: underline; }
+.navButton:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.error { margin: 0; font-size: 13px; color: var(--danger); font-weight: 500; }

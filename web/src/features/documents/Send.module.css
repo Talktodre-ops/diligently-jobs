@@ -1,12 +1,13 @@
-.layout { flex: 1; display: flex; flex-direction: column; }
-.main { flex: 1; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 18px; }
-.h1 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: -0.015em; }
-.changes { margin: 0; max-width: 60ch; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.changes { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.inlineLink { padding: 0; border: 0; background: transparent; color: var(--persimmon-text); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.inlineLink:hover { color: var(--ink); }
+.options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sideNote { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; text-align: center; }
 
-.fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; min-width: 0; }
 .legend { font-size: 13px; font-weight: 600; padding: 0 0 8px; }
 .option {
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px; min-height: 64px;
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; min-height: 64px;
   border: 1.5px solid var(--line); background: var(--surface); cursor: pointer;
 }
 .option:has(:checked) { border-color: var(--ink); }
@@ -34,31 +35,10 @@
 .preparing { margin: 0; font-size: 14px; color: var(--ink-2); }
 .renderError { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 
-.side {
-  position: sticky; bottom: 0; z-index: 5; background: var(--paper); border-top: 1px solid var(--line);
-  padding: 12px 20px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px;
-}
-.sideNote { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
 .dialogText { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-3); }
 
-@media (min-width: 640px) and (max-width: 1023px) {
-  .main, .side { padding-left: max(32px, calc((100% - 640px) / 2)); padding-right: max(32px, calc((100% - 640px) / 2)); }
-}
-@media (min-width: 1024px) {
-  .layout {
-    flex: none; display: grid; grid-template-columns: minmax(0, 1fr) clamp(360px, 28vw, 480px); gap: 48px; align-items: start;
-    padding: 16px var(--page-pad) 64px; max-width: var(--page-max); width: 100%;
-  }
-  .main { padding: 0; }
-  .h1 { font-size: 40px; }
-  .side {
-    position: sticky; top: 24px; bottom: auto; border: 1px solid var(--line); border-radius: var(--radius-md);
-    background: var(--surface); padding: 20px; gap: 16px;
-  }
-}
-
 /* Done: the dark celebration screen. Its colours are fixed, like the board. */
-.done { flex: 1; min-height: 100dvh; background: var(--aubergine); color: var(--butter); display: flex; }
+.done { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: var(--aubergine); color: var(--butter); display: flex; }
 .doneInner { flex: 1; display: flex; flex-direction: column; gap: 18px; padding: 64px 24px calc(32px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
 .tick { width: 80px; height: 80px; border-radius: 50%; background: var(--persimmon); color: var(--aubergine); display: flex; align-items: center; justify-content: center; }
 .doneTitle { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: -0.02em; }
@@ -76,7 +56,7 @@
 .remindText { margin: 0; font-size: 14px; color: var(--on-dark-2); }
 .doneLinks { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; gap: 10px; }
 .homeLink, .againLink {
-  height: 54px; border-radius: var(--radius-pill); font-size: 16px; font-weight: 600; text-decoration: none;
+  height: 54px; font-family: inherit; background: transparent; cursor: pointer; border-radius: var(--radius-pill); font-size: 16px; font-weight: 600; text-decoration: none;
   display: flex; align-items: center; justify-content: center;
 }
 .homeLink { background: var(--butter); color: var(--aubergine); }

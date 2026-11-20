@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
 import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
 import { Notice } from '../../ui/Notice'
-import { PageState } from '../../ui/PageState'
-import { TopBar } from '../../ui/TopBar'
 import { useProfile } from '../../auth/session'
 import { Dialog } from '../../ui/Dialog'
 import { companyName, useBrief } from '../apply/api'
 import { Switch } from '../../ui/Switch'
-import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { useFreshFiles, useLetter, useMarkApplied, type Applied, type FileLinks } from './api'
 import { canShareFiles, fetchAsFiles, MIME, shareOrDownload, type ShareFile, type ShareOutcome } from './download'
 import { fileNameFromUrl, shownScore } from './format'
@@ -38,8 +34,20 @@ function pick(links: FileLinks | undefined, format: Format, letter: boolean): Sh
   return out
 }
 
-export default function SendPage() {
-  const { id = '' } = useParams()
+type Props = {
+  id: string
+  onClose: () => void
+  /** Open the suggestions not looked at yet. */
+  onReview: () => void
+  /** Go to the Letter tab to write one. */
+  onWriteLetter: () => void
+}
+
+/**
+ * Send, as a sheet over the application: pick the format, include the letter
+ * or not, hand the files over, then ask whether it went and set the follow-up.
+ */
+export function SendSheet({ id, onClose, onReview, onWriteLetter }: Props) {
   const brief = useBrief(id)
   const letter = useLetter(id)
   const fresh = useFreshFiles()
@@ -53,7 +61,6 @@ export default function SendPage() {
   const [shareError, setShareError] = useState<string | null>(null)
   const [applied, setApplied] = useState<Applied | null>(null)
   const [shareable] = useState(canShareFiles)
-  const desktop = useMediaQuery(DESKTOP)
   const [prepared, setPrepared] = useState<{ key: string; files: File[] } | null>(null)
 
   const hasLetter = !!letter.data?.doc
@@ -78,12 +85,8 @@ export default function SendPage() {
   }, [shareable, ready, selectionKey])
 
   const company = companyName(brief.data?.application.company)
-  const top = <TopBar back={`/applications/${id}/cv`} backLabel="Back to preview" eyebrow={company} title="Send" />
 
-  if (brief.isPending || letter.isPending) return (<>{top}<PageState.Loading /></>)
-  if (brief.isError) return (<>{top}<PageState.Error error={brief.error} onRetry={() => brief.refetch()} /></>)
-
-  if (phase === 'done') {
+  if (phase === 'done' && brief.data) {
     return (
       <SendDone
         company={company}
@@ -91,7 +94,28 @@ export default function SendPage() {
         score={shownScore(brief.data.score)}
         reminder={applied?.reminder ?? null}
         initialDays={reminderDays}
+        onClose={onClose}
       />
+    )
+  }
+
+  const confirm = () =>
+    markApplied.mutate(reminderDays, {
+      onSuccess: (r) => { setApplied(r); setPhase('done') },
+    })
+
+  if (phase === 'confirm') {
+    return (
+      <Dialog title="Did you send it?" onClose={() => setPhase('choose')}>
+        <p className={s.dialogText}>
+          {outcome === 'shared'
+            ? 'We cannot see what happens after the share sheet. Tell us and we will track it.'
+            : 'We cannot see where the files go after they download. Tell us once it is sent and we will track it.'}
+        </p>
+        {markApplied.isError && <Notice tone="error">{markApplied.error.message}</Notice>}
+        <Button block busy={markApplied.isPending} onClick={confirm}>Yes, mark as applied</Button>
+        <Button block variant="secondary" onClick={() => setPhase('choose')} disabled={markApplied.isPending}>Not yet</Button>
+      </Dialog>
     )
   }
 
@@ -115,115 +139,88 @@ export default function SendPage() {
     }
   }
 
-  const confirm = () =>
-    markApplied.mutate(reminderDays, {
-      onSuccess: (r) => { setApplied(r); setPhase('done') },
-    })
-
-  const fileRows = (
-    <div className={s.files}>
-      <div className={s.filesTitle} id="files-title">Files</div>
-      {preparing && (
-        <p className={s.preparing} role="status" aria-live="polite">Setting your files in type. This takes a few seconds.</p>
-      )}
-      {renderError && (
-        <div className={s.renderError}>
-          <Notice tone="error">{renderError.message}</Notice>
-          <Button variant="secondary" small onClick={retry}>Try again</Button>
-        </div>
-      )}
-      {!preparing && !renderError && (
-        <ul className={s.fileList} aria-labelledby="files-title">
-          {selected.map((f) => (
-            <li key={f.name} className={s.fileRow}>
-              <span className={s.ext}>{format.toUpperCase()}</span>
-              <span className={s.fileName}>{f.name}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-
+  const loading = brief.isPending || letter.isPending
   const shareLabel = shareable ? 'Share' : expected > 1 ? 'Download files' : 'Download file'
-  const action = (
-    <Button block onClick={share} busy={sharing} disabled={!ready}>
-      {!sharing && <Icon name={shareable ? 'share' : 'download'} size={18} />}
-      {shareLabel}
-    </Button>
-  )
 
   return (
-    <>
-      {top}
-      <div className={s.layout}>
-        <main className={s.main}>
-          <h1 className={s.h1}>How should it go out?</h1>
-          <ChangesNote id={id} inCv={brief.data.score.decided} notSeen={brief.data.score.pending} />
+    <Dialog title={`Send to ${company}`} onClose={onClose}>
+      {brief.isError && <Notice tone="error">{brief.error.message}</Notice>}
+      {brief.data && <ChangesNote inCv={brief.data.score.decided} notSeen={brief.data.score.pending} onReview={onReview} />}
 
-          <fieldset className={s.fieldset}>
-            <legend className={s.legend}>Format</legend>
-            {FORMATS.map((f) => (
-              <label key={f.value} className={s.option}>
-                <input type="radio" name="format" value={f.value} checked={format === f.value} onChange={() => setFormat(f.value)} className={s.radio} />
-                <span className={s.optionText}>
-                  <span className={s.optionLabel}>{f.label}</span>
-                  <span className={s.optionNote}>{f.note}</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-
-          {hasLetter ? (
-            <div className={s.letterRow}>
+      <fieldset className={s.fieldset}>
+        <legend className={s.legend}>Format</legend>
+        <div className={s.options}>
+          {FORMATS.map((f) => (
+            <label key={f.value} className={s.option}>
+              <input type="radio" name="format" value={f.value} checked={format === f.value} onChange={() => setFormat(f.value)} className={s.radio} />
               <span className={s.optionText}>
-                <span className={s.optionLabel}>Include cover letter</span>
-                <span className={s.optionNote}>As a second file</span>
+                <span className={s.optionLabel}>{f.label}</span>
+                <span className={s.optionNote}>{f.note}</span>
               </span>
-              <Switch checked={withLetter} onChange={setWithLetter} label="Include cover letter" />
-            </div>
-          ) : (
-            <p className={s.noLetter}>
-              No cover letter for this job yet. <Link to={`/applications/${id}/letter`}>Write one</Link> if you want to send it too.
-            </p>
-          )}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
-          {!desktop && fileRows}
-        </main>
+      {loading ? null : hasLetter ? (
+        <div className={s.letterRow}>
+          <span className={s.optionText}>
+            <span className={s.optionLabel}>Include cover letter</span>
+            <span className={s.optionNote}>As a second file</span>
+          </span>
+          <Switch checked={withLetter} onChange={setWithLetter} label="Include cover letter" />
+        </div>
+      ) : (
+        <p className={s.noLetter}>
+          No cover letter for this job yet. <button type="button" className={s.inlineLink} onClick={onWriteLetter}>Write one</button> if you want to send it too.
+        </p>
+      )}
 
-        <aside className={s.side} aria-label="Send">
-          {desktop && fileRows}
-          {shareError && <Notice tone="error">{shareError}</Notice>}
-          {action}
-          {!shareable && <p className={s.sideNote}>Attach the {expected > 1 ? 'files' : 'file'} wherever you apply: the job portal or an email to the recruiter.</p>}
-        </aside>
+      <div className={s.files}>
+        <div className={s.filesTitle} id="files-title">Files</div>
+        {(preparing || loading) && (
+          <p className={s.preparing} role="status" aria-live="polite">Setting your files in type. This takes a few seconds.</p>
+        )}
+        {renderError && (
+          <div className={s.renderError}>
+            <Notice tone="error">{renderError.message}</Notice>
+            <Button variant="secondary" small onClick={retry}>Try again</Button>
+          </div>
+        )}
+        {!preparing && !loading && !renderError && (
+          <ul className={s.fileList} aria-labelledby="files-title">
+            {selected.map((f) => (
+              <li key={f.name} className={s.fileRow}>
+                <span className={s.ext}>{format.toUpperCase()}</span>
+                <span className={s.fileName}>{f.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {phase === 'confirm' && (
-        <Dialog title="Did you send it?" onClose={() => setPhase('choose')}>
-          <p className={s.dialogText}>
-            {outcome === 'shared'
-              ? 'We cannot see what happens after the share sheet. Tell us and we will track it.'
-              : 'We cannot see where the files go after they download. Tell us once it is sent and we will track it.'}
-          </p>
-          {markApplied.isError && <Notice tone="error">{markApplied.error.message}</Notice>}
-          <Button block busy={markApplied.isPending} onClick={confirm}>Yes, mark as applied</Button>
-          <Button block variant="secondary" onClick={() => setPhase('choose')} disabled={markApplied.isPending}>Not yet</Button>
-        </Dialog>
-      )}
-    </>
+      {shareError && <Notice tone="error">{shareError}</Notice>}
+      <Button block onClick={share} busy={sharing} disabled={!ready}>
+        {!sharing && <Icon name={shareable ? 'share' : 'download'} size={18} />}
+        {shareLabel}
+      </Button>
+      <p className={s.sideNote}>
+        {shareable ? '' : `Attach the ${expected > 1 ? 'files' : 'file'} wherever you apply: the job portal or an email to the recruiter. `}
+        After it goes, we ask if you sent it and remind you to follow up.
+      </p>
+    </Dialog>
   )
 }
 
 /** What goes out: how far the CV moved from the original, and what was not looked at. */
-function ChangesNote({ id, inCv, notSeen }: { id: string; inCv: number; notSeen: number }) {
+function ChangesNote({ inCv, notSeen, onReview }: { inCv: number; notSeen: number; onReview: () => void }) {
   if (inCv === 0) return <p className={s.changes}>Your CV goes out as you wrote it.</p>
   return (
     <p className={s.changes}>
       Your CV has {plural(inCv, 'change')} for this job.
       {notSeen > 0 && (
         <>
-          {' '}You have not looked at {notSeen}. <Link to={`/applications/${id}/review`}>Look them over</Link>
+          {' '}You have not looked at {notSeen}. <button type="button" className={s.inlineLink} onClick={onReview}>Look them over</button>
         </>
       )}
     </p>

@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { PageState } from '../../ui/PageState'
 import { useRewrites, useTailoredCv, type ResumeDoc, type Rewrites } from './api'
 import { Switch } from '../../ui/Switch'
 import s from './CvPaper.module.css'
 
-type Mark = 'used' | 'waiting' | null
+/** A suggestion in the CV: looked at ('used') or not yet ('waiting'). Kept originals carry no mark. */
+type Mark = { kind: 'used' | 'waiting'; id: string } | null
 
 /** "E2.B3" to [1, 2]: the experience entry and bullet a rewrite belongs to. */
 function parseBulletId(id: string | null): [number, number] | null {
@@ -17,19 +19,20 @@ function marks(data: Rewrites | undefined) {
   for (const r of data?.rewrites ?? []) {
     const at = parseBulletId(r.bullet_id)
     if (!at) continue
-    bullets.set(at.join('.'), r.status === 'pending' ? 'waiting' : r.status === 'kept' ? null : 'used')
+    bullets.set(at.join('.'), r.status === 'kept' ? null : { kind: r.status === 'pending' ? 'waiting' : 'used', id: r.id })
   }
   const sum = data?.summary
-  const summary: Mark = !sum ? null : sum.status === 'pending' ? 'waiting' : sum.status === 'kept' ? null : 'used'
+  const summary: Mark = !sum || sum.status === 'kept' ? null : { kind: sum.status === 'pending' ? 'waiting' : 'used', id: 'summary' }
   return { bullets, summary }
 }
 
 /**
- * The tailored CV as decided so far, set like the page the recruiter gets.
- * Butter marks a suggestion in use; a dashed outline marks one that is in use
- * but not looked at yet. Kept originals are unmarked.
+ * The tailored CV as it would go out, set like the page the recruiter gets.
+ * Butter marks a suggestion in use; a dashed outline marks one in use but not
+ * looked at yet. With `openable`, each marked line links to its suggestion
+ * (`?change=`), and wraps like the text around it.
  */
-export function CvPaper({ id }: { id: string }) {
+export function CvPaper({ id, openable = false }: { id: string; openable?: boolean }) {
   const cv = useTailoredCv(id)
   const rewrites = useRewrites(id)
   const [show, setShow] = useState(true)
@@ -38,7 +41,16 @@ export function CvPaper({ id }: { id: string }) {
   if (cv.isError) return <section className={s.wrap} aria-label="Tailored CV"><PageState.Error error={cv.error} onRetry={() => cv.refetch()} /></section>
 
   const m = marks(rewrites.data)
-  const cls = (mark: Mark) => (show && mark ? s[mark] : undefined)
+  const marked = (mark: Mark, text: string) => {
+    if (!show || !mark) return text
+    if (!openable) return <span className={s[mark.kind]}>{text}</span>
+    return (
+      <Link to={{ search: `?change=${encodeURIComponent(mark.id)}` }} replace className={`${s.markLink} ${s[mark.kind]}`}>
+        {text}
+        <span className="visually-hidden">{mark.kind === 'waiting' ? ' (changed for this job, not looked at yet)' : ' (changed for this job)'}</span>
+      </Link>
+    )
+  }
   const doc: ResumeDoc = cv.data.doc
   const contact = [doc.header.email, doc.header.phone, doc.header.linkedin?.display, doc.header.github?.display, doc.header.website?.display].filter(Boolean)
 
@@ -55,10 +67,10 @@ export function CvPaper({ id }: { id: string }) {
       </div>
       {show && (
         <p className={s.legend}>
-          <span className={s.used}>In use</span> <span className={s.waiting}>Not looked at yet</span>
+          <span className={s.used}>Changed for this job</span> <span className={s.waiting}>Not looked at yet</span>
         </p>
       )}
-      <article className={s.paper}>
+      <article className={s.paper} aria-label="Your tailored CV">
         <header className={s.docHead}>
           <div className={s.name}>{doc.header.name}</div>
           {doc.header.title && <div className={s.title}>{doc.header.title}</div>}
@@ -68,7 +80,7 @@ export function CvPaper({ id }: { id: string }) {
         {doc.summary && (
           <>
             <h3 className={s.section}>Professional Summary</h3>
-            <p className={s.p}><span className={cls(m.summary)}>{doc.summary}</span></p>
+            <p className={s.p}>{marked(m.summary, doc.summary)}</p>
           </>
         )}
 
@@ -79,7 +91,7 @@ export function CvPaper({ id }: { id: string }) {
             <div className={s.lineItalic}><span>{e.role}</span><span>{e.location}</span></div>
             <ul className={s.bullets}>
               {e.bullets.map((b, bi) => (
-                <li key={bi}><span className={cls(m.bullets.get(`${ei}.${bi}`) ?? null)}>{b}</span></li>
+                <li key={bi}>{marked(m.bullets.get(`${ei}.${bi}`) ?? null, b)}</li>
               ))}
             </ul>
           </div>

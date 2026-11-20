@@ -59,8 +59,8 @@ describe('HomePage', () => {
     open(busyHome, apps)
     expect(await screen.findByText('Three things need you today.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Draft follow-up' })).toHaveAttribute('href', '/applications/a1/follow-up')
-    expect(screen.getByRole('link', { name: /Unfinished.*Ledgerline · Product Engineer.*3 rewrites to look over/ })).toHaveAttribute('href', '/applications/a2')
-    expect(screen.getByRole('link', { name: /Stopped.*New job/ })).toHaveAttribute('href', '/applications/a3/running')
+    expect(screen.getByRole('link', { name: /Unfinished.*Ledgerline · Product Engineer.*3 rewrites to look over/ })).toHaveAttribute('href', '/applications/a2?change=next')
+    expect(screen.getByRole('link', { name: /Stopped.*New job/ })).toHaveAttribute('href', '/applications/a3')
     const week = screen.getByRole('region', { name: 'This week' })
     expect(within(week).getByRole('link', { name: /Tailored your CV for Ledgerline/ })).toHaveAttribute('href', '/applications/a2')
   })
@@ -132,7 +132,7 @@ describe('HomePage', () => {
 
     await userEvent.type(screen.getByLabelText('Job link or description'), 'https://jobs.example.com/42')
     await userEvent.click(screen.getByRole('button', { name: /Tailor my CV/ }))
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/applications/new1/running'))
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/applications/new1'))
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ url: 'https://jobs.example.com/42', research: true, letter: true })
   })
 

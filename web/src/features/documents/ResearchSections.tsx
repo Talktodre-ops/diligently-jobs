@@ -1,7 +1,7 @@
 import type { Cited, ResearchBrief, Source } from './api'
 import { hostOf } from './format'
 import { Icon } from '../../ui/Icon'
-import s from './Research.module.css'
+import s from './CompanyPanel.module.css'
 
 const sourceOf = (sources: Source[], c: Cited) => sources[c.source - 1]
 
@@ -17,7 +17,7 @@ export function OverviewSection({ brief, rest, sources }: { brief: ResearchBrief
       {rest && <p className={s.lead}>{rest}</p>}
       {brief.products.length > 0 && (
         <section className={s.section} aria-labelledby="r-products">
-          <h2 id="r-products" className={s.label}>What they make</h2>
+          <h4 id="r-products" className={s.label}>What they make</h4>
           <ul className={s.chips}>
             {brief.products.map((p) => <li key={p} className={s.chip}>{p}</li>)}
           </ul>
@@ -25,7 +25,7 @@ export function OverviewSection({ brief, rest, sources }: { brief: ResearchBrief
       )}
       {brief.culture.length > 0 && (
         <section className={s.section} aria-labelledby="r-culture">
-          <h2 id="r-culture" className={s.label}>What they care about</h2>
+          <h4 id="r-culture" className={s.label}>What they care about</h4>
           <ul className={s.card}>
             {brief.culture.map((c) => <li key={c} className={s.row}>{c}</li>)}
           </ul>
@@ -33,7 +33,7 @@ export function OverviewSection({ brief, rest, sources }: { brief: ResearchBrief
       )}
       {brief.recent_news.length > 0 && (
         <section className={s.section} aria-labelledby="r-recent">
-          <h2 id="r-recent" className={s.label}>Recent</h2>
+          <h4 id="r-recent" className={s.label}>Recent</h4>
           {brief.recent_news.map((n) => {
             const src = sourceOf(sources, n)
             const meta = [src && hostOf(src.url), month(src?.published)].filter(Boolean).join(' · ')
@@ -50,7 +50,7 @@ export function OverviewSection({ brief, rest, sources }: { brief: ResearchBrief
       )}
       {brief.why_them && (
         <section className={s.section} aria-labelledby="r-why">
-          <h2 id="r-why" className={s.label}>Why them</h2>
+          <h4 id="r-why" className={s.label}>Why them</h4>
           <p className={s.why}>{brief.why_them}</p>
         </section>
       )}

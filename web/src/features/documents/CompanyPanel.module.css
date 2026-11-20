@@ -1,5 +1,6 @@
-.page { padding: 4px var(--page-pad) 40px; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: var(--page-max); }
-.emptyWrap { padding: 0 var(--page-pad) 32px; display: flex; flex-direction: column; gap: 12px; max-width: 560px; width: 100%; }
+.panel { display: flex; flex-direction: column; gap: 28px; }
+.headRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.emptyWrap { display: flex; flex-direction: column; gap: 12px; max-width: 560px; width: 100%; }
 .head { display: flex; flex-direction: column; gap: 6px; }
 .h1 { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.12; letter-spacing: -0.015em; max-width: 30ch; }
 .h1Long { font-size: 23px; line-height: 1.2; max-width: 40ch; }
@@ -7,18 +8,7 @@
 .status:empty { display: none; }
 .status { font-size: 14px; color: var(--ink-2); }
 
-.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.tab {
-  height: var(--tap); padding: 0 12px; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px;
-  background: transparent; color: var(--ink-2); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
-}
-.tab[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--persimmon); }
-.tab:hover { color: var(--ink); }
-.panel { display: flex; flex-direction: column; gap: 16px; outline-offset: 4px; }
-
-.columns { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 48px; align-items: start; }
 .column { display: flex; flex-direction: column; gap: 16px; }
-.columns > .column:last-child { gap: 36px; }
 .columnTitle { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 
 .lead { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-3); max-width: 62ch; }
@@ -61,11 +51,7 @@ a.news:hover { border-color: var(--ink); color: var(--ink); }
 .sourceTitle { display: block; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .sourceIcon { color: var(--ink-2); flex: none; }
 
-@media (min-width: 640px) {
-  .page { padding: 8px 32px 48px; }
-}
 @media (min-width: 1024px) {
-  .page { padding: 8px 48px 64px; gap: 28px; }
-  .h1 { font-size: 36px; }
-  .h1Long { font-size: 28px; }
+  .h1 { font-size: 32px; }
+  .h1Long { font-size: 26px; }
 }

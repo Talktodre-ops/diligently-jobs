@@ -2,6 +2,7 @@ import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 're
 import { createBrowserRouter, Link } from 'react-router'
 import { PublicOnly, RequireAccount, RequireSession } from '../auth/gates'
 import { PageState } from '../ui/PageState'
+import { OldApplicationRoute } from '../features/apply/OldApplicationRoute'
 import { AppShell } from './AppShell'
 
 // One lazy chunk per screen keeps the first load small on a phone.
@@ -59,14 +60,11 @@ export const routes = [
         element: <AppShell tabs={false} />,
         children: [
           { path: '/new', element: page(() => import('../features/apply/NewJobPage')) },
-          { path: '/applications/:id', element: page(() => import('../features/apply/WorkspacePage')) },
-          { path: '/applications/:id/running', element: page(() => import('../features/apply/RunningPage')) },
-          { path: '/applications/:id/review', element: page(() => import('../features/apply/ReviewPage')) },
-          { path: '/applications/:id/gaps', element: page(() => import('../features/apply/GapsPage')) },
-          { path: '/applications/:id/research', element: page(() => import('../features/documents/ResearchPage')) },
-          { path: '/applications/:id/letter', element: page(() => import('../features/documents/CoverLetterPage')) },
-          { path: '/applications/:id/cv', element: page(() => import('../features/documents/CvPreviewPage')) },
-          { path: '/applications/:id/send', element: page(() => import('../features/documents/SendPage')) },
+          { path: '/applications/:id', element: page(() => import('../features/apply/ApplicationPage')) },
+          // Addresses from before the application was one screen.
+          ...(['running', 'review', 'gaps', 'cv', 'letter', 'research', 'send'] as const).map((was) => (
+            { path: `/applications/:id/${was}`, element: <OldApplicationRoute was={was} /> }
+          )),
           { path: '/applications/:id/follow-up', element: page(() => import('../features/track/FollowUpPage')) },
           { path: '/settings', element: page(() => import('../features/account/SettingsPage')) },
         ],

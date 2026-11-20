@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
-import { companyName, useBrief } from '../apply/api'
 import { useProfile } from '../../auth/session'
-import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { Button } from '../../ui/Button'
 import { Icon } from '../../ui/Icon'
 import { Notice } from '../../ui/Notice'
 import { PageState } from '../../ui/PageState'
-import { TopBar } from '../../ui/TopBar'
 import { TONES, letterParagraphs, useEditLetter, useLetter, useRegenerateLetter, type Letter, type Tone } from './api'
 import { capitalise, countWords } from './format'
 import { LetterParagraph } from './LetterParagraph'
-import s from './CoverLetter.module.css'
+import s from './LetterPanel.module.css'
 
 function plainText(letter: Letter, paragraphs: string[]) {
   const d = letter.doc
@@ -19,14 +15,11 @@ function plainText(letter: Letter, paragraphs: string[]) {
   return [d?.greeting, ...paragraphs, sign].filter(Boolean).join('\n\n')
 }
 
-export default function CoverLetterPage() {
-  const { id = '' } = useParams()
-  const navigate = useNavigate()
-  const brief = useBrief(id)
+/** The Letter tab: the draft, its tone, and editing one paragraph at a time. */
+export function LetterPanel({ id, company }: { id: string; company: string }) {
   const letter = useLetter(id)
   const regenerate = useRegenerateLetter(id)
   const edit = useEditLetter(id)
-  const desktop = useMediaQuery(DESKTOP)
   const [editing, setEditing] = useState<number | null>(null)
   const preferred = useProfile().data?.writing.letter_tone
   const [firstTone, setFirstTone] = useState<Tone | null>(null)
@@ -35,16 +28,12 @@ export default function CoverLetterPage() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
-  const company = companyName(brief.data?.application.company)
-  const back = `/applications/${id}`
   const l = letter.data
   const paragraphs = l ? letterParagraphs(l) : []
   const words = countWords(paragraphs)
-  const top = <TopBar back={back} backLabel="Back to application" eyebrow={company} title="Cover letter" end={l ? <span className={s.words}>{words} words</span> : undefined} />
 
-  if (brief.isPending || letter.isPending) return (<>{top}<PageState.Loading label="Loading your letter" /></>)
-  if (brief.isError) return (<>{top}<PageState.Error error={brief.error} onRetry={() => brief.refetch()} /></>)
-  if (letter.isError) return (<>{top}<PageState.Error error={letter.error} onRetry={() => letter.refetch()} /></>)
+  if (letter.isPending) return <PageState.Loading label="Loading your letter" />
+  if (letter.isError) return <PageState.Error error={letter.error} onRetry={() => letter.refetch()} />
 
   const busy = regenerate.isPending || edit.isPending
   // The first draft starts in the tone chosen in Settings unless one is picked here.
@@ -54,7 +43,6 @@ export default function CoverLetterPage() {
   if (!l) {
     return (
       <>
-        {top}
         <div className={s.emptyWrap}>
           <PageState.Empty
             title="No letter yet"
@@ -126,15 +114,6 @@ export default function CoverLetterPage() {
     </div>
   )
 
-  const actions = (
-    <>
-      <Button variant="secondary" onClick={copy} disabled={busy}>
-        <Icon name="copy" size={18} />
-        Copy
-      </Button>
-      <Button className={s.use} onClick={() => navigate(back)} disabled={busy}>Use this letter</Button>
-    </>
-  )
 
   const status = (
     <div role="status" aria-live="polite" className={s.status}>
@@ -169,35 +148,23 @@ export default function CoverLetterPage() {
     </article>
   )
 
-  const hint = <p className={s.hint}>Tap a paragraph to edit it. Picking another tone writes a new letter from your CV decisions.</p>
-
   return (
-    <>
-      {top}
-      {desktop ? (
-        <div className={s.desk}>
-          <div className={s.paperCol}>{article}</div>
-          <aside className={s.side} aria-label="Letter options">
-            {tones}
-            {status}
-            {regenerate.isError && <Notice tone="error">{regenerate.error.message}</Notice>}
-            {hint}
-            <div className={s.sideActions}>{actions}</div>
-          </aside>
-        </div>
-      ) : (
-        <>
-          <div className={s.toneBar}>{tones}</div>
-          <div className={s.body}>
-            {status}
-            {regenerate.isError && <Notice tone="error">{regenerate.error.message}</Notice>}
-            {article}
-            {hint}
-          </div>
-          <footer className={s.footer}>{actions}</footer>
-        </>
-      )}
+    <div className={s.panel}>
+      <div className={s.top}>
+        {tones}
+        <span className={s.words}>{words} words</span>
+      </div>
+      {status}
+      {regenerate.isError && <Notice tone="error">{regenerate.error.message}</Notice>}
+      {article}
+      <p className={s.hint}>Tap a paragraph to edit it. Picking another tone writes a new letter from your CV decisions.</p>
+      <div className={s.actions}>
+        <Button variant="secondary" small onClick={copy} disabled={busy}>
+          <Icon name="copy" size={18} />
+          Copy
+        </Button>
+      </div>
       <div role="status" aria-live="polite" className={toast ? s.toast : 'visually-hidden'}>{toast}</div>
-    </>
+    </div>
   )
 }

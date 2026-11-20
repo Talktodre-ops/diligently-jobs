@@ -97,7 +97,7 @@ export default function NewJobPage() {
     start.mutate(input, {
       onSuccess: (r) => {
         clearJobDraft()
-        navigate(`/applications/${r.application_id}/running`, { replace: true, state: { jobId: r.job_id } })
+        navigate(`/applications/${r.application_id}`, { replace: true, state: { jobId: r.job_id } })
       },
       onError: (e) => {
         if (isApiError(e, 'no_master_cv')) saveJobDraft('url' in input && input.url ? input.url : jd)

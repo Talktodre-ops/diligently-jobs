@@ -1,5 +1,5 @@
-// Types and hooks for the apply flow: New job, Running, Workspace, Review,
-// Gaps. Shapes follow docs/api.md and backend/src/routes/{workspace,review,gaps}.rs.
+// Types and hooks for the apply flow: New job and the application screen
+// (tailoring, suggestions, questions). Shapes follow docs/api.md and backend/src/routes/{workspace,review,gaps}.rs.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/client'
 import type { Job } from '../../api/types'
@@ -136,8 +136,8 @@ export function useRetryPipeline(id: string) {
   })
 }
 
-export function useRewrites(id: string) {
-  return useQuery({ queryKey: keys.rewrites(id), queryFn: () => api.get<Rewrites>(`/v1/applications/${id}/rewrites`) })
+export function useRewrites(id: string, enabled = true) {
+  return useQuery({ queryKey: keys.rewrites(id), queryFn: () => api.get<Rewrites>(`/v1/applications/${id}/rewrites`), enabled })
 }
 
 /** Everything that shows the decided CV or the score goes stale after a decision. */

@@ -57,17 +57,17 @@ function Card({ card: c }: { card: NeedsYouCard }) {
     review: {
       eyebrow: 'Unfinished',
       sub: `${plural(c.pending ?? 0, 'rewrite')} to look over`,
-      to: `/applications/${c.application_id}`,
+      to: `/applications/${c.application_id}?change=next`,
     },
     retry: {
       eyebrow: 'Stopped',
       sub: 'Tailoring did not finish. Try it again.',
-      to: `/applications/${c.application_id}/running`,
+      to: `/applications/${c.application_id}`,
     },
     prepare: {
       eyebrow: 'Interview',
       sub: 'Read the company research before you go in',
-      to: `/applications/${c.application_id}/research`,
+      to: `/applications/${c.application_id}?tab=company`,
     },
   }[c.type]
   return (
