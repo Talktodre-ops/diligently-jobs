@@ -8,6 +8,12 @@ import { useLocation } from 'react-router'
 import ApplicationPage from '../apply/ApplicationPage'
 import DocumentsPage from './DocumentsPage'
 
+// PDF.js needs a canvas and a worker; the drawn page is covered in the Edge e2e.
+vi.mock('./PdfPages', async (real) => ({
+  ...(await real<typeof import('./PdfPages')>()),
+  PdfPages: ({ url }: { url: string }) => <div data-testid="pdf" data-url={url} />,
+}))
+
 const APP = 'app-1'
 const link = (name: string) => `http://s3.test/f?response-content-disposition=${encodeURIComponent(`attachment; filename="${name}"`)}&sig=${Math.random()}`
 
@@ -154,9 +160,39 @@ describe('Company tab', () => {
 })
 
 describe('Letter tab', () => {
+  it('opens on the letter as LaTeX set it, with Edit for the text', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => {
+      if (u.endsWith('/cover-letters')) return letter()
+      if (u.endsWith('/files')) return files()
+      return base(u, m, b)
+    })
+    const page = await screen.findByTestId('pdf')
+    expect(decodeURIComponent(page.dataset.url!)).toContain('Cover letter.pdf')
+    expect(screen.getByText(/Exactly what the recruiter gets/)).toBeInTheDocument()
+    expect(screen.queryByText('Dear Hiring Team,')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(await screen.findByText('Dear Hiring Team,')).toBeInTheDocument()
+    expect(screen.getByTestId('where')).toHaveTextContent(`/applications/${APP}?tab=letter&view=edit`)
+  })
+
+  it('sets a letter without a file in type before showing it', async () => {
+    let rendered = false
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => {
+      if (u.endsWith('/cover-letters')) return letter()
+      if (u.endsWith('/files')) return rendered ? files() : files({ letter: false })
+      if (u.endsWith('/render')) { rendered = true; return { cv_version_id: 'v', cv_job_id: 'cj', letter_job_id: 'lj' } }
+      if (u === '/v1/jobs/cj' || u === '/v1/jobs/lj') return { id: u.split('/').pop(), kind: 'render', status: 'done', result: null, attempts: 1, max_attempts: 3, progress: null }
+      return base(u, m, b)
+    })
+    const pdf = await screen.findByTestId('pdf')
+    expect(decodeURIComponent(pdf.dataset.url!)).toContain('Cover letter.pdf')
+    expect(calls.find((c) => c.url.endsWith('/render'))?.body).toEqual({ include_letter: true })
+  })
+
   it('rewrites in another tone through the API', async () => {
     let current = letter()
-    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter&view=edit`, (u, m, b) => {
       if (u.endsWith('/cover-letters/regenerate')) { current = letter((b as { tone: string }).tone, ['A warm opening.', 'A warm close.']); return current }
       if (u.endsWith('/cover-letters')) return current
       return base(u, m, b)
@@ -170,7 +206,7 @@ describe('Letter tab', () => {
   })
 
   it('saves an edited paragraph with the others untouched', async () => {
-    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?tab=letter&view=edit`, (u, m, b) => {
       if (u === '/v1/cover-letters/l1' && m === 'PATCH') return letter('direct', (b as { paragraphs: string[] }).paragraphs)
       if (u.endsWith('/cover-letters')) return letter()
       return base(u, m, b)
@@ -187,7 +223,7 @@ describe('Letter tab', () => {
   it('copies the whole letter', async () => {
     const writeText = vi.fn(async () => {})
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
-    setup(<ApplicationPage />, `/applications/${APP}?tab=letter`, (u, m, b) => (u.endsWith('/cover-letters') ? letter() : base(u, m, b)))
+    setup(<ApplicationPage />, `/applications/${APP}?tab=letter&view=edit`, (u, m, b) => (u.endsWith('/cover-letters') ? letter() : base(u, m, b)))
     await userEvent.click(await screen.findByRole('button', { name: 'Copy' }))
     expect(await screen.findByText('Copied to clipboard')).toBeInTheDocument()
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Dear Hiring Team,\n\nI build payment systems that stay up.'))
@@ -219,15 +255,22 @@ describe('Letter tab', () => {
   })
 })
 
-describe('Send sheet', () => {
-  it('hands over both files, then marks applied and moves the reminder', async () => {
-    const calls = setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => {
-      if (u.endsWith('/cover-letters')) return letter()
-      if (u.endsWith('/files')) return files()
-      if (u.endsWith('/applied')) return { application_id: APP, stage: 'applied', reminder: { id: 'rem', application_id: APP, due_at: '2026-11-20T09:00:00Z', status: 'scheduled', sent_at: null } }
+describe('Download sheet', () => {
+  const withLetter: Handler = (u, m, b) => {
+    if (u.endsWith('/cover-letters')) return letter()
+    if (u.endsWith('/files')) return files()
+    return base(u, m, b)
+  }
+  const appliedReply = (due: string) => ({ application_id: APP, stage: 'applied', reminder: { id: 'rem', application_id: APP, due_at: due, status: 'scheduled', sent_at: null } })
+
+  it('downloads both files, then marks applied and moves the reminder', async () => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?download=1`, (u, m, b) => {
+      if (u.endsWith('/applied')) return appliedReply('2026-11-20T09:00:00Z')
       if (u === '/v1/reminders/rem/snooze') return { reminder: { id: 'rem', application_id: APP, due_at: '2026-11-23T09:00:00Z', status: 'scheduled', sent_at: null } }
-      return base(u, m, b)
+      return withLetter(u, m, b)
     })
+    expect(await screen.findByRole('dialog', { name: 'Download your files' })).toBeInTheDocument()
+    expect(screen.getByText('For Halcyon Health, Senior Backend Engineer')).toBeInTheDocument()
     const list = await screen.findByRole('list', { name: 'Files' })
     expect(within(list).getByText('Ada Okafor Halcyon Health CV.pdf')).toBeInTheDocument()
     expect(within(list).getByText('Ada Okafor Halcyon Health Cover letter.pdf')).toBeInTheDocument()
@@ -236,20 +279,42 @@ describe('Send sheet', () => {
     expect(within(list).getByText('Ada Okafor Halcyon Health CV.docx')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('radio', { name: /PDF/ }))
 
-    await userEvent.click(screen.getByRole('button', { name: 'Download files' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Did you send it?' })
+    await userEvent.click(screen.getByRole('button', { name: 'Download both' }))
+    const ask = await screen.findByRole('region', { name: 'Did you apply?' })
     await waitFor(() => expect(clicked).toHaveLength(2))
     expect(calls.find((c) => c.url === '/v1/events')?.body).toEqual({
-      kind: 'files_downloaded', application_id: APP, payload: { format: 'pdf', with_letter: true, via: 'downloaded' },
+      kind: 'files_downloaded', application_id: APP, payload: { format: 'pdf', files: 'cv+letter', via: 'downloaded' },
     })
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Yes, mark as applied' }))
+    await userEvent.click(within(ask).getByRole('button', { name: 'Yes, I applied' }))
     expect(await screen.findByRole('heading', { name: 'Applied.' })).toBeInTheDocument()
-    expect(screen.getByText(/sent with a match of 78/)).toBeInTheDocument()
+    expect(screen.getByText(/with a match of 78/)).toBeInTheDocument()
     expect(calls.find((c) => c.url.endsWith('/applied'))?.body).toEqual({ reminder_days: 7 })
 
     await userEvent.click(screen.getByRole('button', { name: '10 days' }))
     expect(await screen.findByText('We will nudge you on Mon 23 Nov with a draft ready.')).toBeInTheDocument()
     expect(calls.find((c) => c.url.endsWith('/snooze'))?.body).toEqual({ days: 10 })
+  })
+
+  it('downloads the CV or the letter on its own', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, withLetter)
+    await screen.findByRole('list', { name: 'Files' })
+    await userEvent.click(screen.getByRole('button', { name: 'Download the cover letter as PDF' }))
+    await waitFor(() => expect(clicked).toHaveLength(1))
+    expect(decodeURIComponent(clicked[0]!)).toContain('Cover letter.pdf')
+    await userEvent.click(screen.getByRole('radio', { name: /DOCX/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Download the CV as DOCX' }))
+    await waitFor(() => expect(clicked).toHaveLength(2))
+    expect(decodeURIComponent(clicked[1]!)).toContain('CV.docx')
+    expect(screen.getByRole('region', { name: 'Did you apply?' })).toBeInTheDocument()
+  })
+
+  it('lets "Not yet" put the question away', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, withLetter)
+    await screen.findByRole('list', { name: 'Files' })
+    await userEvent.click(screen.getByRole('button', { name: 'Download both' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Not yet' }))
+    expect(screen.queryByRole('region', { name: 'Did you apply?' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Attach them wherever you apply/)).toBeInTheDocument()
   })
 
   it('keeps its place when the window crosses the desktop width', async () => {
@@ -260,33 +325,26 @@ describe('Send sheet', () => {
       addEventListener: (_: string, f: () => void) => listeners.add(f),
       removeEventListener: (_: string, f: () => void) => listeners.delete(f),
     }))
-    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => {
-      if (u.endsWith('/cover-letters')) return letter()
-      if (u.endsWith('/files')) return files()
-      return base(u, m, b)
-    })
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, withLetter)
     await screen.findByRole('list', { name: 'Files' })
-    await userEvent.click(screen.getByRole('button', { name: 'Download files' }))
-    await screen.findByRole('dialog', { name: 'Did you send it?' })
+    await userEvent.click(screen.getByRole('button', { name: 'Download both' }))
+    await screen.findByRole('region', { name: 'Did you apply?' })
     act(() => { wide = false; listeners.forEach((f) => f()) })
-    expect(screen.getByRole('dialog', { name: 'Did you send it?' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Did you apply?' })).toBeInTheDocument()
     act(() => { wide = true; listeners.forEach((f) => f()) })
-    expect(screen.getByRole('dialog', { name: 'Did you send it?' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Did you apply?' })).toBeInTheDocument()
   })
 
   it('preselects the follow-up days from Settings and offers 14', async () => {
-    const calls = setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => {
+    const calls = setup(<ApplicationPage />, `/applications/${APP}?download=1`, (u, m, b) => {
       if (u === '/v1/profile') return { profile: settingsProfile({ reminders: { follow_up_days: 14, send_hour: 9, time_zone: 'Africa/Lagos', skip_weekends: true } }) }
-      if (u.endsWith('/cover-letters')) return letter()
-      if (u.endsWith('/files')) return files()
-      if (u.endsWith('/applied')) return { application_id: APP, stage: 'applied', reminder: { id: 'rem', application_id: APP, due_at: '2026-12-01T09:00:00Z', status: 'scheduled', sent_at: null } }
-      return base(u, m, b)
+      if (u.endsWith('/applied')) return appliedReply('2026-12-01T09:00:00Z')
+      return withLetter(u, m, b)
     })
     await screen.findByRole('list', { name: 'Files' })
     await waitFor(() => expect(calls.some((c) => c.url === '/v1/profile')).toBe(true))
-    await userEvent.click(screen.getByRole('button', { name: 'Download files' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Did you send it?' })
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Yes, mark as applied' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Download both' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Yes, I applied' }))
     expect(await screen.findByRole('heading', { name: 'Applied.' })).toBeInTheDocument()
     expect(calls.find((c) => c.url.endsWith('/applied'))?.body).toEqual({ reminder_days: 14 })
     const group = screen.getByRole('group', { name: 'Remind me to follow up in' })
@@ -294,34 +352,40 @@ describe('Send sheet', () => {
     expect(within(group).getByRole('button', { name: '14 days' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('says how many changes go out and links to the ones not looked at', async () => {
-    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
+  it('says how many changes are in the CV and links to the ones not looked at', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, (u, m, b) => (u.endsWith('/files') ? files() : base(u, m, b)))
     expect(await screen.findByText(/Your CV has 1 change for this job\. You have not looked at 2\./)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Look them over' }))
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/applications/${APP}?change=next`))
   })
 
-  it('says the CV goes out unchanged when every original was kept', async () => {
-    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) =>
+  it('says the CV is unchanged when every original was kept', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, (u, m, b) =>
       u === `/v1/applications/${APP}/brief` ? { ...brief, score: { ...brief.score, decided: 0, pending: 0 } } : u.endsWith('/files') ? files() : base(u, m, b))
-    const sheet = await screen.findByRole('dialog', { name: 'Send to Halcyon Health' })
-    expect(within(sheet).getByText('Your CV goes out as you wrote it.')).toBeInTheDocument()
+    const sheet = await screen.findByRole('dialog', { name: 'Download your files' })
+    expect(within(sheet).getByText('Your CV is as you wrote it.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Look them over' })).not.toBeInTheDocument()
   })
 
   it('names the employer only when the posting did', async () => {
-    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) =>
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, (u, m, b) =>
       u === `/v1/applications/${APP}/brief` ? { ...brief, application: { ...brief.application, company: null } } : u.endsWith('/files') ? files() : base(u, m, b))
-    expect(await screen.findByRole('dialog', { name: 'Send your application' })).toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: /New job/ })).not.toBeInTheDocument()
+    const sheet = await screen.findByRole('dialog', { name: 'Download your files' })
+    expect(within(sheet).queryByText(/^For .*, Senior Backend Engineer/)).not.toBeInTheDocument()
+    expect(within(sheet).queryByText(/New job/)).not.toBeInTheDocument()
   })
 
-  it('sends the CV alone when there is no letter', async () => {
-    setup(<ApplicationPage />, `/applications/${APP}?send=1`, (u, m, b) => (u.endsWith('/files') ? files({ letter: false }) : base(u, m, b)))
+  it('downloads the CV alone when there is no letter', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?download=1`, (u, m, b) => (u.endsWith('/files') ? files({ letter: false }) : base(u, m, b)))
     expect(await screen.findByText(/No cover letter for this job yet/)).toBeInTheDocument()
     const list = await screen.findByRole('list', { name: 'Files' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Download file' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Download CV' })).toBeEnabled()
+  })
+
+  it('still opens from an address made before Send became Download', async () => {
+    setup(<ApplicationPage />, `/applications/${APP}?send=1`, withLetter)
+    expect(await screen.findByRole('dialog', { name: 'Download your files' })).toBeInTheDocument()
   })
 })
 
@@ -347,13 +411,13 @@ describe('DocumentsPage', () => {
     expect(calls.some((c) => c.url === '/v1/documents?kind=letter')).toBe(true)
   })
 
-  it('shares a CV as a download where there is no share sheet', async () => {
+  it('downloads a CV from the list', async () => {
     setup(<DocumentsPage />, '/documents', (u, m, b) => {
       if (u === '/v1/documents?kind=all') return { documents: docs }
       if (u.endsWith('/files')) return files()
       return base(u, m, b)
     })
-    await userEvent.click(await screen.findByRole('button', { name: 'Share CV · Halcyon Health' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Download CV · Halcyon Health' }))
     await waitFor(() => expect(clicked).toHaveLength(1))
     expect(decodeURIComponent(clicked[0]!)).toContain('Halcyon Health CV.pdf')
   })

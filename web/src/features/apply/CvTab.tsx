@@ -17,9 +17,9 @@ type View = 'page' | 'read'
 
 /**
  * The CV tab. Page, the default, is the PDF exactly as LaTeX set it, the file
- * that goes out, with each change highlighted and opening its suggestion. It
+ * that gets downloaded, with each change highlighted and opening its suggestion. It
  * is set in type again after every decision, and says so when typesetting
- * fails, so nothing is sent unseen. Read is the same CV as text, for screen
+ * fails, so nothing is downloaded unseen. Read is the same CV as text, for screen
  * readers and small screens.
  */
 export function CvTab({ id, onOpen }: { id: string; onOpen: (itemId: string) => void }) {
@@ -59,7 +59,7 @@ export function CvTab({ id, onOpen }: { id: string; onOpen: (itemId: string) => 
       <div className={s.tab}>
         <div className={s.bar}>{toggle}</div>
         {cv.data && cv.data.issues.length > 0 && (
-          <Notice>Worth checking before you send: {cv.data.issues.map((i) => i.message).join(' ')}</Notice>
+          <Notice>Worth checking before you download: {cv.data.issues.map((i) => i.message).join(' ')}</Notice>
         )}
         <CvPaper id={id} changeSearch={(itemId) => `?view=read&change=${encodeURIComponent(itemId)}`} />
       </div>
@@ -80,7 +80,7 @@ export function CvTab({ id, onOpen }: { id: string; onOpen: (itemId: string) => 
       <div className={s.failed} role="alert">
         <p className={s.failedTitle}>Your CV did not set in type.</p>
         <p className={s.failedText}>
-          Nothing has been sent, and Send waits until it works. Try again; if it keeps failing, the Read view shows the text meanwhile.
+          Download waits until it works. Try again; if it keeps failing, the Read view shows the text meanwhile.
         </p>
         <Button variant="secondary" small onClick={retry}>Try again</Button>
       </div>

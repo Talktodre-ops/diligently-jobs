@@ -17,7 +17,7 @@ function meta(d: DocumentItem) {
   return `${capitalise(d.tone)} tone · ${d.words} words`
 }
 
-export function DocumentRow({ doc, busy, disabled, onShare }: { doc: DocumentItem; busy: boolean; disabled: boolean; onShare: () => void }) {
+export function DocumentRow({ doc, busy, disabled, onDownload }: { doc: DocumentItem; busy: boolean; disabled: boolean; onDownload: () => void }) {
   const title = documentTitle(doc)
   const to = `/applications/${doc.application_id}${doc.kind === 'cv' ? '' : '?tab=letter'}`
   return (
@@ -30,8 +30,8 @@ export function DocumentRow({ doc, busy, disabled, onShare }: { doc: DocumentIte
         <span className={s.rowMeta}>{meta(doc)}</span>
         <span className={s.rowWhen}>{capitalise(ago(doc.updated_at))}</span>
       </Link>
-      <Button variant="ghost" small iconOnly aria-label={`Share ${title}`} busy={busy} disabled={disabled} onClick={onShare}>
-        {!busy && <Icon name="share" size={20} />}
+      <Button variant="ghost" small iconOnly aria-label={`Download ${title}`} busy={busy} disabled={disabled} onClick={onDownload}>
+        {!busy && <Icon name="download" size={20} />}
       </Button>
     </li>
   )

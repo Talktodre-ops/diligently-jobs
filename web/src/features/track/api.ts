@@ -4,8 +4,8 @@ import { api } from '../../api/client'
 export type Stage = 'saved' | 'applied' | 'interviewing' | 'offer' | 'closed'
 
 export const STAGES: { id: Stage; label: string; empty: { title: string; body: string } }[] = [
-  { id: 'saved', label: 'Drafting', empty: { title: 'Nothing in progress', body: 'Jobs you have started but not sent wait here.' } },
-  { id: 'applied', label: 'Applied', empty: { title: 'Nothing sent yet', body: 'When you send a CV, mark it as applied and it moves here with a follow-up reminder.' } },
+  { id: 'saved', label: 'Drafting', empty: { title: 'Nothing in progress', body: 'Jobs you have tailored but not applied to yet wait here.' } },
+  { id: 'applied', label: 'Applied', empty: { title: 'No applications yet', body: 'After you download your files and apply, mark the job as applied and it moves here with a follow-up reminder.' } },
   { id: 'interviewing', label: 'Interview', empty: { title: 'No interviews yet', body: 'When a company invites you, move the job here and we will help you prepare.' } },
   { id: 'offer', label: 'Offer', empty: { title: 'No offers yet', body: 'When one lands, move it here and we will help you compare.' } },
   { id: 'closed', label: 'Closed', empty: { title: 'Nothing closed', body: 'Move a job here when it is over, so it stops asking for your attention.' } },

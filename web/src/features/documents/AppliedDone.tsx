@@ -4,7 +4,7 @@ import { FOLLOW_UP_DAYS } from '../../api/types'
 import { Icon } from '../../ui/Icon'
 import { useMoveReminder, type Reminder } from './api'
 import { shortDate } from './format'
-import s from './Send.module.css'
+import s from './Download.module.css'
 
 type Props = { company: string; role: string | null; score: number | null; reminder: Reminder | null; initialDays: number; onClose: () => void }
 
@@ -12,7 +12,7 @@ type Props = { company: string; role: string | null; score: number | null; remin
  * "Applied." over the whole screen, with the follow-up reminder, which the
  * person can move to another of the Settings choices.
  */
-export function SendDone({ company, role, score, reminder: first, initialDays, onClose }: Props) {
+export function AppliedDone({ company, role, score, reminder: first, initialDays, onClose }: Props) {
   const move = useMoveReminder()
   const [reminder, setReminder] = useState(first)
   const [days, setDays] = useState(initialDays)
@@ -33,7 +33,7 @@ export function SendDone({ company, role, score, reminder: first, initialDays, o
       <div className={s.doneInner}>
         <div className={s.tick} aria-hidden="true"><Icon name="check" size={38} strokeWidth={2.4} /></div>
         <h2 id="applied-title" className={s.doneTitle}>Applied.</h2>
-        <p className={s.doneText}>{what}{score != null ? `, sent with a match of ${score}.` : ', marked as sent.'}</p>
+        <p className={s.doneText}>{what}{score != null ? `, with a match of ${score}.` : '.'}</p>
         {reminder && (
           <div className={s.remind}>
             <div className={s.remindLabel} id="remind-label">Remind me to follow up in</div>

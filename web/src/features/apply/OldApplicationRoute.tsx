@@ -14,7 +14,7 @@ export function OldApplicationRoute({ was }: { was: Old }) {
   const query =
     was === 'letter' ? '?tab=letter'
       : was === 'research' ? '?tab=company'
-        : was === 'send' ? '?send=1'
+        : was === 'send' ? '?download=1'
           : was === 'review' ? `?change=${encodeURIComponent(params.get('item') ?? 'next')}`
             : ''
   return <Navigate to={`/applications/${id}${query}`} replace state={location.state} />

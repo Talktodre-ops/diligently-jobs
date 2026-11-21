@@ -96,7 +96,7 @@ async fn the_monday_summary_goes_once_per_local_monday_after_the_send_hour() {
     assert_eq!(e.subject, "Your week: 1 draft waiting");
     assert!(e.text.contains("Week of 23 November"), "{}", e.text);
     assert!(e.text.contains("One thing needs you this week"));
-    assert!(e.text.contains("Send your Halcyon Health application"));
+    assert!(e.text.contains("Apply to Halcyon Health"));
     assert!(e.text.contains("Sent on Mondays at 9:00 your time"));
     assert!(e.idempotency_key.starts_with("weekly-"));
     assert!(e

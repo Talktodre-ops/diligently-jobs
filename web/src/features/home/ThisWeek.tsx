@@ -18,7 +18,7 @@ export function ThisWeek({ events, desktop }: { events: WeekEvent[]; desktop: bo
         {!desktop && <Link to="/jobs" className={s.headLink}>All jobs</Link>}
       </div>
       {events.length === 0 ? (
-        <p className={s.quiet}>Nothing yet this week. Applications you tailor and send show up here.</p>
+        <p className={s.quiet}>Nothing yet this week. Jobs you tailor and apply to show up here.</p>
       ) : (
         <ol id="this-week-list" className={desktop ? s.weekBox : s.timeline}>
           {visible.map((e, i) => {

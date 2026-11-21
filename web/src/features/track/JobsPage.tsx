@@ -14,7 +14,7 @@ import s from './JobsPage.module.css'
 function sentLine(a: TrackedApp) {
   switch (a.stage) {
     case 'saved': return `Started ${ago(a.created_at)}`
-    case 'applied': return `Sent ${ago(a.submitted_at ?? a.updated_at)}`
+    case 'applied': return `Applied ${ago(a.submitted_at ?? a.updated_at)}`
     case 'interviewing': return `Moved ${ago(a.updated_at)}`
     case 'offer': return `Offer ${ago(a.updated_at)}`
     case 'closed': return `Closed ${ago(a.updated_at)}`

@@ -1,22 +1,21 @@
 import { useState } from 'react'
 import { isApiError } from '../../api/client'
 import { startRender, useFreshFiles, waitForJob, type DocumentItem } from './api'
-import { MIME, shareOrDownload, triggerDownload } from './download'
-import { fileNameFromUrl } from './format'
+import { triggerDownload } from './download'
 
-/** Key for the row being shared: CVs by application, letters by letter id. */
+/** Key for the row being downloaded: CVs by application, letters by letter id. */
 export const docKey = (d: DocumentItem) => (d.kind === 'cv' ? `cv:${d.application_id}` : `letter:${d.id}`)
 
 /**
- * Share (or, without a share sheet, download) one document's PDF from the
- * Documents list. Renders it first if the file is missing or out of date.
+ * Download one document's PDF from the Documents list. Renders it first if
+ * the file is missing or out of date.
  */
-export function useShareDocument() {
+export function useDownloadDocument() {
   const fresh = useFreshFiles()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const share = async (d: DocumentItem) => {
+  const download = async (d: DocumentItem) => {
     setBusy(docKey(d))
     setError(null)
     try {
@@ -31,14 +30,7 @@ export function useShareDocument() {
       }
       const url = d.kind === 'cv' ? links.cv.pdf_url : links.letter.pdf_url
       if (!url) throw new Error('The file is not ready yet. Try again in a moment.')
-      const name = fileNameFromUrl(url) ?? (d.kind === 'cv' ? 'CV.pdf' : 'Cover letter.pdf')
-      if (missing) {
-        // The render took a while, so the tap no longer counts as a gesture
-        // for the share sheet; a download always works.
-        triggerDownload(url)
-      } else {
-        await shareOrDownload([{ url, name, type: MIME.pdf }], null, name)
-      }
+      triggerDownload(url)
     } catch (e) {
       setError(isApiError(e) || e instanceof Error ? e.message : 'That did not work. Try again.')
     } finally {
@@ -46,5 +38,5 @@ export function useShareDocument() {
     }
   }
 
-  return { share, busy, error }
+  return { download, busy, error }
 }

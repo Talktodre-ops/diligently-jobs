@@ -8,8 +8,7 @@ import { PageState } from '../../ui/PageState'
 import { TopBar } from '../../ui/TopBar'
 import { DESKTOP, useMediaQuery } from '../../ui/useMediaQuery'
 import { CompanyPanel } from '../documents/CompanyPanel'
-import { LetterPanel } from '../documents/LetterPanel'
-import { SendSheet } from '../documents/SendSheet'
+import { DownloadSheet } from '../documents/DownloadSheet'
 import { companyName, useBrief, usePipelineJob, useRewrites, type Brief, type Step } from './api'
 import { ChangeSheet } from './ChangeSheet'
 import { ChangesList } from './ChangesList'
@@ -17,6 +16,7 @@ import { CvTab } from './CvTab'
 import { plural } from './format'
 import { Progress } from './Progress'
 import { LegacyApplication } from './LegacyApplication'
+import { LetterTab } from './LetterTab'
 import { Questions } from './Questions'
 import { reviewItems } from './reviewItems'
 import { ScoreStrip } from './ScoreStrip'
@@ -32,9 +32,10 @@ type Tab = (typeof TABS)[number]['id']
 /**
  * One application on one screen. Tailoring shows in place while it runs; the
  * CV, the letter and the company research are tabs; a suggestion opens in a
- * sheet over the CV; Send is a sheet too. The address carries the tab
- * (`?tab=`), an open suggestion (`?change=`, or `next` for the first one not
- * looked at) and Send (`?send=1`), so every state can be linked to.
+ * sheet over the CV; Download is a sheet too. The address carries the tab
+ * (`?tab=`), its view (`?view=`), an open suggestion (`?change=`, or `next`
+ * for the first one not looked at) and Download (`?download=1`), so every
+ * state can be linked to.
  */
 export default function ApplicationPage() {
   const { id = '' } = useParams()
@@ -69,20 +70,23 @@ export default function ApplicationPage() {
 
   const tabParam = params.get('tab')
   const tab: Tab = tabParam === 'letter' || tabParam === 'company' ? tabParam : 'cv'
-  const sending = params.get('send') === '1'
+  // ?send=1 is the address from before Send became Download.
+  const downloading = params.get('download') === '1' || params.get('send') === '1'
   const changeParam = params.get('change')
 
   const update = (edit: (p: URLSearchParams) => void) =>
     setParams((p) => { const n = new URLSearchParams(p); edit(n); return n }, { replace: true })
-  const setTab = (t: Tab) => update((n) => { if (t === 'cv') n.delete('tab'); else n.set('tab', t) })
+  // Each tab has its own views (Page and Read, Page and Edit), so a view does not carry over.
+  const setTab = (t: Tab) => update((n) => { n.delete('view'); if (t === 'cv') n.delete('tab'); else n.set('tab', t) })
   const openChange = (itemId: string, edit = false) => update((n) => {
+    n.delete('download')
     n.delete('send')
     n.set('change', itemId)
     if (edit) n.set('edit', '1'); else n.delete('edit')
   })
   const closeChange = () => update((n) => { n.delete('change'); n.delete('edit') })
-  const openSend = () => update((n) => { n.delete('change'); n.delete('edit'); n.set('send', '1') })
-  const closeSend = () => update((n) => n.delete('send'))
+  const openDownload = () => update((n) => { n.delete('change'); n.delete('edit'); n.delete('send'); n.set('download', '1') })
+  const closeDownload = () => update((n) => { n.delete('download'); n.delete('send') })
 
   if (brief.isPending) return <PageState.Loading />
   if (brief.isError) {
@@ -114,12 +118,12 @@ export default function ApplicationPage() {
     : items.find((i) => i.id === changeParam)?.id
   const sheet = changeParam && startId ? (
     <ChangeSheet key={startId} appId={id} items={items} startId={startId} startEditing={params.get('edit') === '1'} onClose={closeChange} />
-  ) : sending ? (
-    <SendSheet
+  ) : downloading ? (
+    <DownloadSheet
       id={id}
-      onClose={closeSend}
+      onClose={closeDownload}
       onReview={() => openChange('next')}
-      onWriteLetter={() => update((n) => { n.delete('send'); n.set('tab', 'letter') })}
+      onWriteLetter={() => update((n) => { n.delete('download'); n.delete('send'); n.set('tab', 'letter') })}
     />
   ) : null
 
@@ -132,19 +136,19 @@ export default function ApplicationPage() {
     ),
     letter: running
       ? <Waiting what="Your letter is written after the CV. It shows here when tailoring finishes." />
-      : <LetterPanel id={id} company={company} />,
+      : <LetterTab id={id} company={company} />,
     company: running
       ? <Waiting what={`What we find about ${company} shows here when tailoring finishes.`} />
       : <CompanyPanel id={id} company={company} />,
   }
   const tabs = <Tabs tab={tab} onChange={setTab} panels={panels} />
-  const sendButton = (
-    <Button onClick={openSend} disabled={running} className={s.send}>
-      <Icon name="send" size={18} strokeWidth={2} />
-      Send
+  const downloadButton = (
+    <Button onClick={openDownload} disabled={running} className={s.download}>
+      <Icon name="download" size={18} strokeWidth={2} />
+      Download
     </Button>
   )
-  const note = <SendNote brief={b} running={running} onReview={() => openChange('next')} />
+  const note = <DownloadNote brief={b} running={running} onReview={() => openChange('next')} />
 
   // One tree for both widths: the header, the left column and the footer
   // change, while the tabs and the sheet keep their places, so a window or
@@ -158,8 +162,8 @@ export default function ApplicationPage() {
         <div className={s.deskWhere}>{where}</div>
       </div>
       {!running && <ScoreStrip score={b.score} />}
-      <div className={s.deskSend}>
-        {sendButton}
+      <div className={s.deskAction}>
+        {downloadButton}
         {note}
       </div>
     </header>
@@ -190,7 +194,7 @@ export default function ApplicationPage() {
         {!desktop && (
           <footer className={s.footer}>
             {note}
-            {sendButton}
+            {downloadButton}
           </footer>
         )}
       </div>
@@ -235,11 +239,11 @@ function Tabs({ tab, onChange, panels }: { tab: Tab; onChange: (t: Tab) => void;
   )
 }
 
-/** Beside Send: what will go out, and a way into what was not looked at. */
-function SendNote({ brief, running, onReview }: { brief: Brief; running: boolean; onReview: () => void }) {
-  if (running) return <p className={s.note}>Send opens when your CV is ready.</p>
+/** Beside Download: how far the CV moved, and a way into what was not looked at. */
+function DownloadNote({ brief, running, onReview }: { brief: Brief; running: boolean; onReview: () => void }) {
+  if (running) return <p className={s.note}>Download opens when your CV is ready.</p>
   const { decided, pending } = brief.score
-  if (decided === 0) return <p className={s.note}>Your CV goes out as you wrote it.</p>
+  if (decided === 0) return <p className={s.note}>Your CV is as you wrote it.</p>
   return (
     <p className={s.note}>
       {plural(decided, 'change')} in your CV

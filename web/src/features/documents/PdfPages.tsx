@@ -15,6 +15,8 @@ type Props = {
   onOpen: (id: string) => void
   /** Called from the error state; the parent fetches a fresh link and remounts. */
   onRetry: () => void
+  /** What the pages are, for screen readers: "CV page 1 of 2". */
+  what?: string
 }
 
 const norm = (t: string) => t.replace(/\s+/g, ' ').trim()
@@ -38,15 +40,17 @@ export function containsAtWordBoundary(haystack: string, needle: string): boolea
 }
 
 /**
- * The CV exactly as LaTeX set it, page by page, drawn with PDF.js. A phone
+ * A CV or letter exactly as LaTeX set it, page by page, drawn with PDF.js. A phone
  * browser cannot show a PDF inline reliably (Android Chrome downloads it, iOS
  * shows one page without zoom control in an iframe), so the page is drawn to
  * a canvas instead. Highlights are an overlay; the file itself has none. Each
  * highlighted change is one tab stop that opens it.
  */
-export function PdfPages({ url, changes, onOpen, onRetry }: Props) {
+export function PdfPages({ url, changes, onOpen, onRetry, what = 'CV' }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const [src] = useState(url)
+  // Read once with the url: the drawing effect runs per source.
+  const [label] = useState(what)
   const [wanted] = useState(() => changes.map((c) => ({ ...c, text: norm(c.text) })).filter((c) => c.text.length > 0))
   // The highlights are drawn once per page; they call whatever onOpen is now.
   const open = useRef(onOpen)
@@ -77,7 +81,7 @@ export function PdfPages({ url, changes, onOpen, onRetry }: Props) {
           const canvas = document.createElement('canvas')
           canvas.className = s.canvas!
           canvas.setAttribute('role', 'img')
-          canvas.setAttribute('aria-label', `CV page ${n} of ${pdf.numPages}, as rendered`)
+          canvas.setAttribute('aria-label', `${label} page ${n} of ${pdf.numPages}, as rendered`)
           page.appendChild(canvas)
           host.appendChild(page)
           const { aspect, marks } = await renderPage(pdf, n, canvas, width, match)
@@ -117,7 +121,7 @@ export function PdfPages({ url, changes, onOpen, onRetry }: Props) {
     return () => {
       cancelled = true
     }
-  }, [src, wanted])
+  }, [src, wanted, label])
 
   return (
     <div className={s.wrap}>

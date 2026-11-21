@@ -8,7 +8,7 @@ import { useMasterCv } from '../account/api'
 import { useDocuments, type DocumentKind } from './api'
 import { DocumentRow } from './DocumentRow'
 import { ago } from './format'
-import { docKey, useShareDocument } from './useShareDocument'
+import { docKey, useDownloadDocument } from './useDownloadDocument'
 import s from './Documents.module.css'
 
 const FILTERS: { value: DocumentKind; label: string; empty: string }[] = [
@@ -42,7 +42,7 @@ function MasterCard() {
 export default function DocumentsPage() {
   const [kind, setKind] = useState<DocumentKind>('all')
   const docs = useDocuments(kind)
-  const sharing = useShareDocument()
+  const downloading = useDownloadDocument()
   const base = useId()
   const current = FILTERS.find((f) => f.value === kind)!
 
@@ -61,7 +61,7 @@ export default function DocumentsPage() {
     list = (
       <PageState.Empty
         title={current.empty}
-        body="Tailor your CV to a job and the files you send show up here, ready to share again."
+        body="Tailor your CV to a job and its files show up here, ready to download again."
         action={<ButtonLink to="/new" small>Add a job</ButtonLink>}
       />
     )
@@ -72,9 +72,9 @@ export default function DocumentsPage() {
           <DocumentRow
             key={docKey(d)}
             doc={d}
-            busy={sharing.busy === docKey(d)}
-            disabled={sharing.busy !== null && sharing.busy !== docKey(d)}
-            onShare={() => sharing.share(d)}
+            busy={downloading.busy === docKey(d)}
+            disabled={downloading.busy !== null && downloading.busy !== docKey(d)}
+            onDownload={() => downloading.download(d)}
           />
         ))}
       </ul>
@@ -111,9 +111,9 @@ export default function DocumentsPage() {
           </div>
           <div id={`${base}-panel`} role="tabpanel" aria-labelledby={`${base}-${kind}`} className={s.panel}>
             <div role="status" aria-live="polite" className="visually-hidden">
-              {sharing.busy ? 'Preparing the file.' : ''}
+              {downloading.busy ? 'Preparing the file.' : ''}
             </div>
-            {sharing.error && <Notice tone="error">{sharing.error}</Notice>}
+            {downloading.error && <Notice tone="error">{downloading.error}</Notice>}
             {list}
           </div>
         </div>
