@@ -78,6 +78,16 @@ http-body-util = "0.1.5"
 lopdf = "0.47.0"
 tokio   = { version = "1", features = ["macros", "rt-multi-thread"] }
 
+# Local and test builds. Panics and failed tests still show file and line in
+# our code; debuggers lose variable values, and library frames lose their
+# lines. The linker reads a fraction of the debug data, which is most of
+# the memory a build needs.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 opt-level     = 3
 lto           = "thin"

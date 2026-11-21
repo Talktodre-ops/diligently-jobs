@@ -28,4 +28,9 @@ if [ ! -x tools/tectonic ]; then
 fi
 export TECTONIC_BIN="$PWD/tools/tectonic"
 
+# Compiling and linking are the memory peak, not the tests. Four jobs keep it
+# to a few GB beside everything else on a laptop; raise it on a bigger box.
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
+
+# One area: scripts/test.sh --test it google::
 cargo test "$@"
