@@ -266,10 +266,11 @@ async fn resend_verification_sends_a_new_working_link() {
     assert_eq!(res.status, StatusCode::ACCEPTED);
     assert_eq!(app.mail.sent().len(), 2);
     verify_latest(&app, &c, "ada@example.com").await;
+    let after_verify = app.mail.sent().len();
 
     // Already verified: still 202, but nothing more is sent.
     c.post("/v1/auth/resend-verification", json!({})).await;
-    assert_eq!(app.mail.sent().len(), 2);
+    assert_eq!(app.mail.sent().len(), after_verify);
 }
 
 // --- password reset ------------------------------------------------------------

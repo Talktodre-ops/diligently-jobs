@@ -423,6 +423,7 @@ async fn sign_in(
     let ua = meta.user_agent.as_deref();
     if fresh {
         crate::devices::remember(state, user_id, ua).await;
+        crate::notify::welcome(state, user_id).await;
     } else {
         crate::devices::signed_in(
             state,

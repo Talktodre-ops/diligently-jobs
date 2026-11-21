@@ -191,6 +191,82 @@ pub async fn google_disconnected(state: &AppState, user_id: Uuid) {
     .await;
 }
 
+/// The welcome email, once per account and only to a confirmed address.
+/// Claiming `welcomed_at` first means a double confirm sends one email.
+pub async fn welcome(state: &AppState, user_id: Uuid) {
+    let claimed: Result<Option<String>, sqlx::Error> = sqlx::query_scalar(
+        r#"
+        update users set welcomed_at = now()
+        where id = $1 and welcomed_at is null and email_verified_at is not null
+        returning email
+        "#,
+    )
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await;
+    match claimed {
+        Ok(Some(to)) => {
+            let email = mail::welcome(
+                &to,
+                &state.config.web.app_base_url,
+                format!("welcome-{user_id}"),
+            );
+            mail::send_best_effort(state.mailer.as_ref(), email).await;
+        }
+        Ok(None) => {}
+        Err(e) => tracing::error!(%user_id, error = %e, "welcome email not claimed"),
+    }
+}
+
+/// "Your first tailored CV is ready", once per account, after the first
+/// tailoring run finishes. Best effort: the CV is ready either way.
+pub async fn first_cv_ready(state: &AppState, user_id: Uuid, application_id: Uuid) {
+    #[derive(FromRow)]
+    struct First {
+        email: String,
+        company: Option<String>,
+        role: Option<String>,
+        with_letter: bool,
+    }
+    let claimed = sqlx::query_as::<_, First>(
+        r#"
+        with claim as (
+            update users set first_cv_mailed_at = now()
+            where id = $1 and first_cv_mailed_at is null and email_verified_at is not null
+            returning email
+        )
+        select c.email, a.company, a.role,
+               exists (select 1 from cover_letters l where l.application_id = a.id) as with_letter
+        from claim c, applications a
+        where a.id = $2 and a.user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .bind(application_id)
+    .fetch_optional(&state.db)
+    .await;
+    match claimed {
+        Ok(Some(f)) => {
+            let app = &state.config.web.app_base_url;
+            let link = format!("{app}/applications/{application_id}");
+            let email = mail::first_cv_ready(
+                &f.email,
+                app,
+                &mail::FirstCv {
+                    company: f.company.as_deref(),
+                    role: f.role.as_deref(),
+                    with_letter: f.with_letter,
+                    link: &link,
+                },
+                format!("first-cv-{user_id}"),
+            );
+            mail::send_best_effort(state.mailer.as_ref(), email).await;
+        }
+        Ok(None) => {}
+        Err(e) => tracing::error!(%user_id, error = %e, "first CV email not claimed"),
+    }
+}
+
 /// After the account is gone: the address and zone are read before deleting.
 pub async fn account_deleted(state: &AppState, r: &Recipient) {
     let when = match local_time(&state.db, r.time_zone.as_deref(), Utc::now()).await {

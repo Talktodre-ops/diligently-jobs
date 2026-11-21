@@ -279,6 +279,14 @@ async fn a_new_person_gets_a_verified_account_without_a_password() {
             .unwrap();
     assert!(hash.is_none());
     assert_eq!(sub.as_deref(), Some("g-1"));
+    let welcomes = |app: &TestApp| {
+        app.mail
+            .sent()
+            .iter()
+            .filter(|m| m.subject == "Welcome to Diligently")
+            .count()
+    };
+    assert_eq!(welcomes(&app), 1, "a new Google account is welcomed");
 
     // The state is single use.
     let replay = callback(
@@ -326,6 +334,7 @@ async fn a_new_person_gets_a_verified_account_without_a_password() {
     let again = sign_in(&app, "code-2", "/").await;
     let me2 = client_from(&app, &again).get("/v1/auth/me").await;
     assert_eq!(me2.body["user"]["id"], me.body["user"]["id"]);
+    assert_eq!(welcomes(&app), 1, "signing in again is not welcomed again");
 }
 
 #[tokio::test]

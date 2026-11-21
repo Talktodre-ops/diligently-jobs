@@ -175,6 +175,7 @@ pub async fn run(state: &AppState, job: &Job) -> anyhow::Result<Value> {
         .bind(uid)
         .execute(&state.db)
         .await?;
+    crate::notify::first_cv_ready(state, uid, app_id).await;
     Ok(json!({ "application_id": app_id }))
 }
 
