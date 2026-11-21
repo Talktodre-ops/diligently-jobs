@@ -43,4 +43,5 @@ mod tracking;
 mod upload;
 mod usage;
 mod verify_code;
+mod welcome_email;
 mod writing_prefs;

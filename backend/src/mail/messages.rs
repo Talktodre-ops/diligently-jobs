@@ -266,6 +266,71 @@ pub fn account_deleted(
 }
 
 // ---------------------------------------------------------------------------
+// Getting started: each goes out once per account
+// ---------------------------------------------------------------------------
+
+/// Once the address is confirmed, or a Google account is created.
+pub fn welcome(to: &str, app: &str, key: String) -> Email {
+    Message::new(
+        "Welcome to Diligently",
+        "Tailor your CV to a job and apply from your phone.",
+        "You're in",
+    )
+    .para("Diligently tailors your CV and cover letter to each job you want. Both come back properly typeset, and they look the same on your phone as on a laptop, so you can apply from wherever you are.")
+    .para("**Add your CV.** Upload it once. We read it, and you check what we found.")
+    .para("**Paste a job.** The link or the posting itself.")
+    .para("**Download and apply.** Look over what changed, then download your CV and letter and attach them where you apply.")
+    .button(Button::new("Tailor my first CV", format!("{app}/")))
+    .note("You're getting this because you just created a Diligently account.")
+    .into_email(app, to, key)
+}
+
+pub struct FirstCv<'a> {
+    pub company: Option<&'a str>,
+    pub role: Option<&'a str>,
+    pub with_letter: bool,
+    pub link: &'a str,
+}
+
+/// When the first tailoring run finishes.
+pub fn first_cv_ready(to: &str, app: &str, f: &FirstCv<'_>, key: String) -> Email {
+    let company = f.company.map(str::trim).filter(|c| !c.is_empty());
+    let role = f.role.map(str::trim).filter(|r| !r.is_empty());
+    let subject = match company {
+        Some(c) => format!("Your CV for {c} is ready"),
+        None => "Your first tailored CV is ready".to_string(),
+    };
+    let heading = match (company, role) {
+        (Some(c), Some(r)) => format!("{c}, {r}"),
+        (Some(c), None) => c.to_string(),
+        (None, Some(r)) => r.to_string(),
+        (None, None) => "Your first tailored CV".to_string(),
+    };
+    let target = match (company, role) {
+        (Some(c), Some(r)) => format!("the {r} role at {c}"),
+        (Some(c), None) => format!("your application to {c}"),
+        (None, Some(r)) => format!("the {r} role"),
+        (None, None) => "the job you added".to_string(),
+    };
+    let what = if f.with_letter {
+        "Your CV and cover letter are"
+    } else {
+        "Your CV is"
+    };
+    let both = if f.with_letter { "both" } else { "it" };
+    Message::new(
+        subject,
+        "Look over what changed, then download it on your phone or laptop.",
+        heading,
+    )
+    .eyebrow("Your first tailored CV")
+    .para(format!("{what} tailored to {target}. Look over what changed, keep what sounds like you, then download {both} and apply."))
+    .button(Button::new("Open my CV", f.link))
+    .small("Every CV you tailor from now on waits for you in Diligently. We only email about it this first time.")
+    .into_email(app, to, key)
+}
+
+// ---------------------------------------------------------------------------
 // Optional emails: each carries a one-click unsubscribe
 // ---------------------------------------------------------------------------
 

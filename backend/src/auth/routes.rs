@@ -385,6 +385,7 @@ pub async fn verify(
     .bind(claimed.user_id)
     .execute(&state.db)
     .await?;
+    crate::notify::welcome(&state, claimed.user_id).await;
     Ok(Json(Ok { ok: true }).into_response())
 }
 
@@ -412,6 +413,7 @@ pub async fn verify_code(
                 .bind(user.id)
                 .execute(&state.db)
                 .await?;
+                crate::notify::welcome(&state, user.id).await;
             }
             code::Check::Wrong => {
                 return Err(AppError::bad_field(
